@@ -1,0 +1,268 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["public", "auth"]
+}
+
+// Public Schema Models
+
+// Gaming Championship Models
+model championships {
+  id         BigInt             @id @unique @default(autoincrement())
+  name       String // Changed from 'title' to match frontend interface
+  status     ChampionshipStatus @default(ongoing)
+  created_at DateTime           @default(now()) @db.Timestamptz
+
+  // Relations
+  matches matches[]
+  teams   teams[]
+
+  @@map("championships")
+  @@schema("public")
+}
+
+enum ChampionshipStatus {
+  ongoing
+  ended
+
+  @@schema("public")
+}
+
+model teams {
+  id              BigInt      @id @unique @default(autoincrement())
+  championship_id BigInt
+  name            FamilyType
+  grade           TeamGrade
+  gender          TeamGender?
+  created_at      DateTime    @default(now()) @db.Timestamptz
+
+  // Relations
+  championship     championships       @relation(fields: [championship_id], references: [id])
+  teamAMatches     matches[]           @relation("TeamAMatches")
+  teamBMatches     matches[]           @relation("TeamBMatches")
+  winnerMatches    matches[]           @relation("WinnerMatches")
+  basketballScores basketball_scores[]
+  footballScores   football_scores[]
+
+  @@map("teams")
+  @@schema("public")
+}
+
+enum TeamGrade {
+  ey
+  s4
+  s5
+  s6
+
+  @@schema("public")
+}
+
+enum TeamGender {
+  male
+  female
+
+  @@schema("public")
+}
+
+enum MatchStatus {
+  not_yet_scheduled
+  scheduled
+  in_progress
+  completed
+  cancelled
+
+  @@schema("public")
+}
+
+enum SportType {
+  basketball
+  football
+  volleyball
+
+  @@schema("public")
+}
+
+enum GradeType {
+  Ishami
+  Ijabo
+  Ingabo
+
+  @@schema("public")
+}
+
+enum FamilyType {
+  KATHERINE_JOHNSON
+  YVAN_BURAVAN
+  Chinua_Achebe
+  RUGANZU_NDOLI_2
+  Pele_Edson_Arantes_Do_Nascimento
+  Toni_Morrison
+  Ubald_Rugirangoga
+  Charles_Babbage
+  Alfred_Nobel
+  Ruth_Bader_Ginsberg
+  AOUA_KEITA
+  Fannie_Lou_Hamer
+  Niyitegeka_Felestin
+  Lance_Solomon_Reddick
+  ADA_loveloce
+  Rosalie_Gicanda
+  Irena_Sendler
+  Thomas_Edison
+  Family_1
+  Family_2
+  Family_3
+  Family_4
+  Family_5
+  Family_6
+
+  @@schema("public")
+}
+
+enum BoysStages {
+  preliminary
+  semi_finals
+  finals
+
+  @@schema("public")
+}
+
+enum GirlsStages {
+  preliminary
+  quarter_finals
+  semi_finals
+  finals
+
+  @@schema("public")
+}
+
+model players {
+  id         BigInt      @id @unique @default(autoincrement())
+  first_name String // Required field discovered from inspection
+  last_name  String // Required field discovered from inspection
+  created_at DateTime    @default(now()) @db.Timestamptz
+  grade      GradeType? // New enum field for player grade
+  family     FamilyType? // New enum field for player family
+
+  // Relations
+  basketballScores basketball_scores[]
+  footballScores   football_scores[]
+
+  @@map("players")
+  @@schema("public")
+}
+
+model matches {
+  id                 BigInt       @id @unique @default(autoincrement())
+  team_a_id          BigInt? // First team in the match (actual column name)
+  team_b_id          BigInt? // Second team in the match (actual column name)
+  championship_id    BigInt // Championship this match belongs to
+  sport_type         SportType // Sport type for the match
+  match_time         DateTime? // Scheduled date and time for the match (nullable)
+  winner_id          BigInt? // Winner team ID (nullable)
+  status             MatchStatus  @default(not_yet_scheduled)
+  created_at         DateTime     @default(now()) @db.Timestamptz
+  next_match_id      BigInt? // Next match in tournament bracket
+  boys_stage_groups  BoysStages? // Stage for boys tournament
+  girls_stage_groups GirlsStages? // Stage for girls tournament
+
+  // Relations
+  championship           championships       @relation(fields: [championship_id], references: [id])
+  teamA                  teams?              @relation("TeamAMatches", fields: [team_a_id], references: [id])
+  teamB                  teams?              @relation("TeamBMatches", fields: [team_b_id], references: [id])
+  winner                 teams?              @relation("WinnerMatches", fields: [winner_id], references: [id])
+  nextMatch              matches?            @relation("NextMatch", fields: [next_match_id], references: [id])
+  previousMatches        matches[]           @relation("NextMatch")
+  basketballScores       basketball_scores[]
+  footballScores         football_scores[]
+  predictions            predictions[]
+  predictedWinnerMatches predictions[]       @relation("PredictedWinnerMatches")
+
+  @@map("matches")
+  @@schema("public")
+}
+
+model basketball_scores {
+  id         BigInt   @id @unique @default(autoincrement())
+  match_id   BigInt
+  team_id    BigInt
+  player_id  BigInt? // Optional player reference
+  points     BigInt
+  rebounds   BigInt
+  assists    BigInt
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  // Relations
+  match  matches  @relation(fields: [match_id], references: [id])
+  team   teams    @relation(fields: [team_id], references: [id])
+  player players? @relation(fields: [player_id], references: [id])
+
+  @@map("basketball_scores")
+  @@schema("public")
+}
+
+model football_scores {
+  id         BigInt   @id @unique @default(autoincrement())
+  match_id   BigInt
+  team_id    BigInt
+  player_id  BigInt
+  goals      BigInt
+  assists    BigInt
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  // Relations
+  match  matches @relation(fields: [match_id], references: [id])
+  team   teams   @relation(fields: [team_id], references: [id])
+  player players @relation(fields: [player_id], references: [id])
+
+  @@map("football_scores")
+  @@schema("public")
+}
+
+model predictions {
+  id                  BigInt   @id @unique @default(autoincrement())
+  user_id             String   @db.Uuid
+  match_id            BigInt
+  predicted_winner_id BigInt
+  is_correct          Boolean?
+  created_at          DateTime @default(now()) @db.Timestamptz
+
+  // Relations
+  match           matches @relation(fields: [match_id], references: [id])
+  predictedWinner matches @relation("PredictedWinnerMatches", fields: [predicted_winner_id], references: [id])
+
+  @@map("predictions")
+  @@schema("public")
+}
+
+model admins {
+  id         BigInt   @id @unique @default(autoincrement())
+  user_id    String   @db.Uuid
+  first_name String
+  last_name  String
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  @@map("admins")
+  @@schema("public")
+}
+
+model users {
+  id         BigInt   @id @unique @default(autoincrement())
+  user_id    String   @db.Uuid
+  first_name String
+  last_name  String
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  @@map("users")
+  @@schema("public")
+}

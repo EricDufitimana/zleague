@@ -1,0 +1,216 @@
+'use client';
+
+import { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { IconUsers, IconCheck, IconX } from '@tabler/icons-react';
+
+// Families organized by grade
+const FAMILIES_BY_GRADE = {
+  'ey': [
+    'Family_1',
+    'Family_2', 
+    'Family_3',
+    'Family_4',
+    'Family_5',
+    'Family_6'
+  ],
+  's4': [
+    'Thomas Edison',
+    'Rosalie Gicanda',
+    'Lance Solomon Reddick',
+    'Niyitegeka Felestin',
+    'Irena Sendler',
+    'ADA loveloce'
+  ],
+  's5': [
+    'Pelé (Edson Arantes Do Nascimento)',
+    'Ubald Rugirangoga',
+    'Alfred Nobel',
+    'Toni Morrison',
+    'Ruth Bader Ginsberg',
+    'Charles Babbage'
+  ],
+  's6': [
+    'KATHERINE JOHNSON',
+    'YVAN BURAVAN', 
+    'Chinua Achebe',
+    'RUGANZU NDOLI 2',
+    'AOUA KEITA',
+    'Fannie Lou Hamer'
+  ]
+};
+
+interface FamilySelectorProps {
+  selectedFamilies: string[];
+  onFamiliesChange: (families: string[]) => void;
+  playersByFamily?: { [family: string]: number };
+  disabled?: boolean;
+}
+
+interface FamilyWithGrade {
+  name: string;
+  grade: string;
+}
+
+export function FamilySelector({ 
+  selectedFamilies, 
+  onFamiliesChange, 
+  playersByFamily = {},
+  disabled = false 
+}: FamilySelectorProps) {
+  const [selectAll, setSelectAll] = useState(false);
+
+  // Get all families from all grades
+  const allFamilies = Object.values(FAMILIES_BY_GRADE).flat();
+
+  const handleFamilyToggle = (family: string) => {
+    if (disabled) return;
+    
+    if (selectedFamilies.includes(family)) {
+      onFamiliesChange(selectedFamilies.filter(f => f !== family));
+    } else {
+      onFamiliesChange([...selectedFamilies, family]);
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (disabled) return;
+    
+    if (selectAll) {
+      onFamiliesChange([]);
+      setSelectAll(false);
+    } else {
+      onFamiliesChange(allFamilies);
+      setSelectAll(true);
+    }
+  };
+
+  const handleSelectNone = () => {
+    if (disabled) return;
+    
+    onFamiliesChange([]);
+    setSelectAll(false);
+  };
+
+  // Helper function to get grade for a family
+  const getFamilyGrade = (family: string): string => {
+    for (const [grade, families] of Object.entries(FAMILIES_BY_GRADE)) {
+      if (families.includes(family)) {
+        return grade;
+      }
+    }
+    return 'ey'; // Default fallback
+  };
+
+  // Get selected families with their grades
+  const getSelectedFamiliesWithGrades = (): FamilyWithGrade[] => {
+    return selectedFamilies.map(family => ({
+      name: family,
+      grade: getFamilyGrade(family)
+    }));
+  };
+
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Select Families</h3>
+          <p className="text-sm text-muted-foreground">
+            Choose families from all grades to create teams
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSelectAll}
+            disabled={disabled}
+          >
+            <IconCheck className="size-4 mr-2" />
+            Select All
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSelectNone}
+            disabled={disabled}
+          >
+            <IconX className="size-4 mr-2" />
+            Select None
+          </Button>
+        </div>
+      </div>
+
+      {/* All Families with Grade Indicators */}
+      <div className="space-y-4">
+        {Object.entries(FAMILIES_BY_GRADE).map(([grade, families]) => (
+          <div key={grade} className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-xs font-medium">
+                {grade.toUpperCase()}
+              </Badge>
+              <span className="text-sm text-muted-foreground">
+                {families.length} families
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+              {families.map((family) => {
+                const isSelected = selectedFamilies.includes(family);
+                const playerCount = playersByFamily[family] || 0;
+                
+                return (
+                  <Card 
+                    key={family}
+                    className={`cursor-pointer transition-all hover:shadow-sm p-2 ${
+                      isSelected 
+                        ? 'ring-1 ring-primary bg-primary/5' 
+                        : 'hover:bg-muted/50'
+                    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onClick={() => handleFamilyToggle(family)}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <Checkbox 
+                        checked={isSelected}
+                        onChange={() => handleFamilyToggle(family)}
+                        disabled={disabled}
+                        className="h-3 w-3"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium truncate" title={family}>
+                          {family}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <IconUsers className="size-2" />
+                          <span>{playerCount}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {selectedFamilies.length > 0 && (
+        <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+          <div className="flex items-center gap-2">
+            <IconCheck className="size-4 text-primary" />
+            <span className="text-sm font-medium">
+              {selectedFamilies.length} families selected
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Teams will be created for each selected family
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
