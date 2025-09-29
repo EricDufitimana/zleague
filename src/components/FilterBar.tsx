@@ -37,7 +37,7 @@ export function FilterBar({ selectedSport, onSportChange, selectedDate, onDateCh
           {sports.map((sport) => (
             <TabsTrigger key={sport.value} value={sport.value} className="flex items-center gap-2">
               <span>{sport.icon}</span>
-              <span className="hidden sm:inline">{sport.label.split(' ')[1]}</span>
+              <span className="hidden sm:inline">{sport.label.split(&apos; &apos;)[1]}</span>
             </TabsTrigger>
           ))}
         </TabsList>

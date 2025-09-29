@@ -241,12 +241,12 @@ export async function POST(request: NextRequest) {
     try {
       // Find or create the next match for this current match
       const currentStage = gender === 'boys' ? boys_stage_groups : girls_stage_groups;
-      const nextMatchId = await createNextRoundMatch(
+      const nextMatchId = await findOrCreateNextMatch(
         championship_id, 
         sport_type, 
         gender, 
         currentStage
-      );
+        );
 
       // Create the current match
       const { data: match, error } = await supabase

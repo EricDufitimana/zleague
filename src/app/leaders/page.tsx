@@ -46,7 +46,7 @@ const mockLeaders = {
     points: [
       { rank: 1, name: "Yuki Ishikawa", team: "Japan", points: 245, blocks: 18, aces: 12, avatar: "" },
       { rank: 2, name: "Wilfredo León", team: "Poland", points: 238, blocks: 15, aces: 18, avatar: "" },
-      { rank: 3, name: "Earvin N'Gapeth", team: "France", points: 226, blocks: 12, aces: 14, avatar: "" },
+      { rank: 3, name: "Earvin N&apos;Gapeth", team: "France", points: 226, blocks: 12, aces: 14, avatar: "" },
       { rank: 4, name: "Yuji Nishida", team: "Japan", points: 218, blocks: 14, aces: 16, avatar: "" },
       { rank: 5, name: "Bartosz Kurek", team: "Poland", points: 212, blocks: 11, aces: 13, avatar: "" },
     ],

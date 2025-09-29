@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import {
   Trophy,
   Calendar,
@@ -84,10 +85,10 @@ export function SportsSidebar({ ...props }: React.ComponentProps<typeof Sidebar>
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <a href="/dashboard">
+              <Link href="/dashboard">
                 <Trophy className="!size-5" />
                 <span className="text-base font-semibold">ZLeague</span>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
