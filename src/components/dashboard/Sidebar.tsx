@@ -5,7 +5,7 @@ interface SidebarProps {
   setIsOpen: (open: boolean) => void;
 }
 
-export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
+export default function Sidebar({ isOpen }: SidebarProps) {
   const menuItems = [
     { name: 'Dashboard', icon: 'grid', active: true, badge: null },
     { name: 'Tasks', icon: 'check-square', active: false, badge: '12+' },

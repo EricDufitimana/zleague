@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
 
 interface userData{
@@ -14,7 +14,7 @@ export function useUserData(){
         error: null, 
     })
 
-    const fetchUserData = async () =>{
+    const fetchUserData = useCallback(async () =>{
         try{
             const supabase = createClient()
 
@@ -51,9 +51,9 @@ export function useUserData(){
             console.error("Error fetching user data:", error)
             return;
         }
-    }
+    }, [])
 
-    const initializeUserData = async () => {
+    const initializeUserData = useCallback(async () => {
         try{
             setUserData((prev:userData) => ({...prev, isLoading:true, error: null}))
             await fetchUserData();
@@ -62,7 +62,7 @@ export function useUserData(){
             console.error("Error initializing user data:", error)
             return;
         }
-    }
+    }, [fetchUserData])
 
     useEffect(() => {
         initializeUserData();
