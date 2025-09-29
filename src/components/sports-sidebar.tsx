@@ -5,14 +5,11 @@ import Link from "next/link"
 import {
   IconTrophy,
   IconCalendar,
-  IconUsers,
   IconChartBar,
   IconSettings,
   IconHome,
-  IconFileText,
   IconTarget,
-  IconAward,
-  IconClock
+  IconAward
 } from "@tabler/icons-react"
 
 import { NavMain } from "@/components/nav-main"

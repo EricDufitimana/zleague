@@ -66,7 +66,7 @@ export function useUserData(){
 
     useEffect(() => {
         initializeUserData();
-    }, []);
+    }, [initializeUserData]);
 
     const refreshUserData = () => {
         initializeUserData();
