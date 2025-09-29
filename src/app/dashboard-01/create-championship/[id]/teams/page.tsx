@@ -702,7 +702,7 @@ export default function ChampionshipTeamsPage() {
               Delete Team
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{selectedTeam?.name}"? This action cannot be undone.
+              Are you sure you want to delete &quot;{selectedTeam?.name}&quot;? This action cannot be undone.
               {selectedTeam && selectedTeam.player_count && selectedTeam.player_count > 0 && (
                 <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
                   <p className="text-sm text-yellow-800">

@@ -1034,7 +1034,7 @@ export default function RecordPage() {
                         />
                         {validationErrors.teamAPoints && (
                           <p className="text-red-500 text-xs mt-1">
-                            Team points ({basketballScores.teamA.points}) don't match individual points ({individualStats.teamA.reduce((sum, stat) => sum + stat.points, 0)})
+                            Team points ({basketballScores.teamA.points}) don&apos;t match individual points ({individualStats.teamA.reduce((sum, stat) => sum + stat.points, 0)})
                           </p>
                         )}
                       </div>
@@ -1059,7 +1059,7 @@ export default function RecordPage() {
                         />
                         {validationErrors.teamARebounds && (
                           <p className="text-red-500 text-xs mt-1">
-                            Team rebounds ({basketballScores.teamA.rebounds}) don't match individual rebounds ({individualStats.teamA.reduce((sum, stat) => sum + stat.rebounds, 0)})
+                            Team rebounds ({basketballScores.teamA.rebounds}) don&apos;t match individual rebounds ({individualStats.teamA.reduce((sum, stat) => sum + stat.rebounds, 0)})
                           </p>
                         )}
                       </div>
@@ -1084,7 +1084,7 @@ export default function RecordPage() {
                         />
                         {validationErrors.teamAAssists && (
                           <p className="text-red-500 text-xs mt-1">
-                            Team assists ({basketballScores.teamA.assists}) don't match individual assists ({individualStats.teamA.reduce((sum, stat) => sum + stat.assists, 0)})
+                            Team assists ({basketballScores.teamA.assists}) don&apos;t match individual assists ({individualStats.teamA.reduce((sum, stat) => sum + stat.assists, 0)})
                           </p>
                         )}
                       </div>
@@ -1269,7 +1269,7 @@ export default function RecordPage() {
                         />
                         {validationErrors.teamBPoints && (
                           <p className="text-red-500 text-xs mt-1">
-                            Team points ({basketballScores.teamB.points}) don't match individual points ({individualStats.teamB.reduce((sum, stat) => sum + stat.points, 0)})
+                            Team points ({basketballScores.teamB.points}) don&apos;t match individual points ({individualStats.teamB.reduce((sum, stat) => sum + stat.points, 0)})
                           </p>
                         )}
                       </div>
@@ -1294,7 +1294,7 @@ export default function RecordPage() {
                         />
                         {validationErrors.teamBRebounds && (
                           <p className="text-red-500 text-xs mt-1">
-                            Team rebounds ({basketballScores.teamB.rebounds}) don't match individual rebounds ({individualStats.teamB.reduce((sum, stat) => sum + stat.rebounds, 0)})
+                            Team rebounds ({basketballScores.teamB.rebounds}) don&apos;t match individual rebounds ({individualStats.teamB.reduce((sum, stat) => sum + stat.rebounds, 0)})
                           </p>
                         )}
                       </div>
@@ -1319,7 +1319,7 @@ export default function RecordPage() {
                         />
                         {validationErrors.teamBAssists && (
                           <p className="text-red-500 text-xs mt-1">
-                            Team assists ({basketballScores.teamB.assists}) don't match individual assists ({individualStats.teamB.reduce((sum, stat) => sum + stat.assists, 0)})
+                            Team assists ({basketballScores.teamB.assists}) don&apos;t match individual assists ({individualStats.teamB.reduce((sum, stat) => sum + stat.assists, 0)})
                           </p>
                         )}
                       </div>
@@ -1525,7 +1525,7 @@ export default function RecordPage() {
                         />
                         {validationErrors.teamAGoals && (
                           <p className="text-red-500 text-xs mt-1">
-                            Team goals ({footballScores.teamA.goals}) don't match individual goals ({footballIndividualStats.teamA.reduce((sum, stat) => sum + stat.goals, 0)})
+                            Team goals ({footballScores.teamA.goals}) don&apos;t match individual goals ({footballIndividualStats.teamA.reduce((sum, stat) => sum + stat.goals, 0)})
                           </p>
                         )}
                       </div>
@@ -1550,7 +1550,7 @@ export default function RecordPage() {
                         />
                         {validationErrors.teamAAssistsFootball && (
                           <p className="text-red-500 text-xs mt-1">
-                            Team assists ({footballScores.teamA.assists}) don't match individual assists ({footballIndividualStats.teamA.reduce((sum, stat) => sum + stat.assists, 0)})
+                            Team assists ({footballScores.teamA.assists}) don&apos;t match individual assists ({footballIndividualStats.teamA.reduce((sum, stat) => sum + stat.assists, 0)})
                           </p>
                         )}
                       </div>
@@ -1705,7 +1705,7 @@ export default function RecordPage() {
                         />
                         {validationErrors.teamBGoals && (
                           <p className="text-red-500 text-xs mt-1">
-                            Team goals ({footballScores.teamB.goals}) don't match individual goals ({footballIndividualStats.teamB.reduce((sum, stat) => sum + stat.goals, 0)})
+                            Team goals ({footballScores.teamB.goals}) don&apos;t match individual goals ({footballIndividualStats.teamB.reduce((sum, stat) => sum + stat.goals, 0)})
                           </p>
                         )}
                       </div>
@@ -1730,7 +1730,7 @@ export default function RecordPage() {
                         />
                         {validationErrors.teamBAssistsFootball && (
                           <p className="text-red-500 text-xs mt-1">
-                            Team assists ({footballScores.teamB.assists}) don't match individual assists ({footballIndividualStats.teamB.reduce((sum, stat) => sum + stat.assists, 0)})
+                            Team assists ({footballScores.teamB.assists}) don&apos;t match individual assists ({footballIndividualStats.teamB.reduce((sum, stat) => sum + stat.assists, 0)})
                           </p>
                         )}
                       </div>
