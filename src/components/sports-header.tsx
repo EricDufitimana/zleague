@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import Link from "next/link"
 
 interface SportsHeaderProps {
   title?: string
@@ -18,12 +19,12 @@ export function SportsHeader({ title = "Sports Management" }: SportsHeaderProps)
         <h1 className="text-base font-medium">{title}</h1>
         <div className="ml-auto flex items-center gap-2">
           <Button variant="ghost" asChild size="sm" className="hidden sm:flex">
-            <a
+            <Link
               href="/"
               className="dark:text-foreground"
             >
               Home
-            </a>
+            </Link>
           </Button>
         </div>
       </div>
