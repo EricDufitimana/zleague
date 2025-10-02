@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,8 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { updateTeam, deleteTeam, type TeamData } from '@/actions/teams';
-import { IconArrowLeft, IconPlus, IconLoader2, IconUsers, IconTrophy, IconShield, IconEdit, IconTrash, IconDotsVertical, IconRefresh } from '@tabler/icons-react';
+import { updateTeam, deleteTeam } from '@/actions/teams';
+import { IconArrowLeft, IconPlus, IconLoader2, IconUsers, IconTrophy, IconEdit, IconTrash, IconDotsVertical, IconRefresh } from '@tabler/icons-react';
 import { toast } from 'react-hot-toast';
 import { Badge } from '@/components/ui/badge';
 import { AppSidebar } from "@/components/app-sidebar";
@@ -62,14 +62,7 @@ export default function ChampionshipTeamsPage() {
   const [editTeamGrade, setEditTeamGrade] = useState('');
   const [editTeamGender, setEditTeamGender] = useState('');
 
-  useEffect(() => {
-    if (championshipId) {
-      fetchChampionship();
-      fetchTeams();
-    }
-  }, [championshipId]);
-
-  const fetchChampionship = async () => {
+  const fetchChampionship = useCallback(async () => {
     try {
       const response = await fetch('/api/championships');
       if (response.ok) {
@@ -82,9 +75,9 @@ export default function ChampionshipTeamsPage() {
     } catch (error) {
       console.error('Error fetching championship:', error);
     }
-  };
+  }, [championshipId]);
 
-  const fetchTeams = async () => {
+  const fetchTeams = useCallback(async () => {
     try {
       setIsRefreshing(true);
       const response = await fetch(`/api/teams?championship_id=${championshipId}&t=${Date.now()}`, {
@@ -105,7 +98,14 @@ export default function ChampionshipTeamsPage() {
       setIsRefreshing(false);
       setIsFetching(false);
     }
-  };
+  }, [championshipId]);
+
+  useEffect(() => {
+    if (championshipId) {
+      fetchChampionship();
+      fetchTeams();
+    }
+  }, [championshipId, fetchChampionship, fetchTeams]);
 
   const handleCreateTeam = async () => {
     if (!teamName.trim() || !teamGrade || !teamGender) return;
@@ -610,7 +610,7 @@ export default function ChampionshipTeamsPage() {
               Delete Team
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{selectedTeam?.name}"? This action cannot be undone.
+              Are you sure you want to delete &quot;{selectedTeam?.name}&quot;? This action cannot be undone.
               {selectedTeam && selectedTeam.player_count && selectedTeam.player_count > 0 && (
                 <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
                   <p className="text-sm text-yellow-800">

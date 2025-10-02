@@ -147,7 +147,7 @@ export async function PUT(request: NextRequest) {
     const supabase = createAdminClient();
     console.log('✅ Supabase admin client created successfully');
 
-    const updateData: any = {
+    const updateData: { name: string; status?: string } = {
       name: name.trim(),
     };
 

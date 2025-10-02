@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Navbar } from "@/components/Navbar"
 import { cn } from "@/lib/utils"
 
@@ -19,26 +19,26 @@ const mockBracketData = {
             id: "qf1",
             homeTeam: { name: "Real Madrid", score: 3 },
             awayTeam: { name: "Barcelona", score: 1 },
-            status: "final",
+            status: "final" as const,
           },
           {
             id: "qf2",
             homeTeam: { name: "Manchester City", score: 2 },
             awayTeam: { name: "Liverpool", score: 2 },
-            status: "live",
+            status: "live" as const,
           },
           {
             id: "qf3",
             homeTeam: { name: "Bayern Munich", score: 0 },
             awayTeam: { name: "PSG", score: 0 },
-            status: "scheduled",
+            status: "scheduled" as const,
             time: "20:00",
           },
           {
             id: "qf4",
             homeTeam: { name: "Juventus", score: 1 },
             awayTeam: { name: "AC Milan", score: 0 },
-            status: "final",
+            status: "final" as const,
           },
         ],
       },
@@ -49,14 +49,14 @@ const mockBracketData = {
             id: "sf1",
             homeTeam: { name: "Real Madrid", score: 0 },
             awayTeam: { name: "Manchester City", score: 0 },
-            status: "scheduled",
+            status: "scheduled" as const,
             time: "TBD",
           },
           {
             id: "sf2",
             homeTeam: { name: "Bayern Munich", score: 0 },
             awayTeam: { name: "Juventus", score: 0 },
-            status: "scheduled",
+            status: "scheduled" as const,
             time: "TBD",
           },
         ],
@@ -68,7 +68,7 @@ const mockBracketData = {
             id: "final",
             homeTeam: { name: "TBD", score: 0 },
             awayTeam: { name: "TBD", score: 0 },
-            status: "scheduled",
+            status: "scheduled" as const,
             time: "TBD",
           },
         ],
@@ -84,13 +84,13 @@ const mockBracketData = {
             id: "qf1",
             homeTeam: { name: "Lakers", score: 108 },
             awayTeam: { name: "Warriors", score: 112 },
-            status: "final",
+            status: "final" as const,
           },
           {
             id: "qf2",
             homeTeam: { name: "Celtics", score: 95 },
             awayTeam: { name: "Heat", score: 98 },
-            status: "live",
+            status: "live" as const,
           },
         ],
       },
@@ -105,7 +105,7 @@ const mockBracketData = {
             id: "qf1",
             homeTeam: { name: "Brazil", score: 3 },
             awayTeam: { name: "Italy", score: 1 },
-            status: "final",
+            status: "final" as const,
           },
         ],
       },
@@ -113,7 +113,21 @@ const mockBracketData = {
   },
 }
 
-function BracketMatch({ match }: { match: any }) {
+interface Match {
+  id: string;
+  homeTeam: {
+    name: string;
+    score: number;
+  };
+  awayTeam: {
+    name: string;
+    score: number;
+  };
+  status: 'scheduled' | 'live' | 'final';
+  time?: string;
+}
+
+function BracketMatch({ match }: { match: Match }) {
   const statusConfig = {
     scheduled: { label: "Scheduled", variant: "secondary" as const },
     live: { label: "LIVE", variant: "destructive" as const },
@@ -217,16 +231,21 @@ export default function BracketPage() {
   )
 }
 
-function BracketView({ rounds }: { rounds: any[] }) {
+interface Round {
+  name: string;
+  matches: Match[];
+}
+
+function BracketView({ rounds }: { rounds: Round[] }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {rounds.map((round, roundIndex) => (
+      {rounds.map((round) => (
         <div key={round.name} className="space-y-4">
           <div className="text-center">
             <h3 className="text-lg font-semibold text-gray-900">{round.name}</h3>
           </div>
           <div className="space-y-4">
-            {round.matches.map((match: any) => (
+            {round.matches.map((match) => (
               <BracketMatch key={match.id} match={match} />
             ))}
           </div>

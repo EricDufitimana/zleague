@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Trophy, Shuffle, Play, RotateCcw, Check, X, Loader2, ArrowLeft, Users, Shield } from 'lucide-react';
+import { Trophy, Shuffle, RotateCcw, Check, X, Loader2, Users, Shield } from 'lucide-react';
 
 interface Championship {
   id: number;
@@ -61,9 +61,52 @@ export default function MatchPage() {
   
   // Wheel physics
   const friction = 0.991;
-  let angVel = 0;
-  let ang = 0;
+  const angVelRef = useRef(0);
+  const angRef = useRef(0);
   const TAU = 2 * Math.PI;
+
+  const fetchChampionships = useCallback(async () => {
+    try {
+      const response = await fetch('/api/championships');
+      if (response.ok) {
+        const data = await response.json();
+        setChampionships(data);
+      }
+    } catch (error) {
+      console.error('Error fetching championships:', error);
+    }
+  }, []);
+
+  const fetchChampionship = useCallback(async (id: string) => {
+    try {
+      const response = await fetch(`/api/championships/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setChampionship(data);
+      } else {
+        // If championship not found, redirect back to match index
+        router.push('/dashboard/match');
+      }
+    } catch (error) {
+      console.error('Error fetching championship:', error);
+      router.push('/dashboard/match');
+    }
+  }, [router]);
+
+  const fetchTeams = useCallback(async (championshipId: string) => {
+    try {
+      const response = await fetch(`/api/teams?championship_id=${championshipId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setTeams(data);
+        
+        // Fetch existing matches to filter out used teams
+        await fetchExistingMatches(championshipId, data);
+      }
+    } catch (error) {
+      console.error('Error fetching teams:', error);
+    }
+  }, []);
 
   useEffect(() => {
     fetchChampionships();
@@ -71,7 +114,7 @@ export default function MatchPage() {
       fetchChampionship(championshipId);
       fetchTeams(championshipId);
     }
-  }, [championshipId]);
+  }, [championshipId, fetchChampionships, fetchChampionship, fetchTeams]);
 
   useEffect(() => {
     if (championshipId) {
@@ -80,6 +123,25 @@ export default function MatchPage() {
       setSelectedSportType('all');
     }
   }, [championshipId]);
+
+  const getWheelTeams = useCallback(() => (availableTeams.length > 0 ? availableTeams : teams), [availableTeams, teams]);
+
+  const initWheel = useCallback(() => {
+    if (!canvasRef.current) return;
+    
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    ctxRef.current = ctx;
+    
+    // Set canvas size
+    canvas.width = 400;
+    canvas.height = 400;
+    
+    // Draw initial wheel
+    drawWheel();
+  }, []);
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -96,14 +158,42 @@ export default function MatchPage() {
         }
       }
     }
-  }, [availableTeams, teams]);
+  }, [availableTeams, teams, getWheelTeams, initWheel]);
+
+  const updateAvailableTeams = useCallback(() => {
+    const filteredTeams = filterAvailableTeams();
+    setAvailableTeams(filteredTeams);
+  }, [teams, selectedGender, selectedSportType, matchups]);
+
+  const setupBasketballPairs = useCallback((teams: Team[]) => {
+    if (selectedSportType === 'basketball') {
+      const thunderHawks = teams.find(team => team.name === 'Thunder Hawks');
+      const novaSharks = teams.find(team => team.name === 'Nova Sharks');
+      
+      if (thunderHawks && novaSharks) {
+        // Randomly decide when this pair should appear (1st, 2nd, 3rd, etc. - but not last)
+        const availableTeamCount = teams.length;
+        const maxPairs = Math.floor(availableTeamCount / 2);
+        // Don't let it be the last pair - choose randomly from 0 to maxPairs-2
+        const randomPairPosition = Math.floor(Math.random() * Math.max(1, maxPairs - 1));
+        
+        const pairs = [{ teamA: thunderHawks, teamB: novaSharks }];
+        setPredefinedPairs(pairs);
+        setCurrentPairIndex(-randomPairPosition); // Negative to track when to activate
+      }
+    } else {
+      // Clear pairs for non-basketball sports
+      setPredefinedPairs([]);
+      setCurrentPairIndex(0);
+    }
+  }, [selectedSportType]);
 
   useEffect(() => {
     if (teams.length > 0) {
       updateAvailableTeams();
       setupBasketballPairs(teams);
     }
-  }, [selectedGender, selectedSportType, teams, matchups]);
+  }, [selectedGender, selectedSportType, teams, matchups, updateAvailableTeams, setupBasketballPairs]);
 
   // Reset wheel state when sport type changes
   useEffect(() => {
@@ -118,55 +208,13 @@ export default function MatchPage() {
       if (canvasRef.current) {
         canvasRef.current.style.transform = 'rotate(0rad)';
       }
-      ang = 0;
+      angRef.current = 0;
       
       // Update available teams for the new sport
       updateAvailableTeams();
     }
-  }, [selectedSportType]);
+  }, [selectedSportType, updateAvailableTeams]);
 
-  const fetchChampionships = async () => {
-    try {
-      const response = await fetch('/api/championships');
-      if (response.ok) {
-        const data = await response.json();
-        setChampionships(data);
-      }
-    } catch (error) {
-      console.error('Error fetching championships:', error);
-    }
-  };
-
-  const fetchChampionship = async (id: string) => {
-    try {
-      const response = await fetch(`/api/championships/${id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setChampionship(data);
-      } else {
-        // If championship not found, redirect back to match index
-        router.push('/dashboard/match');
-      }
-    } catch (error) {
-      console.error('Error fetching championship:', error);
-      router.push('/dashboard/match');
-    }
-  };
-
-  const fetchTeams = async (championshipId: string) => {
-    try {
-      const response = await fetch(`/api/teams?championship_id=${championshipId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setTeams(data);
-        
-        // Fetch existing matches to filter out used teams
-        await fetchExistingMatches(championshipId, data);
-      }
-    } catch (error) {
-      console.error('Error fetching teams:', error);
-    }
-  };
 
   const fetchExistingMatches = async (championshipId: string, allTeams: Team[]) => {
     try {
@@ -175,7 +223,7 @@ export default function MatchPage() {
         const matchesData = await response.json();
         
         // Set existing matchups for display
-        const existingMatchups = matchesData.map((match: any) => {
+        const existingMatchups = matchesData.map((match: { team_a_id: number; team_b_id: number; sport_type: string; created_at: string; id: number }) => {
           const team1 = allTeams.find(t => t.id === match.team_a_id);
           const team2 = allTeams.find(t => t.id === match.team_b_id);
           return {
@@ -206,7 +254,7 @@ export default function MatchPage() {
   const filterAvailableTeams = () => {
     if (!teams.length) return [];
     
-    let filteredTeams = teams.filter(team => {
+    const filteredTeams = teams.filter(team => {
       // Filter by gender if selected (skip if "all" is selected)
       if (selectedGender && selectedGender !== 'all' && team.gender !== selectedGender) return false;
       return true;
@@ -229,54 +277,6 @@ export default function MatchPage() {
     return filteredTeams.filter(team => !usedTeamIds.has(team.id));
   };
 
-  const updateAvailableTeams = () => {
-    const filteredTeams = filterAvailableTeams();
-    setAvailableTeams(filteredTeams);
-  };
-
-  // Use available teams for the wheel; if none, fall back to all teams so the wheel remains visible
-  const getWheelTeams = () => (availableTeams.length > 0 ? availableTeams : teams);
-
-  // Setup predefined pairs for basketball
-  const setupBasketballPairs = (teams: Team[]) => {
-    if (selectedSportType === 'basketball') {
-      const thunderHawks = teams.find(team => team.name === 'Thunder Hawks');
-      const novaSharks = teams.find(team => team.name === 'Nova Sharks');
-      
-      if (thunderHawks && novaSharks) {
-        // Randomly decide when this pair should appear (1st, 2nd, 3rd, etc. - but not last)
-        const availableTeamCount = teams.length;
-        const maxPairs = Math.floor(availableTeamCount / 2);
-        // Don't let it be the last pair - choose randomly from 0 to maxPairs-2
-        const randomPairPosition = Math.floor(Math.random() * Math.max(1, maxPairs - 1));
-        
-        const pairs = [{ teamA: thunderHawks, teamB: novaSharks }];
-        setPredefinedPairs(pairs);
-        setCurrentPairIndex(-randomPairPosition); // Negative to track when to activate
-      }
-    } else {
-      // Clear pairs for non-basketball sports
-      setPredefinedPairs([]);
-      setCurrentPairIndex(0);
-    }
-  };
-
-  const initWheel = () => {
-    if (!canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    ctxRef.current = ctx;
-    
-    // Set canvas size
-    canvas.width = 400;
-    canvas.height = 400;
-    
-    // Draw initial wheel
-    drawWheel();
-  };
 
   const drawWheel = () => {
     const wheelTeams = getWheelTeams();
@@ -339,19 +339,19 @@ export default function MatchPage() {
 
 
 
-  const frame = () => {
-    if (!angVel) return;
+  const frame = useCallback(() => {
+    if (!angVelRef.current) return;
     
-    angVel *= friction;
+    angVelRef.current *= friction;
     
-    if (angVel < 0.002) {
-      angVel = 0;
+    if (angVelRef.current < 0.002) {
+      angVelRef.current = 0;
       setIsSpinning(false);
       
       // Calculate which team is selected based on actual wheel position
       const wheelTeams = getWheelTeams();
       if (wheelTeams.length > 0) {
-        const normalizedAngle = (360 - (ang * 180 / Math.PI) % 360) / 360;
+        const normalizedAngle = (360 - (angRef.current * 180 / Math.PI) % 360) / 360;
         let selectedIndex = Math.floor(normalizedAngle * wheelTeams.length);
         selectedIndex = Math.max(0, Math.min(selectedIndex, wheelTeams.length - 1));
         setSelectedTeam(wheelTeams[selectedIndex]);
@@ -363,19 +363,19 @@ export default function MatchPage() {
       }
     }
     
-    ang += angVel;
-    ang %= TAU;
+    angRef.current += angVelRef.current;
+    angRef.current %= TAU;
     
     if (canvasRef.current) {
-      canvasRef.current.style.transform = `rotate(${ang}rad)`;
+      canvasRef.current.style.transform = `rotate(${angRef.current}rad)`;
     }
     
-    if (angVel > 0) {
+    if (angVelRef.current > 0) {
       animationRef.current = requestAnimationFrame(frame);
     }
-  };
+  }, [getWheelTeams, selectedSportType, spinCount, predefinedPairs.length]);
 
-  const spinWheel = () => {
+  const spinWheel = useCallback(() => {
     // Don't allow spinning if gender or sport type is not selected
     if (selectedGender === 'all' || selectedSportType === 'all') return;
     
@@ -415,22 +415,22 @@ export default function MatchPage() {
         
         // Calculate velocity needed to reach target using friction physics
         // Using: finalAngle = initialAngle + (initialVel / (1-friction))
-        const neededDistance = totalTargetAngle - ang;
-        angVel = neededDistance * (1 - friction) * 1.2; // Increased multiplier for faster spin
+        const neededDistance = totalTargetAngle - angRef.current;
+        angVelRef.current = neededDistance * (1 - friction) * 1.2; // Increased multiplier for faster spin
       } else {
         // Fallback to random if target not found
-        angVel = Math.random() * 0.2 + 0.25;
+        angVelRef.current = Math.random() * 0.2 + 0.25;
       }
     } else {
       // Normal random spin for non-basketball or other teams (faster)
-      angVel = Math.random() * 0.3 + 0.4; // Increased base velocity
+      angVelRef.current = Math.random() * 0.3 + 0.4; // Increased base velocity
     }
     
     if (animationRef.current) {
       cancelAnimationFrame(animationRef.current);
     }
     animationRef.current = requestAnimationFrame(frame);
-  };
+  }, [selectedGender, selectedSportType, getWheelTeams, isSpinning, predefinedPairs, currentPairIndex, spinCount, firstTeam, frame]);
 
   const confirmMatchup = async () => {
     if (pendingMatchup && championshipId) {
@@ -477,7 +477,7 @@ export default function MatchPage() {
           if (canvasRef.current) {
             canvasRef.current.style.transform = 'rotate(0rad)';
           }
-          ang = 0;
+          angRef.current = 0;
         } else {
           const errorData = await response.json();
           console.error('Error creating match:', errorData);
@@ -529,15 +529,15 @@ export default function MatchPage() {
     if (canvasRef.current) {
       canvasRef.current.style.transform = 'rotate(0rad)';
     }
-    ang = 0;
+    angRef.current = 0;
   };
 
-  const resetWheel = () => {
+  const resetWheel = useCallback(() => {
     if (animationRef.current) {
       cancelAnimationFrame(animationRef.current);
     }
-    angVel = 0;
-    ang = 0;
+    angVelRef.current = 0;
+    angRef.current = 0;
     setMatchups([]);
     setCurrentMatchup(null);
     setSelectedTeam(null);
@@ -553,7 +553,7 @@ export default function MatchPage() {
     if (canvasRef.current) {
       canvasRef.current.style.transform = 'rotate(0rad)';
     }
-  };
+  }, [championshipId, teams]);
 
   const handleChampionshipChange = (newChampionshipId: string) => {
     if (newChampionshipId !== championshipId) {

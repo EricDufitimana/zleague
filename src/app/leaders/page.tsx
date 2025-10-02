@@ -8,6 +8,38 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Navbar } from "@/components/Navbar"
 
+// Types for different leaderboard entries
+type FootballPlayer = {
+  rank: number;
+  name: string;
+  team: string;
+  goals: number;
+  assists: number;
+  avatar: string;
+};
+
+type BasketballPlayer = {
+  rank: number;
+  name: string;
+  team: string;
+  points: number;
+  rebounds: number;
+  assists: number;
+  avatar: string;
+};
+
+type VolleyballPlayer = {
+  rank: number;
+  name: string;
+  team: string;
+  points: number;
+  blocks: number;
+  aces: number;
+  avatar: string;
+};
+
+type LeaderPlayer = FootballPlayer | BasketballPlayer | VolleyballPlayer;
+
 // Mock leaderboard data
 const mockLeaders = {
   football: {
@@ -87,7 +119,7 @@ export default function LeadersPage() {
   }
 
   const categories = getCategories(selectedSport)
-  const leaders = mockLeaders[selectedSport as keyof typeof mockLeaders]?.[selectedCategory as keyof any] || []
+  const leaders = (mockLeaders[selectedSport as keyof typeof mockLeaders]?.[selectedCategory as keyof typeof mockLeaders[keyof typeof mockLeaders]] || []) as LeaderPlayer[]
 
   const getColumnHeaders = (sport: string, category: string) => {
     switch (sport) {
@@ -171,7 +203,7 @@ export default function LeadersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {leaders.map((player: any) => (
+                {leaders.map((player: LeaderPlayer) => (
                   <TableRow key={player.rank} className="hover:bg-gray-50/50">
                     <TableCell className="font-medium">
                       <Badge variant={player.rank <= 3 ? "default" : "secondary"} className="w-8 h-8 rounded-full flex items-center justify-center">
@@ -192,22 +224,22 @@ export default function LeadersPage() {
                     <TableCell className="text-gray-600">{player.team}</TableCell>
                     {selectedSport === "football" && (
                       <>
-                        <TableCell className="font-bold text-gray-900">{player.goals}</TableCell>
-                        <TableCell className="font-bold text-gray-900">{player.assists}</TableCell>
+                        <TableCell className="font-bold text-gray-900">{(player as FootballPlayer).goals}</TableCell>
+                        <TableCell className="font-bold text-gray-900">{(player as FootballPlayer).assists}</TableCell>
                       </>
                     )}
                     {selectedSport === "basketball" && (
                       <>
-                        <TableCell className="font-bold text-gray-900">{player.points}</TableCell>
-                        <TableCell className="font-bold text-gray-900">{player.rebounds}</TableCell>
-                        <TableCell className="font-bold text-gray-900">{player.assists}</TableCell>
+                        <TableCell className="font-bold text-gray-900">{(player as BasketballPlayer).points}</TableCell>
+                        <TableCell className="font-bold text-gray-900">{(player as BasketballPlayer).rebounds}</TableCell>
+                        <TableCell className="font-bold text-gray-900">{(player as BasketballPlayer).assists}</TableCell>
                       </>
                     )}
                     {selectedSport === "volleyball" && (
                       <>
-                        <TableCell className="font-bold text-gray-900">{player.points}</TableCell>
-                        <TableCell className="font-bold text-gray-900">{player.blocks}</TableCell>
-                        <TableCell className="font-bold text-gray-900">{player.aces}</TableCell>
+                        <TableCell className="font-bold text-gray-900">{(player as VolleyballPlayer).points}</TableCell>
+                        <TableCell className="font-bold text-gray-900">{(player as VolleyballPlayer).blocks}</TableCell>
+                        <TableCell className="font-bold text-gray-900">{(player as VolleyballPlayer).aces}</TableCell>
                       </>
                     )}
                   </TableRow>

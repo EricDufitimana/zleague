@@ -15,109 +15,6 @@ function getNextStatus(currentStatus: string, gender: 'boys' | 'girls'): string 
     : null;
 }
 
-async function createNextRoundMatch(
-  championship_id: string, 
-  sport_type: string, 
-  gender: 'boys' | 'girls',
-  current_status: string
-): Promise<string | null> {
-  const nextStatus = getNextStatus(current_status, gender);
-  if (!nextStatus) return null;
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-
-  try {
-    console.log(`Looking for next match: ${current_status} → ${nextStatus} for ${gender}`);
-    
-    // First, check if there are existing next matches with the next status
-    const { data: existingNextMatches, error: searchError } = await supabase
-      .from('matches')
-      .select('id, team_a_id, team_b_id')
-      .eq('championship_id', championship_id)
-      .eq('sport_type', sport_type)
-      .or(`team_a_id.is.null,team_b_id.is.null`)
-      .limit(10);
-
-    if (searchError) {
-      console.error('Error searching for existing next matches:', searchError);
-      return null;
-    }
-
-    // Check if any existing next match has space (null team_a_id or team_b_id)
-    if (existingNextMatches && existingNextMatches.length > 0) {
-      const availableMatch = existingNextMatches.find(match => 
-        match.team_a_id === null || match.team_b_id === null
-      );
-      
-      if (availableMatch) {
-        console.log(`Found available next match with ID: ${availableMatch.id}`);
-        return availableMatch.id.toString();
-      }
-    }
-
-    // Check if any existing next match is already used by two teams
-    const { data: allMatches, error: allMatchesError } = await supabase
-      .from('matches')
-      .select('id, next_match_id')
-      .eq('championship_id', championship_id)
-      .eq('sport_type', sport_type);
-
-    if (allMatchesError) {
-      console.error('Error fetching all matches:', allMatchesError);
-      return null;
-    }
-
-    // Count how many matches point to each next_match_id
-    const nextMatchCounts = new Map<string, number>();
-    allMatches?.forEach(match => {
-      if (match.next_match_id) {
-        const count = nextMatchCounts.get(match.next_match_id.toString()) || 0;
-        nextMatchCounts.set(match.next_match_id.toString(), count + 1);
-      }
-    });
-
-    console.log('Next match usage counts:', Object.fromEntries(nextMatchCounts));
-
-    // Look for a next match that has only one match pointing to it (not used by two teams)
-    for (const [nextMatchId, count] of nextMatchCounts.entries()) {
-      if (count === 1) {
-        console.log(`Found next match with ID ${nextMatchId} used by only ${count} match - reusing it`);
-        return nextMatchId;
-      }
-    }
-
-    // No suitable existing match found, create a new one
-    console.log(`Creating new next match: ${current_status} → ${nextStatus} for ${gender}`);
-    
-    const { data: nextMatch, error } = await supabase
-      .from('matches')
-      .insert({
-        championship_id: parseInt(championship_id),
-        sport_type: sport_type,
-        status: 'not_yet_scheduled',
-        ...(gender === 'boys' ? { boys_stage_groups: nextStatus } : { girls_stage_groups: nextStatus }),
-        team_a_id: null,
-        team_b_id: null,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error creating next match:', error);
-      return null;
-    }
-
-    console.log(`Created new next match with ID: ${nextMatch.id}`);
-    return nextMatch.id.toString();
-  } catch (error) {
-    console.error('Error creating next match:', error);
-    return null;
-  }
-}
-
 async function findOrCreateNextMatch(
   championship_id: string,
   sport_type: string,
@@ -125,7 +22,10 @@ async function findOrCreateNextMatch(
   current_status: string
 ): Promise<string | null> {
   const nextStatus = getNextStatus(current_status, gender);
-  if (!nextStatus) return null;
+  if (!nextStatus) {
+    console.log(`No next status after ${current_status} for ${gender}`);
+    return null;
+  }
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -133,69 +33,102 @@ async function findOrCreateNextMatch(
   );
 
   try {
-    // First, look for existing next round matches with the next status
-    const { data: existingNextMatches, error: searchError } = await supabase
+    console.log(`Finding/creating next match: ${current_status} → ${nextStatus} for ${gender}`);
+    
+    // Build the correct stage field name and filter
+    const stageField = gender === 'boys' ? 'boys_stage_groups' : 'girls_stage_groups';
+    
+    // Look for existing matches in the next round that have space
+    const { data: existingMatches, error: searchError } = await supabase
       .from('matches')
       .select('id, team_a_id, team_b_id, next_match_id')
       .eq('championship_id', championship_id)
       .eq('sport_type', sport_type)
-      .or(`team_a_id.is.null,team_b_id.is.null`)
-      .limit(10);
+      .eq(stageField, nextStatus)
+      .or('team_a_id.is.null,team_b_id.is.null');
 
     if (searchError) {
       console.error('Error searching for existing matches:', searchError);
-      return null;
-    }
-
-    // If we found available matches, check if any have space
-    if (existingNextMatches && existingNextMatches.length > 0) {
-      // Look for matches that have space (null team_a_id or team_b_id)
-      const availableMatch = existingNextMatches.find(match => 
-        match.team_a_id === null || match.team_b_id === null
+    } else if (existingMatches && existingMatches.length > 0) {
+      // Find match with available slot
+      const availableMatch = existingMatches.find(match => 
+        !match.team_a_id || !match.team_b_id
       );
       
       if (availableMatch) {
+        console.log(`Found available next match: ${availableMatch.id}`);
         return availableMatch.id.toString();
       }
     }
 
-    // No available match found, check if we should link to an existing match
-    // or create a completely new one
-    const { data: allNextMatches, error: allMatchesError } = await supabase
+    // Check how many matches are already pointing to each next_match_id
+    // to find matches that only have 1 feeder (and can accept another)
+    const { data: allCurrentRoundMatches, error: allMatchesError } = await supabase
       .from('matches')
       .select('id, next_match_id')
       .eq('championship_id', championship_id)
-      .eq('sport_type', sport_type);
+      .eq('sport_type', sport_type)
+      .eq(stageField, current_status)
+      .not('next_match_id', 'is', null);
 
-    if (allMatchesError) {
-      console.error('Error fetching all matches:', allMatchesError);
-      return await createNextRoundMatch(championship_id, sport_type, gender, current_status);
-    }
+    if (!allMatchesError && allCurrentRoundMatches) {
+      // Count how many matches point to each next_match_id
+      const nextMatchCounts = new Map<string, number>();
+      allCurrentRoundMatches.forEach(match => {
+        if (match.next_match_id) {
+          const id = match.next_match_id.toString();
+          nextMatchCounts.set(id, (nextMatchCounts.get(id) || 0) + 1);
+        }
+      });
 
-    // Count how many matches point to each next_match_id
-    const nextMatchCounts = new Map<string, number>();
-    allNextMatches?.forEach(match => {
-      if (match.next_match_id) {
-        const count = nextMatchCounts.get(match.next_match_id.toString()) || 0;
-        nextMatchCounts.set(match.next_match_id.toString(), count + 1);
-      }
-    });
+      console.log('Next match usage:', Object.fromEntries(nextMatchCounts));
 
-    console.log('Next match counts:', Object.fromEntries(nextMatchCounts));
-
-    // Look for a next match that has only one match pointing to it
-    for (const [nextMatchId, count] of nextMatchCounts.entries()) {
-      if (count === 1) {
-        // This next match has only one match pointing to it, we can link to it
-        console.log(`Linking to existing next match ${nextMatchId} (count: ${count})`);
-        return nextMatchId;
+      // Find a next match that only has 1 match pointing to it
+      for (const [nextMatchId, count] of nextMatchCounts.entries()) {
+        if (count === 1) {
+          console.log(`Reusing next match ${nextMatchId} (currently has ${count} feeder)`);
+          return nextMatchId;
+        }
       }
     }
 
-    console.log('No suitable existing match found, creating new one');
+    // No suitable match found, create a new one
+    console.log(`Creating new ${nextStatus} match for ${gender}`);
+    
+    // Recursively create the next match's next match (if not final)
+    const subsequentMatchId = nextStatus !== 'finals' 
+      ? await findOrCreateNextMatch(championship_id, sport_type, gender, nextStatus)
+      : null;
 
-    // No suitable existing match found, create a new one
-    return await createNextRoundMatch(championship_id, sport_type, gender, current_status);
+    const insertData: any = {
+      championship_id: parseInt(championship_id),
+      sport_type: sport_type,
+      status: 'not_yet_scheduled',
+      team_a_id: null,
+      team_b_id: null,
+      next_match_id: subsequentMatchId ? parseInt(subsequentMatchId) : null,
+    };
+
+    // Set the appropriate stage field
+    if (gender === 'boys') {
+      insertData.boys_stage_groups = nextStatus;
+    } else {
+      insertData.girls_stage_groups = nextStatus;
+    }
+
+    const { data: newMatch, error: createError } = await supabase
+      .from('matches')
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (createError) {
+      console.error('Error creating new match:', createError);
+      return null;
+    }
+
+    console.log(`Created new next match: ${newMatch.id}`);
+    return newMatch.id.toString();
   } catch (error) {
     console.error('Error in findOrCreateNextMatch:', error);
     return null;
@@ -213,7 +146,7 @@ export async function POST(request: NextRequest) {
       championship_id, 
       sport_type, 
       status = 'not_yet_scheduled',
-      gender = 'boys', // Default to boys, should be provided
+      gender = 'boys',
       boys_stage_groups = 'preliminary',
       girls_stage_groups = 'preliminary'
     } = body;
@@ -239,27 +172,38 @@ export async function POST(request: NextRequest) {
     );
 
     try {
-      // Find or create the next match for this current match
+      // Get the current stage based on gender
       const currentStage = gender === 'boys' ? boys_stage_groups : girls_stage_groups;
+      
+      // Find or create the next match
       const nextMatchId = await findOrCreateNextMatch(
         championship_id, 
         sport_type, 
         gender, 
         currentStage
-        );
+      );
+
+      // Prepare insert data
+      const insertData: any = {
+        team_a_id: parseInt(team_a_id),
+        team_b_id: parseInt(team_b_id),
+        championship_id: parseInt(championship_id),
+        sport_type: sport_type,
+        status: status,
+        next_match_id: nextMatchId ? parseInt(nextMatchId) : null,
+      };
+
+      // Set the appropriate stage field
+      if (gender === 'boys') {
+        insertData.boys_stage_groups = boys_stage_groups;
+      } else {
+        insertData.girls_stage_groups = girls_stage_groups;
+      }
 
       // Create the current match
       const { data: match, error } = await supabase
         .from('matches')
-        .insert({
-          team_a_id: parseInt(team_a_id),
-          team_b_id: parseInt(team_b_id),
-          championship_id: parseInt(championship_id),
-          sport_type: sport_type,
-          status: status,
-          ...(gender === 'boys' ? { boys_stage_groups: boys_stage_groups } : { girls_stage_groups: girls_stage_groups }),
-          next_match_id: nextMatchId ? parseInt(nextMatchId) : null,
-        })
+        .insert(insertData)
         .select()
         .single();
 
@@ -272,11 +216,7 @@ export async function POST(request: NextRequest) {
       }
 
       console.log('Match created successfully:', match);
-      console.log(`Next match ID: ${nextMatchId}`);
-      
-      // The next match creation is now handled intelligently in findOrCreateNextMatch
-      // which will either link to an existing match or create a new one based on
-      // how many other matches are pointing to the same next_match_id
+      console.log(`Linked to next match ID: ${nextMatchId}`);
 
       return NextResponse.json(
         { 
@@ -287,7 +227,7 @@ export async function POST(request: NextRequest) {
         { status: 201 }
       );
     } catch (error) {
-      console.error('Prisma error:', error);
+      console.error('Error creating match:', error);
       return NextResponse.json(
         { error: 'Failed to create match', details: error instanceof Error ? error.message : 'Unknown error' },
         { status: 500 }
@@ -316,7 +256,6 @@ export async function GET(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Build query for Supabase
     let query = supabase.from('matches').select('*');
 
     if (championship_id) {
@@ -328,7 +267,6 @@ export async function GET(request: NextRequest) {
     }
 
     if (gender) {
-      // Filter by gender using stage groups
       if (gender === 'boys') {
         query = query.not('boys_stage_groups', 'is', null);
       } else if (gender === 'girls') {
@@ -398,7 +336,7 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
-      // Build update object based on provided fields
+      // Build update object
       const updateData: any = {};
       
       if (match_time !== undefined) {
@@ -413,7 +351,6 @@ export async function PATCH(request: NextRequest) {
         updateData.winner_id = parseInt(winner_id);
       }
 
-      // If no fields to update, return error
       if (Object.keys(updateData).length === 0) {
         return NextResponse.json(
           { error: 'At least one field to update is required' },
@@ -437,7 +374,7 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
-      // If a winner was set and there's a next match, advance the winner
+      // If winner set and next match exists, advance the winner
       if (winner_id && currentMatch.next_match_id) {
         const { data: nextMatch, error: nextMatchError } = await supabase
           .from('matches')
@@ -446,20 +383,27 @@ export async function PATCH(request: NextRequest) {
           .single();
 
         if (nextMatch && !nextMatchError) {
-          // Determine which slot to fill in the next match
           const updateNextMatch: any = {};
           
           if (!nextMatch.team_a_id) {
             updateNextMatch.team_a_id = parseInt(winner_id);
           } else if (!nextMatch.team_b_id) {
             updateNextMatch.team_b_id = parseInt(winner_id);
+          } else {
+            console.log('Warning: Next match already has both teams assigned');
           }
 
           if (Object.keys(updateNextMatch).length > 0) {
-            await supabase
+            const { error: advanceError } = await supabase
               .from('matches')
               .update(updateNextMatch)
               .eq('id', currentMatch.next_match_id);
+
+            if (advanceError) {
+              console.error('Error advancing winner to next match:', advanceError);
+            } else {
+              console.log(`Winner ${winner_id} advanced to next match ${currentMatch.next_match_id}`);
+            }
           }
         }
       }
@@ -472,7 +416,7 @@ export async function PATCH(request: NextRequest) {
         { status: 200 }
       );
     } catch (error) {
-      console.error('Supabase error:', error);
+      console.error('Error updating match:', error);
       return NextResponse.json(
         { error: 'Failed to update match', details: error instanceof Error ? error.message : 'Unknown error' },
         { status: 500 }
