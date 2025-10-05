@@ -77,7 +77,16 @@ export default function PredictorsPage() {
         // Fetch scheduled matches
         const matchesRes = await fetch(`/api/matches?status=scheduled`)
         const matchesJson = await matchesRes.json()
-        const apiMatches: any[] = matchesJson?.matches || []
+        const apiMatches: Array<{
+          id: number
+          team_a_id?: number
+          team_b_id?: number
+          teamA?: { id: number; name: string }
+          teamB?: { id: number; name: string }
+          match_time?: string
+          created_at: string
+          sport_type?: string
+        }> = matchesJson?.matches || []
         
         console.log('Raw API matches data:', apiMatches)
         
@@ -114,12 +123,16 @@ export default function PredictorsPage() {
         // Fetch top predictors
         const predictorsRes = await fetch('/api/predictions')
         const predictorsJson = await predictorsRes.json()
-        const predictions: any[] = predictorsJson?.predictions || []
+        const predictions: Array<{
+          user_id: number
+          is_correct: boolean | null
+          user?: { username?: string; first_name?: string; last_name?: string }
+        }> = predictorsJson?.predictions || []
         
         // Calculate top predictors based on accuracy
         const userStats = new Map<number, { correct: number; total: number; name: string }>()
         
-        predictions.forEach((pred: any) => {
+        predictions.forEach((pred) => {
           if (pred.is_correct !== null && pred.user) {
             const userId = pred.user_id
             const userName = pred.user.username || `${pred.user.first_name} ${pred.user.last_name}`
@@ -156,10 +169,10 @@ export default function PredictorsPage() {
           if (userData.user) {
             const predictionsRes = await fetch(`/api/predictions?user_id=${userData.user.id}`)
             const predictionsJson = await predictionsRes.json()
-            const userPreds = predictionsJson?.predictions || []
+            const userPreds: UserPredictionDetail[] = predictionsJson?.predictions || []
             
             // Get set of match IDs user has already predicted
-            const predictedMatchIds = new Set<number>(userPreds.map((p: any) => parseInt(p.match_id)).filter((id: number) => !isNaN(id)))
+            const predictedMatchIds = new Set<number>(userPreds.map((p) => parseInt(String(p.match_id))).filter((id: number) => !isNaN(id)))
             setUserPredictions(predictedMatchIds)
             
             // Store detailed predictions for dialog
@@ -264,9 +277,9 @@ export default function PredictorsPage() {
           if (userData.user) {
             const predictionsRes = await fetch(`/api/predictions?user_id=${userData.user.id}`)
             const predictionsJson = await predictionsRes.json()
-            const userPreds = predictionsJson?.predictions || []
+            const userPreds: UserPredictionDetail[] = predictionsJson?.predictions || []
             
-            const predictedMatchIds = new Set<number>(userPreds.map((p: any) => parseInt(p.match_id)).filter((id: number) => !isNaN(id)))
+            const predictedMatchIds = new Set<number>(userPreds.map((p) => parseInt(String(p.match_id))).filter((id: number) => !isNaN(id)))
             setUserPredictions(predictedMatchIds)
             
             // Update detailed predictions

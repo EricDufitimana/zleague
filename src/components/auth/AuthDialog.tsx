@@ -77,9 +77,9 @@ export function AuthDialog({ open, onOpenChange, defaultMode = "login" }: AuthDi
       })
 
       if (error) throw error
-    } catch (error: any) {
+    } catch (error) {
       console.error('Google auth error:', error)
-      toast.error(error.message || 'Failed to authenticate with Google')
+      toast.error((error as Error).message || 'Failed to authenticate with Google')
       localStorage.removeItem('pending_user_metadata')
     } 
   }

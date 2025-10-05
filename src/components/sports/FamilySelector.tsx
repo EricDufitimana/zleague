@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -50,11 +50,6 @@ interface FamilySelectorProps {
   disabled?: boolean;
 }
 
-interface FamilyWithGrade {
-  name: string;
-  grade: string;
-}
-
 export function FamilySelector({ 
   selectedFamilies, 
   onFamiliesChange, 
@@ -94,25 +89,6 @@ export function FamilySelector({
     onFamiliesChange([]);
     setSelectAll(false);
   };
-
-  // Helper function to get grade for a family
-  const getFamilyGrade = (family: string): string => {
-    for (const [grade, families] of Object.entries(FAMILIES_BY_GRADE)) {
-      if (families.includes(family)) {
-        return grade;
-      }
-    }
-    return 'ey'; // Default fallback
-  };
-
-  // Get selected families with their grades
-  const getSelectedFamiliesWithGrades = (): FamilyWithGrade[] => {
-    return selectedFamilies.map(family => ({
-      name: family,
-      grade: getFamilyGrade(family)
-    }));
-  };
-
 
   return (
     <div className="space-y-4">

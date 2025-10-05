@@ -669,14 +669,28 @@ export default function RecordPage() {
     setMessage(null);
 
     try {
-      // Update match with winner and status
+      // Calculate team scores based on sport type
+      let teamAScore = 0;
+      let teamBScore = 0;
+      
+      if (selectedMatchData.sport_type === 'basketball') {
+        teamAScore = basketballScores.teamA.points;
+        teamBScore = basketballScores.teamB.points;
+      } else if (selectedMatchData.sport_type === 'football') {
+        teamAScore = footballScores.teamA.goals;
+        teamBScore = footballScores.teamB.goals;
+      }
+
+      // Update match with winner, status, and team scores
       const matchUpdateResponse = await fetch('/api/matches', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           match_id: selectedMatchData.id,
           winner_id: parseInt(winningTeam),
-          status: 'played'
+          status: 'played',
+          team_a_score: teamAScore,
+          team_b_score: teamBScore
         })
       });
 

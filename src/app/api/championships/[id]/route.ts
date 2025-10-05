@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   console.log('🏆 Championship API - GET request received');
   console.log('🌐 Request URL:', request.url);
@@ -11,6 +11,7 @@ export async function GET(
   console.log('🕐 Timestamp:', new Date().toISOString());
   
   try {
+    const params = await context.params;
     const id = params.id;
     console.log('🏷️ Championship ID from params:', id);
     console.log('🏷️ Championship ID type:', typeof id);

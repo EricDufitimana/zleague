@@ -500,7 +500,7 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { match_id, match_time, status, winner_id } = body;
+    const { match_id, match_time, status, winner_id, team_a_score, team_b_score } = body;
 
     if (!match_id) {
       return NextResponse.json(
@@ -553,6 +553,14 @@ export async function PATCH(request: NextRequest) {
       
       if (winner_id !== undefined) {
         updateData.winner_id = parseInt(winner_id);
+      }
+      
+      if (team_a_score !== undefined) {
+        updateData.team_a_score = parseInt(team_a_score);
+      }
+      
+      if (team_b_score !== undefined) {
+        updateData.team_b_score = parseInt(team_b_score);
       }
 
       if (Object.keys(updateData).length === 0) {

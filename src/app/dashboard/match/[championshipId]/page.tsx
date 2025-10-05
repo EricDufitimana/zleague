@@ -212,7 +212,7 @@ export default function MatchPage() {
   const filterAvailableTeams = () => {
     if (!teams.length) return [];
     
-    let filteredTeams = teams.filter(team => {
+    const filteredTeams = teams.filter(team => {
       // Filter by gender if selected (skip if "all" is selected)
       if (selectedGender && selectedGender !== 'all' && team.gender !== selectedGender) return false;
       return true;

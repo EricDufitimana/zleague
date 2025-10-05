@@ -62,6 +62,53 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Football scores recorded successfully:', insertedScores);
+
+    // Calculate team totals and update match
+    const teamTotals = scores.reduce((acc: Record<number, number>, score) => {
+      const teamId = score.team_id;
+      if (!acc[teamId]) {
+        acc[teamId] = 0;
+      }
+      acc[teamId] += score.goals || 0;
+      return acc;
+    }, {});
+
+    console.log('Team totals calculated:', teamTotals);
+
+    // Get match to determine which team is team_a and team_b
+    const { data: match, error: matchError } = await supabase
+      .from('matches')
+      .select('team_a_id, team_b_id')
+      .eq('id', match_id)
+      .single();
+
+    if (matchError) {
+      console.error('Error fetching match:', matchError);
+    } else if (match) {
+      const updateData: { team_a_score?: number; team_b_score?: number } = {};
+      
+      if (match.team_a_id && teamTotals[match.team_a_id] !== undefined) {
+        updateData.team_a_score = teamTotals[match.team_a_id];
+      }
+      
+      if (match.team_b_id && teamTotals[match.team_b_id] !== undefined) {
+        updateData.team_b_score = teamTotals[match.team_b_id];
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        const { error: updateError } = await supabase
+          .from('matches')
+          .update(updateData)
+          .eq('id', match_id);
+
+        if (updateError) {
+          console.error('Error updating match team scores:', updateError);
+        } else {
+          console.log('Match team scores updated:', updateData);
+        }
+      }
+    }
+
     return NextResponse.json(
       { 
         message: 'Football scores recorded successfully',
