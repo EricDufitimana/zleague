@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Trophy, Shuffle, Play, RotateCcw, Check, X, Loader2, ArrowLeft, Users, Shield } from 'lucide-react';
-import { ImprovedWheel } from '@/components/ImprovedWheel';
+import { ImprovedWheel } from '@/components/shared/ImprovedWheel';
 import '@/styles/fireworks.css';
 
 interface Championship {
