@@ -47,13 +47,29 @@ export default function AuthCallbackPage() {
 
         console.log('User authenticated with ID:', userId);
 
-        console.log('Making API call to create admin account...');
+        // Check for pending user metadata from registration
+        const pendingMetadataStr = localStorage.getItem('pending_user_metadata');
+        let pendingMetadata = null;
+        if (pendingMetadataStr) {
+          try {
+            pendingMetadata = JSON.parse(pendingMetadataStr);
+            console.log('Found pending user metadata:', pendingMetadata);
+            localStorage.removeItem('pending_user_metadata'); // Clean up
+          } catch (e) {
+            console.error('Failed to parse pending metadata:', e);
+          }
+        }
+
+        console.log('Making API call to create account...');
         const response = await fetch('/api/auth/callback', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ user_id: userId }),
+          body: JSON.stringify({ 
+            user_id: userId,
+            metadata: pendingMetadata
+          }),
         })
 
         console.log('API response status:', response.status);
@@ -63,7 +79,7 @@ export default function AuthCallbackPage() {
         if (response.ok) {
           console.log('Account created successfully, redirecting to dashboard...');
           // Redirect to dashboard after successful account creation
-          router.push('/dashboard')
+          router.push('/')
         } else {
           console.error('Failed to create account:', responseData);
           setError(responseData.error || 'Failed to create account');

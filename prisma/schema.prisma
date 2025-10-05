@@ -35,6 +35,7 @@ enum ChampionshipStatus {
   ongoing
   ended
 
+  @@map("championship_status")
   @@schema("public")
 }
 
@@ -43,7 +44,7 @@ model teams {
   championship_id BigInt
   name            FamilyType
   grade           TeamGrade
-  gender          TeamGender?
+  gender          Gender?
   created_at      DateTime    @default(now()) @db.Timestamptz
 
   // Relations
@@ -64,23 +65,24 @@ enum TeamGrade {
   s5
   s6
 
+  @@map("grade")
   @@schema("public")
 }
 
-enum TeamGender {
+enum Gender {
   male
   female
 
+  @@map("gender")
   @@schema("public")
 }
 
 enum MatchStatus {
   not_yet_scheduled
   scheduled
-  in_progress
-  completed
-  cancelled
+  played
 
+  @@map("match_status")
   @@schema("public")
 }
 
@@ -89,6 +91,7 @@ enum SportType {
   football
   volleyball
 
+  @@map("sport_type")
   @@schema("public")
 }
 
@@ -97,6 +100,7 @@ enum GradeType {
   Ijabo
   Ingabo
 
+  @@map("grade_type")
   @@schema("public")
 }
 
@@ -126,25 +130,29 @@ enum FamilyType {
   Family_5
   Family_6
 
+  @@map("family_type")
   @@schema("public")
 }
 
 enum BoysStages {
   preliminary
-  semi_finals
+  semi_finals @map("semi-finals")
   finals
 
+  @@map("boys_stages")
   @@schema("public")
 }
 
 enum GirlsStages {
   preliminary
-  quarter_finals
-  semi_finals
+  quarter_finals @map("quarter-finals")
+  semi_finals @map("semi-finals")
   finals
 
+  @@map("girls_stages")
   @@schema("public")
 }
+
 
 model players {
   id         BigInt      @id @unique @default(autoincrement())
@@ -168,6 +176,7 @@ model matches {
   team_b_id          BigInt? // Second team in the match (actual column name)
   championship_id    BigInt // Championship this match belongs to
   sport_type         SportType // Sport type for the match
+  gender             Gender? // Gender for the match (male/female)
   match_time         DateTime? // Scheduled date and time for the match (nullable)
   winner_id          BigInt? // Winner team ID (nullable)
   status             MatchStatus  @default(not_yet_scheduled)
@@ -193,14 +202,16 @@ model matches {
 }
 
 model basketball_scores {
-  id         BigInt   @id @unique @default(autoincrement())
-  match_id   BigInt
-  team_id    BigInt
-  player_id  BigInt? // Optional player reference
-  points     BigInt
-  rebounds   BigInt
-  assists    BigInt
-  created_at DateTime @default(now()) @db.Timestamptz
+  id                     BigInt   @id @unique @default(autoincrement())
+  match_id               BigInt
+  team_id                BigInt
+  player_id              BigInt? // Optional player reference
+  points                 BigInt
+  rebounds               BigInt
+  assists                BigInt
+  three_points_made      BigInt   @default(0)
+  three_points_attempted BigInt   @default(0)
+  created_at             DateTime @default(now()) @db.Timestamptz
 
   // Relations
   match  matches  @relation(fields: [match_id], references: [id])
@@ -212,13 +223,15 @@ model basketball_scores {
 }
 
 model football_scores {
-  id         BigInt   @id @unique @default(autoincrement())
-  match_id   BigInt
-  team_id    BigInt
-  player_id  BigInt
-  goals      BigInt
-  assists    BigInt
-  created_at DateTime @default(now()) @db.Timestamptz
+  id               BigInt   @id @unique @default(autoincrement())
+  match_id         BigInt
+  team_id          BigInt
+  player_id        BigInt
+  goals            BigInt
+  assists          BigInt
+  shots_on_target  BigInt   @default(0)
+  saves            BigInt   @default(0)
+  created_at       DateTime @default(now()) @db.Timestamptz
 
   // Relations
   match  matches @relation(fields: [match_id], references: [id])

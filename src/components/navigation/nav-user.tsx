@@ -6,6 +6,7 @@ import {
   IconLogout,
   IconNotification,
   IconUserCircle,
+  IconHome
 } from "@tabler/icons-react"
 
 import {
@@ -28,10 +29,13 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import Link from "next/link"
+import { createClient } from "@/utils/supabase/client";
+import { useRouter } from "next/navigation";
 
 export function NavUser({
   user,
-}: {
+}: {  
   user: {
     name: string
     email: string
@@ -39,7 +43,16 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
-
+  const supabase = createClient()
+  const router = useRouter()
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      router.push("/");
+    } catch (error) {
+      console.error("Error logging out:", error);
+    }
+  }
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -85,20 +98,15 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
-                <IconUserCircle />
-                Account
+               <Link href="/" className="flex text-sm align-start gap-2">
+                 <IconHome />
+                 Home
+                </Link>
+             
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <IconCreditCard />
-                Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <IconNotification />
-                Notifications
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
+                        </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}> 
               <IconLogout />
               Log out
             </DropdownMenuItem>

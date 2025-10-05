@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Navbar } from "@/components/Navbar"
+import { Navbar } from "@/components/navigation/Navbar"
 import Link from "next/link"
 import { Chrome } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"

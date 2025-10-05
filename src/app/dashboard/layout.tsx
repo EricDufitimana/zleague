@@ -1,8 +1,8 @@
 "use client";
 
 import { ReactNode } from "react";
-import { SportsSidebar } from "@/components/sports-sidebar";
-import { SportsHeader } from "@/components/sports-header";
+import { SportsSidebar } from "@/components/layout/sports-sidebar";
+import { SportsHeader } from "@/components/sports/sports-header";
 import {
   SidebarInset,
   SidebarProvider,

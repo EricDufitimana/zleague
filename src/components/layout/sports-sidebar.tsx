@@ -1,20 +1,20 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import {
-  IconChartBar,
-  IconDashboard,
-  IconHelp,
-  IconSettings,
   IconTrophy,
   IconCalendar,
+  IconChartBar,
+  IconSettings,
+  IconHome,
   IconTarget,
-  IconAward,
+  IconAward
 } from "@tabler/icons-react"
 
-import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
-import { NavUser } from "@/components/nav-user"
+import { NavMain } from "@/components/navigation/nav-main"
+import { NavSecondary } from "@/components/navigation/nav-secondary"
+import { NavUser } from "@/components/navigation/nav-user"
 import {
   Sidebar,
   SidebarContent,
@@ -24,7 +24,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import Link from "next/link"
 
 const data = {
   user: {
@@ -35,12 +34,12 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "/dashboard-01",
-      icon: IconDashboard,
+      url: "/dashboard",
+      icon: IconHome,
     },
     {
       title: "Championships",
-      url: "/dashboard-01/create-championship",
+      url: "/dashboard/create-championship", 
       icon: IconTrophy,
     },
     {
@@ -59,26 +58,10 @@ const data = {
       icon: IconAward,
     },
   ],
-  navSecondary: [
-    {
-      title: "Analytics",
-      url: "/dashboard/analytics",
-      icon: IconChartBar,
-    },
-    {
-      title: "Settings",
-      url: "/dashboard/settings",
-      icon: IconSettings,
-    },
-    {
-      title: "Help",
-      url: "/dashboard/help",
-      icon: IconHelp,
-    },
-  ],
+  
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function SportsSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -88,7 +71,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <Link href="/dashboard-01">
+              <Link href="/dashboard">
                 <IconTrophy className="!size-5" />
                 <span className="text-base font-semibold">ZLeague</span>
               </Link>
@@ -98,7 +81,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />
@@ -106,3 +88,4 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     </Sidebar>
   )
 }
+

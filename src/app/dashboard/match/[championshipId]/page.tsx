@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Trophy, Shuffle, RotateCcw, Check, X, Loader2, Users, Shield } from 'lucide-react';
+import { Trophy, Shuffle, Play, RotateCcw, Check, X, Loader2, ArrowLeft, Users, Shield, Trash2 } from 'lucide-react';
+import { ImprovedWheel } from '@/components/shared/ImprovedWheel';
+import '@/styles/fireworks.css';
 
 interface Championship {
   id: number;
@@ -24,6 +26,7 @@ interface Team {
 }
 
 interface Matchup {
+  id?: number;
   team1: Team;
   team2: Team;
   sport_type: string;
@@ -36,8 +39,8 @@ export default function MatchPage() {
   const championshipId = params.championshipId as string;
   
   const [championship, setChampionship] = useState<Championship | null>(null);
-  const [championships, setChampionships] = useState<Championship[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedGender, setSelectedGender] = useState<string>('all');
   const [selectedSportType, setSelectedSportType] = useState<string>('all');
   const [isSpinning, setIsSpinning] = useState(false);
@@ -50,6 +53,7 @@ export default function MatchPage() {
   const [spinCount, setSpinCount] = useState(0);
   const [pendingMatchup, setPendingMatchup] = useState<Matchup | null>(null);
   const [isCreatingMatch, setIsCreatingMatch] = useState(false);
+  const [currentPointerTeam, setCurrentPointerTeam] = useState<Team | null>(null);
   
   // Predefined matchup pairs
   const [predefinedPairs, setPredefinedPairs] = useState<Array<{teamA: Team, teamB: Team}>>([]);
@@ -61,60 +65,29 @@ export default function MatchPage() {
   
   // Wheel physics
   const friction = 0.991;
-  const angVelRef = useRef(0);
-  const angRef = useRef(0);
+  let angVel = 0;
+  let ang = 0;
   const TAU = 2 * Math.PI;
 
-  const fetchChampionships = useCallback(async () => {
-    try {
-      const response = await fetch('/api/championships');
-      if (response.ok) {
-        const data = await response.json();
-        setChampionships(data);
-      }
-    } catch (error) {
-      console.error('Error fetching championships:', error);
-    }
-  }, []);
-
-  const fetchChampionship = useCallback(async (id: string) => {
-    try {
-      const response = await fetch(`/api/championships/${id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setChampionship(data);
-      } else {
-        // If championship not found, redirect back to match index
-        router.push('/dashboard/match');
-      }
-    } catch (error) {
-      console.error('Error fetching championship:', error);
-      router.push('/dashboard/match');
-    }
-  }, [router]);
-
-  const fetchTeams = useCallback(async (championshipId: string) => {
-    try {
-      const response = await fetch(`/api/teams?championship_id=${championshipId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setTeams(data);
-        
-        // Fetch existing matches to filter out used teams
-        await fetchExistingMatches(championshipId, data);
-      }
-    } catch (error) {
-      console.error('Error fetching teams:', error);
-    }
-  }, []);
-
   useEffect(() => {
-    fetchChampionships();
-    if (championshipId) {
-      fetchChampionship(championshipId);
-      fetchTeams(championshipId);
-    }
-  }, [championshipId, fetchChampionships, fetchChampionship, fetchTeams]);
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        if (championshipId) {
+          await Promise.all([
+            fetchChampionship(championshipId),
+            fetchTeams(championshipId)
+          ]);
+        }
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadData();
+  }, [championshipId]);
 
   useEffect(() => {
     if (championshipId) {
@@ -123,25 +96,6 @@ export default function MatchPage() {
       setSelectedSportType('all');
     }
   }, [championshipId]);
-
-  const getWheelTeams = useCallback(() => (availableTeams.length > 0 ? availableTeams : teams), [availableTeams, teams]);
-
-  const initWheel = useCallback(() => {
-    if (!canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    ctxRef.current = ctx;
-    
-    // Set canvas size
-    canvas.width = 400;
-    canvas.height = 400;
-    
-    // Draw initial wheel
-    drawWheel();
-  }, []);
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -158,42 +112,14 @@ export default function MatchPage() {
         }
       }
     }
-  }, [availableTeams, teams, getWheelTeams, initWheel]);
-
-  const updateAvailableTeams = useCallback(() => {
-    const filteredTeams = filterAvailableTeams();
-    setAvailableTeams(filteredTeams);
-  }, [teams, selectedGender, selectedSportType, matchups]);
-
-  const setupBasketballPairs = useCallback((teams: Team[]) => {
-    if (selectedSportType === 'basketball') {
-      const thunderHawks = teams.find(team => team.name === 'Thunder Hawks');
-      const novaSharks = teams.find(team => team.name === 'Nova Sharks');
-      
-      if (thunderHawks && novaSharks) {
-        // Randomly decide when this pair should appear (1st, 2nd, 3rd, etc. - but not last)
-        const availableTeamCount = teams.length;
-        const maxPairs = Math.floor(availableTeamCount / 2);
-        // Don't let it be the last pair - choose randomly from 0 to maxPairs-2
-        const randomPairPosition = Math.floor(Math.random() * Math.max(1, maxPairs - 1));
-        
-        const pairs = [{ teamA: thunderHawks, teamB: novaSharks }];
-        setPredefinedPairs(pairs);
-        setCurrentPairIndex(-randomPairPosition); // Negative to track when to activate
-      }
-    } else {
-      // Clear pairs for non-basketball sports
-      setPredefinedPairs([]);
-      setCurrentPairIndex(0);
-    }
-  }, [selectedSportType]);
+  }, [availableTeams, teams]);
 
   useEffect(() => {
     if (teams.length > 0) {
       updateAvailableTeams();
       setupBasketballPairs(teams);
     }
-  }, [selectedGender, selectedSportType, teams, matchups, updateAvailableTeams, setupBasketballPairs]);
+  }, [selectedGender, selectedSportType, teams, matchups]);
 
   // Reset wheel state when sport type changes
   useEffect(() => {
@@ -208,22 +134,54 @@ export default function MatchPage() {
       if (canvasRef.current) {
         canvasRef.current.style.transform = 'rotate(0rad)';
       }
-      angRef.current = 0;
+      ang = 0;
       
       // Update available teams for the new sport
       updateAvailableTeams();
     }
-  }, [selectedSportType, updateAvailableTeams]);
+  }, [selectedSportType]);
 
+
+  const fetchChampionship = async (id: string) => {
+    try {
+      const response = await fetch(`/api/championships/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setChampionship(data);
+      } else {
+        // If championship not found, redirect back to match index
+        router.push('/dashboard/match');
+      }
+    } catch (error) {
+      console.error('Error fetching championship:', error);
+      router.push('/dashboard/match');
+    }
+  };
+
+  const fetchTeams = async (championshipId: string) => {
+    try {
+      const response = await fetch(`/api/teams?championship_id=${championshipId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setTeams(data);
+        
+        // Fetch existing matches to filter out used teams
+        await fetchExistingMatches(championshipId, data);
+      }
+    } catch (error) {
+      console.error('Error fetching teams:', error);
+    }
+  };
 
   const fetchExistingMatches = async (championshipId: string, allTeams: Team[]) => {
     try {
       const response = await fetch(`/api/matches?championship_id=${championshipId}`);
       if (response.ok) {
-        const matchesData = await response.json();
+        const responseData = await response.json();
+        const matchesData = responseData.matches || [];
         
         // Set existing matchups for display
-        const existingMatchups = matchesData.map((match: { team_a_id: number; team_b_id: number; sport_type: string; created_at: string; id: number }) => {
+        const existingMatchups = matchesData.map((match: any) => {
           const team1 = allTeams.find(t => t.id === match.team_a_id);
           const team2 = allTeams.find(t => t.id === match.team_b_id);
           return {
@@ -254,7 +212,7 @@ export default function MatchPage() {
   const filterAvailableTeams = () => {
     if (!teams.length) return [];
     
-    const filteredTeams = teams.filter(team => {
+    let filteredTeams = teams.filter(team => {
       // Filter by gender if selected (skip if "all" is selected)
       if (selectedGender && selectedGender !== 'all' && team.gender !== selectedGender) return false;
       return true;
@@ -277,6 +235,54 @@ export default function MatchPage() {
     return filteredTeams.filter(team => !usedTeamIds.has(team.id));
   };
 
+  const updateAvailableTeams = () => {
+    const filteredTeams = filterAvailableTeams();
+    setAvailableTeams(filteredTeams);
+  };
+
+  // Use available teams for the wheel (don't fall back to all teams to respect gender filter)
+  const getWheelTeams = () => availableTeams;
+
+  // Setup predefined pairs for basketball
+  const setupBasketballPairs = (teams: Team[]) => {
+    if (selectedSportType === 'basketball') {
+      const thunderHawks = teams.find(team => team.name === 'Thunder Hawks');
+      const novaSharks = teams.find(team => team.name === 'Nova Sharks');
+      
+      if (thunderHawks && novaSharks) {
+        // Randomly decide when this pair should appear (1st, 2nd, 3rd, etc. - but not last)
+        const availableTeamCount = teams.length;
+        const maxPairs = Math.floor(availableTeamCount / 2);
+        // Don't let it be the last pair - choose randomly from 0 to maxPairs-2
+        const randomPairPosition = Math.floor(Math.random() * Math.max(1, maxPairs - 1));
+        
+        const pairs = [{ teamA: thunderHawks, teamB: novaSharks }];
+        setPredefinedPairs(pairs);
+        setCurrentPairIndex(-randomPairPosition); // Negative to track when to activate
+      }
+    } else {
+      // Clear pairs for non-basketball sports
+      setPredefinedPairs([]);
+      setCurrentPairIndex(0);
+    }
+  };
+
+  const initWheel = () => {
+    if (!canvasRef.current) return;
+    
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    ctxRef.current = ctx;
+    
+    // Set canvas size
+    canvas.width = 400;
+    canvas.height = 400;
+    
+    // Draw initial wheel
+    drawWheel();
+  };
 
   const drawWheel = () => {
     const wheelTeams = getWheelTeams();
@@ -339,98 +345,121 @@ export default function MatchPage() {
 
 
 
-  const frame = useCallback(() => {
-    if (!angVelRef.current) return;
+  const frame = () => {
+    if (!angVel) return;
     
-    angVelRef.current *= friction;
+    angVel *= friction;
     
-    if (angVelRef.current < 0.002) {
-      angVelRef.current = 0;
-      setIsSpinning(false);
+    // Continuously track which team is under the pointer while spinning
+    const wheelTeams = getWheelTeams();
+    if (wheelTeams.length > 0) {
+      // Convert current angle to degrees
+      const currentAngleDegrees = (ang * 180 / Math.PI) % 360;
       
-      // Calculate which team is selected based on actual wheel position
-      const wheelTeams = getWheelTeams();
-      if (wheelTeams.length > 0) {
-        const normalizedAngle = (360 - (angRef.current * 180 / Math.PI) % 360) / 360;
-        let selectedIndex = Math.floor(normalizedAngle * wheelTeams.length);
-        selectedIndex = Math.max(0, Math.min(selectedIndex, wheelTeams.length - 1));
-        setSelectedTeam(wheelTeams[selectedIndex]);
-        
-        // Update pair index after second team selection in basketball
-        if (selectedSportType === 'basketball' && spinCount === 1 && predefinedPairs.length > 0) {
-          setCurrentPairIndex(prev => prev + 1);
-        }
+      // Calculate which sector the pointer is pointing to
+      // The wheel drawing uses: arc * i where arc = 2π / wheelTeams.length
+      // So sector 0 is from 0° to 45°, sector 1 is from 45° to 90°, etc.
+      const anglePerSector = 360 / wheelTeams.length;
+      
+      // The pointer is at the top (0°), so we need to find which sector
+      // is currently positioned at the top after the wheel has rotated
+      // Since the wheel rotates clockwise, we need to find which original sector
+      // is now at the top position
+      
+      // Method: Find which sector contains the current rotation angle
+      // But we need to account for the fact that the pointer is fixed at the top
+      let sectorIndex = Math.floor(currentAngleDegrees / anglePerSector);
+      
+      // Ensure the index is within bounds
+      sectorIndex = sectorIndex % wheelTeams.length;
+      if (sectorIndex < 0) sectorIndex += wheelTeams.length;
+      
+      const passingTeam = wheelTeams[sectorIndex];
+      if (passingTeam && passingTeam.id !== currentPointerTeam?.id) {
+        console.log('Team change:', {
+          angle: currentAngleDegrees.toFixed(1),
+          sectorIndex,
+          teamName: passingTeam.name,
+          totalTeams: wheelTeams.length,
+          calculation: `${currentAngleDegrees.toFixed(1)} / ${anglePerSector} = ${sectorIndex}`
+        });
+        setCurrentPointerTeam(passingTeam);
       }
     }
     
-    angRef.current += angVelRef.current;
-    angRef.current %= TAU;
+    if (angVel < 0.002) {
+      angVel = 0;
+      setIsSpinning(false);
+      
+      // Set the final selected team when wheel stops
+      setSelectedTeam(currentPointerTeam);
+      
+      // Update pair index after second team selection in basketball
+      if (selectedSportType === 'basketball' && spinCount === 1 && predefinedPairs.length > 0) {
+        setCurrentPairIndex(prev => prev + 1);
+      }
+    }
+    
+    ang += angVel;
+    ang %= TAU;
     
     if (canvasRef.current) {
-      canvasRef.current.style.transform = `rotate(${angRef.current}rad)`;
+      canvasRef.current.style.transform = `rotate(${ang}rad)`;
     }
     
-    if (angVelRef.current > 0) {
+    if (angVel > 0) {
       animationRef.current = requestAnimationFrame(frame);
     }
-  }, [getWheelTeams, selectedSportType, spinCount, predefinedPairs.length]);
+  }
 
-  const spinWheel = useCallback(() => {
+
+  const spinWheel = () => {
     // Don't allow spinning if gender or sport type is not selected
     if (selectedGender === 'all' || selectedSportType === 'all') return;
     
     const wheelTeams = getWheelTeams();
     if (wheelTeams.length === 0 || isSpinning) return;
     
+    // If only 2 teams remain, auto-assign them without spinning
+    if (wheelTeams.length === 2) {
+      const team1 = wheelTeams[0];
+      const team2 = wheelTeams[1];
+      
+      setFirstTeam(team1);
+      setSecondTeam(team2);
+      // Use selected sport type or default to basketball
+      const sport_type = (selectedSportType && selectedSportType !== 'all') ? selectedSportType : 'basketball';
+      setPendingMatchup({ team1, team2, sport_type });
+      setSpinCount(1); // Mark as completed
+      
+      // Clear available teams since we've used them all
+      setAvailableTeams([]);
+      
+      // Trigger fireworks for the auto-assignment
+      const pyroContainer = document.createElement("div");
+      pyroContainer.className = "pyro";
+      const beforeElement = document.createElement("div");
+      beforeElement.className = "before";
+      const afterElement = document.createElement("div");
+      afterElement.className = "after";
+      pyroContainer.appendChild(beforeElement);
+      pyroContainer.appendChild(afterElement);
+      document.body.appendChild(pyroContainer);
+      setTimeout(() => {
+        if (document.body.contains(pyroContainer)) {
+          document.body.removeChild(pyroContainer);
+        }
+      }, 4000);
+      
+      return;
+    }
+    
     setIsSpinning(true);
     
-    // Determine target team for basketball
-    let targetTeam: Team | null = null;
-    if (selectedSportType === 'basketball' && predefinedPairs.length > 0 && currentPairIndex === 0) {
-      const currentPair = predefinedPairs[0];
-      
-      if (spinCount === 0) {
-        // First spin - target Thunder Hawks
-        targetTeam = currentPair.teamA;
-      } else if (spinCount === 1 && firstTeam) {
-        // Second spin - target Nova Sharks
-        if (firstTeam.id === currentPair.teamA.id) {
-          targetTeam = currentPair.teamB;
-        } else if (firstTeam.id === currentPair.teamB.id) {
-          targetTeam = currentPair.teamA;
-        }
-      }
-    }
-    
-    if (targetTeam) {
-      // Calculate the angle needed to land on target team
-      const targetIndex = wheelTeams.findIndex(team => team.id === targetTeam!.id);
-      if (targetIndex !== -1) {
-        const arc = (2 * Math.PI) / wheelTeams.length;
-        const targetAngle = (targetIndex * arc) + (arc / 2);
-        
-        // Add 3-6 full rotations for realistic effect (faster spinning)
-        const fullRotations = Math.floor(Math.random() * 4) + 3;
-        const totalTargetAngle = (fullRotations * 2 * Math.PI) + targetAngle;
-        
-        // Calculate velocity needed to reach target using friction physics
-        // Using: finalAngle = initialAngle + (initialVel / (1-friction))
-        const neededDistance = totalTargetAngle - angRef.current;
-        angVelRef.current = neededDistance * (1 - friction) * 1.2; // Increased multiplier for faster spin
-      } else {
-        // Fallback to random if target not found
-        angVelRef.current = Math.random() * 0.2 + 0.25;
-      }
-    } else {
-      // Normal random spin for non-basketball or other teams (faster)
-      angVelRef.current = Math.random() * 0.3 + 0.4; // Increased base velocity
-    }
-    
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-    }
-    animationRef.current = requestAnimationFrame(frame);
-  }, [selectedGender, selectedSportType, getWheelTeams, isSpinning, predefinedPairs, currentPairIndex, spinCount, firstTeam, frame]);
+    // The ImprovedWheel component handles its own spinning logic
+    // We just need to trigger it by calling the wheel's spin function
+    // This will be handled by the ImprovedWheel component's onClick
+  };
 
   const confirmMatchup = async () => {
     if (pendingMatchup && championshipId) {
@@ -477,7 +506,7 @@ export default function MatchPage() {
           if (canvasRef.current) {
             canvasRef.current.style.transform = 'rotate(0rad)';
           }
-          angRef.current = 0;
+          ang = 0;
         } else {
           const errorData = await response.json();
           console.error('Error creating match:', errorData);
@@ -529,15 +558,15 @@ export default function MatchPage() {
     if (canvasRef.current) {
       canvasRef.current.style.transform = 'rotate(0rad)';
     }
-    angRef.current = 0;
+    ang = 0;
   };
 
-  const resetWheel = useCallback(() => {
+  const resetWheel = () => {
     if (animationRef.current) {
       cancelAnimationFrame(animationRef.current);
     }
-    angVelRef.current = 0;
-    angRef.current = 0;
+    angVel = 0;
+    ang = 0;
     setMatchups([]);
     setCurrentMatchup(null);
     setSelectedTeam(null);
@@ -553,13 +582,8 @@ export default function MatchPage() {
     if (canvasRef.current) {
       canvasRef.current.style.transform = 'rotate(0rad)';
     }
-  }, [championshipId, teams]);
-
-  const handleChampionshipChange = (newChampionshipId: string) => {
-    if (newChampionshipId !== championshipId) {
-      router.push(`/dashboard/match/${newChampionshipId}`);
-    }
   };
+
 
   const getAvailableTeamsCount = () => {
     return availableTeams.length;
@@ -605,6 +629,26 @@ export default function MatchPage() {
     }
   };
 
+  const deleteMatchup = async (matchupId: number) => {
+    if (!matchupId) return;
+    
+    try {
+      const response = await fetch(`/api/matches?match_id=${matchupId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Remove the matchup from the local state
+        setMatchups(prevMatchups => prevMatchups.filter(matchup => matchup.id !== matchupId));
+        console.log('Matchup deleted successfully');
+      } else {
+        console.error('Failed to delete matchup');
+      }
+    } catch (error) {
+      console.error('Error deleting matchup:', error);
+    }
+  };
+
   const nextMatchup = () => {
     const currentSportMatchups = getCurrentSportMatchups();
     if (currentSportMatchups.length === 0) return;
@@ -638,6 +682,21 @@ export default function MatchPage() {
     };
   }, []);
 
+  // Show loading state while data is being fetched
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-3">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <p className="text-lg font-medium text-gray-600">Loading championship data...</p>
+            <p className="text-sm text-gray-500">Fetching teams and match information</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-3">
       {/* Page Header with Championship Filter */}
@@ -648,25 +707,20 @@ export default function MatchPage() {
         </div>
         
         <div className="flex flex-col items-start gap-2">
-          <Label htmlFor="championship" className="text-sm font-medium">Championship</Label>
-          <Select value={championshipId} onValueChange={handleChampionshipChange}>
-            <SelectTrigger className="w-64 bg-white">
-              <SelectValue placeholder="Choose a championship" />
-            </SelectTrigger>
-            <SelectContent>
-              {championships.length === 0 ? (
-                <SelectItem value="loading" disabled>
-                  Loading championships...
-                </SelectItem>
-              ) : (
-                championships.map((champ) => (
-                  <SelectItem key={champ.id} value={champ.id.toString()}>
-                    {champ.name}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
+          <Button 
+            variant="outline" 
+            onClick={() => router.push('/dashboard/match')}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Matches
+          </Button>
+          {championship && (
+            <div className="text-right">
+              <p className="text-sm font-medium text-gray-600">Current Championship</p>
+              <p className="text-lg font-semibold text-gray-900">{championship.name}</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -760,15 +814,51 @@ export default function MatchPage() {
               <CardContent className="flex w-full pt-4 items-center justify-center">
                 {getWheelTeams().length >= 1 ? (
                   <div className="flex flex-col items-center">
-                    <div className="relative inline-block overflow-hidden rounded-full">
-                      <canvas
-                        ref={canvasRef}
-                        className="block"
-                        style={{ transform: 'rotate(0rad)' }}
-                      />
-                      {/* Top Pointer */}
-                      <div className="absolute top-0 left-1/2 w-0 h-0 border-l-8 border-r-8 border-b-16 border-l-transparent border-r-transparent border-b-white transform -translate-x-1/2 z-30"></div>
+                    {/* Live team display above the wheel */}
+                    <div className="text-center mb-4">
+                      {selectedTeam ? (
+                        <div className="bg-green-100 border border-green-300 rounded-lg px-4 py-2">
+                          <span className="text-lg font-bold text-green-700">
+                            {selectedTeam.name}
+                          </span>
+                          <div className="text-xs text-green-600 mt-1">
+                            {isSpinning ? 'Spinning...' : 'Selected!'}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-500 text-sm">Click wheel to spin and select a team</span>
+                      )}
                     </div>
+                    
+                    {/* Improved Wheel Component */}
+                    <ImprovedWheel
+                      teams={getWheelTeams()}
+                      isSpinning={isSpinning}
+                      onSelectWinner={(winner) => {
+                        // Just set the selected team - let user manually choose to set 1st or 2nd team
+                        setSelectedTeam(winner);
+                        
+                        // Trigger fireworks
+                        const pyroContainer = document.createElement("div");
+                        pyroContainer.className = "pyro";
+                        const beforeElement = document.createElement("div");
+                        beforeElement.className = "before";
+                        const afterElement = document.createElement("div");
+                        afterElement.className = "after";
+                        pyroContainer.appendChild(beforeElement);
+                        pyroContainer.appendChild(afterElement);
+                        document.body.appendChild(pyroContainer);
+                        setTimeout(() => {
+                          if (document.body.contains(pyroContainer)) {
+                            document.body.removeChild(pyroContainer);
+                          }
+                        }, 4000);
+                      }}
+                      onSpinComplete={() => {
+                        setIsSpinning(false);
+                      }}
+                    />
+                    
                     {/* Spin / Reset under the wheel */}
                     <div className="mt-4 flex items-center justify-center gap-3">
                       <Button
@@ -778,7 +868,9 @@ export default function MatchPage() {
                         size="sm"
                       >
                         <Shuffle className="w-4 h-4 mr-2" />
-                        {isSpinning ? 'Spinning...' : spinCount === 0 ? 'Spin for First' : 'Spin for Second'}
+                        {isSpinning ? 'Spinning...' : 
+                         getWheelTeams().length === 2 ? 'Auto-Assign Final Match' :
+                         spinCount === 0 ? 'Spin for First' : 'Spin for Second'}
                       </Button>
                       <Button onClick={resetWheel} variant="outline" size="sm">
                         <RotateCcw className="w-4 h-4 mr-2" />
@@ -908,6 +1000,7 @@ export default function MatchPage() {
                           <th scope="col" className="px-4 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Sport</th>
                           <th scope="col" className="px-4 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Status</th>
                           <th scope="col" className="px-4 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                          <th scope="col" className="px-4 py-2 text-center text-[10px] font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
@@ -925,6 +1018,18 @@ export default function MatchPage() {
                             <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-500">{matchup.sport_type.charAt(0).toUpperCase() + matchup.sport_type.slice(1)}</td>
                             <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-500">Confirmed</td>
                             <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-500">{matchup.created_at ? new Date(matchup.created_at).toLocaleDateString() : 'Today'}</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-center">
+                              {matchup.id && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => deleteMatchup(matchup.id!)}
+                                  className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>

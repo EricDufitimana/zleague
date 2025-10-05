@@ -175,7 +175,8 @@ export default function MatchPage() {
     try {
       const response = await fetch(`/api/matches?championship_id=${championshipId}`);
       if (response.ok) {
-        const matchesData = await response.json();
+        const responseData = await response.json();
+        const matchesData = responseData.matches || [];
         
         // Set existing matchups for display
         const existingMatchups = matchesData.map((match: any) => {
@@ -416,6 +417,40 @@ export default function MatchPage() {
     
     const wheelTeams = getWheelTeams();
     if (wheelTeams.length === 0 || isSpinning) return;
+    
+    // If only 2 teams remain, auto-assign them without spinning
+    if (wheelTeams.length === 2) {
+      const team1 = wheelTeams[0];
+      const team2 = wheelTeams[1];
+      
+      setFirstTeam(team1);
+      setSecondTeam(team2);
+      // Use selected sport type or default to basketball
+      const sport_type = (selectedSportType && selectedSportType !== 'all') ? selectedSportType : 'basketball';
+      setPendingMatchup({ team1, team2, sport_type });
+      setSpinCount(1); // Mark as completed
+      
+      // Clear available teams since we've used them all
+      setAvailableTeams([]);
+      
+      // Trigger fireworks for the auto-assignment
+      const pyroContainer = document.createElement("div");
+      pyroContainer.className = "pyro";
+      const beforeElement = document.createElement("div");
+      beforeElement.className = "before";
+      const afterElement = document.createElement("div");
+      afterElement.className = "after";
+      pyroContainer.appendChild(beforeElement);
+      pyroContainer.appendChild(afterElement);
+      document.body.appendChild(pyroContainer);
+      setTimeout(() => {
+        if (document.body.contains(pyroContainer)) {
+          document.body.removeChild(pyroContainer);
+        }
+      }, 4000);
+      
+      return;
+    }
     
     setIsSpinning(true);
     
@@ -774,6 +809,30 @@ export default function MatchPage() {
                       isSpinning={isSpinning}
                       onSelectWinner={(winner) => {
                         setSelectedTeam(winner);
+                        
+                        // Check if only 2 teams remain - auto-assign them
+                        const currentAvailableTeams = getWheelTeams();
+                        if (currentAvailableTeams.length === 2) {
+                          // Auto-assign the last two teams
+                          const team1 = winner;
+                          const team2 = currentAvailableTeams.find(t => t.id !== winner.id);
+                          
+                          if (team2) {
+                            setFirstTeam(team1);
+                            setSecondTeam(team2);
+                            // Use selected sport type or default to basketball
+                            const sport_type = (selectedSportType && selectedSportType !== 'all') ? selectedSportType : 'basketball';
+                            setPendingMatchup({ team1, team2, sport_type });
+                            setSpinCount(1); // Mark as completed
+                            
+                            // Clear available teams since we've used them all
+                            setAvailableTeams([]);
+                          }
+                        } else {
+                          // Normal flow - call handleTeamSelection
+                          handleTeamSelection(winner);
+                        }
+                        
                         // Trigger fireworks
                         const pyroContainer = document.createElement("div");
                         pyroContainer.className = "pyro";
@@ -804,7 +863,9 @@ export default function MatchPage() {
                         size="sm"
                       >
                         <Shuffle className="w-4 h-4 mr-2" />
-                        {isSpinning ? 'Spinning...' : spinCount === 0 ? 'Spin for First' : 'Spin for Second'}
+                        {isSpinning ? 'Spinning...' : 
+                         getWheelTeams().length === 2 ? 'Auto-Assign Final Match' :
+                         spinCount === 0 ? 'Spin for First' : 'Spin for Second'}
                       </Button>
                       <Button onClick={resetWheel} variant="outline" size="sm">
                         <RotateCcw className="w-4 h-4 mr-2" />

@@ -21,7 +21,22 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    console.log('Supabase client created, attempting to insert football scores...');
+    console.log('Supabase client created, checking for existing scores...');
+
+    // Delete existing scores for this match (to allow updates)
+    const { error: deleteError } = await supabase
+      .from('football_scores')
+      .delete()
+      .eq('match_id', match_id);
+
+    if (deleteError) {
+      console.error('Error deleting existing scores:', deleteError);
+      // Continue anyway - might be first time recording
+    } else {
+      console.log('Existing scores deleted successfully');
+    }
+
+    console.log('Attempting to insert football scores...');
 
     // Insert all scores (team and individual player scores)
     const { data: insertedScores, error } = await supabase
@@ -31,6 +46,8 @@ export async function POST(request: NextRequest) {
         team_id: score.team_id,
         goals: score.goals,
         assists: score.assists,
+        shots_on_target: score.shots_on_target || 0,
+        saves: score.saves || 0,
         player_id: score.player_id || null,
         created_at: new Date().toISOString()
       })))

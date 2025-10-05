@@ -7,12 +7,25 @@ const TOURNAMENT_STATUSES = {
   girls: ['preliminary', 'quarter-finals', 'semi-finals', 'finals']
 };
 
+// Helper function to convert between match gender (boys/girls) and team gender (male/female)
+function matchGenderToTeamGender(matchGender: 'boys' | 'girls'): 'male' | 'female' {
+  return matchGender === 'boys' ? 'male' : 'female';
+}
+
+function teamGenderToMatchGender(teamGender: 'male' | 'female'): 'boys' | 'girls' {
+  return teamGender === 'male' ? 'boys' : 'girls';
+}
+
 function getNextStatus(currentStatus: string, gender: 'boys' | 'girls'): string | null {
   const statuses = TOURNAMENT_STATUSES[gender];
   const currentIndex = statuses.indexOf(currentStatus);
   return currentIndex !== -1 && currentIndex < statuses.length - 1 
     ? statuses[currentIndex + 1] 
     : null;
+}
+
+function isFinalRound(status: string): boolean {
+  return status === 'finals';
 }
 
 async function findOrCreateNextMatch(
@@ -35,34 +48,22 @@ async function findOrCreateNextMatch(
   try {
     console.log(`Finding/creating next match: ${current_status} → ${nextStatus} for ${gender}`);
     
-    // Build the correct stage field name and filter
+    // Build the correct stage field name
     const stageField = gender === 'boys' ? 'boys_stage_groups' : 'girls_stage_groups';
     
-    // Look for existing matches in the next round that have space
-    const { data: existingMatches, error: searchError } = await supabase
+    // Step 1: Get all existing next round matches
+    const { data: existingNextMatches, error: searchError } = await supabase
       .from('matches')
       .select('id, team_a_id, team_b_id, next_match_id')
       .eq('championship_id', championship_id)
       .eq('sport_type', sport_type)
-      .eq(stageField, nextStatus)
-      .or('team_a_id.is.null,team_b_id.is.null');
+      .eq(stageField, nextStatus);
 
     if (searchError) {
-      console.error('Error searching for existing matches:', searchError);
-    } else if (existingMatches && existingMatches.length > 0) {
-      // Find match with available slot
-      const availableMatch = existingMatches.find(match => 
-        !match.team_a_id || !match.team_b_id
-      );
-      
-      if (availableMatch) {
-        console.log(`Found available next match: ${availableMatch.id}`);
-        return availableMatch.id.toString();
-      }
+      console.error('Error searching for existing next matches:', searchError);
     }
 
-    // Check how many matches are already pointing to each next_match_id
-    // to find matches that only have 1 feeder (and can accept another)
+    // Step 2: Get all current round matches to count their next_match_id references
     const { data: allCurrentRoundMatches, error: allMatchesError } = await supabase
       .from('matches')
       .select('id, next_match_id')
@@ -71,32 +72,90 @@ async function findOrCreateNextMatch(
       .eq(stageField, current_status)
       .not('next_match_id', 'is', null);
 
-    if (!allMatchesError && allCurrentRoundMatches) {
-      // Count how many matches point to each next_match_id
-      const nextMatchCounts = new Map<string, number>();
+    if (allMatchesError) {
+      console.error('Error fetching current round matches:', allMatchesError);
+    }
+
+    // Step 3: Count how many current round matches point to each next_match_id
+    const nextMatchCounts = new Map<string, number>();
+    if (allCurrentRoundMatches) {
       allCurrentRoundMatches.forEach(match => {
         if (match.next_match_id) {
           const id = match.next_match_id.toString();
           nextMatchCounts.set(id, (nextMatchCounts.get(id) || 0) + 1);
         }
       });
-
-      console.log('Next match usage:', Object.fromEntries(nextMatchCounts));
-
-      // Find a next match that only has 1 match pointing to it
-      for (const [nextMatchId, count] of nextMatchCounts.entries()) {
-        if (count === 1) {
-          console.log(`Reusing next match ${nextMatchId} (currently has ${count} feeder)`);
-          return nextMatchId;
-        }
-      }
     }
 
-    // No suitable match found, create a new one
+    console.log('Next match usage counts:', Object.fromEntries(nextMatchCounts));
+
+    // Step 4: Special handling for finals - there should only be ONE finals match
+    if (isFinalRound(nextStatus)) {
+      if (existingNextMatches && existingNextMatches.length > 0) {
+        const finalsMatch = existingNextMatches[0];
+        const currentCount = nextMatchCounts.get(finalsMatch.id.toString()) || 0;
+        
+        if (currentCount < 2) {
+          console.log(`Found THE finals match ${finalsMatch.id} with ${currentCount} feeders - using it`);
+          return finalsMatch.id.toString();
+        } else {
+          console.log(`Finals match already has 2 feeders - cannot add more`);
+          return null;
+        }
+      }
+      
+      // No finals match exists, create THE ONLY finals match
+      console.log(`Creating THE finals match for ${gender}`);
+      const insertData: any = {
+        championship_id: parseInt(championship_id),
+        sport_type: sport_type,
+        status: 'not_yet_scheduled',
+        team_a_id: null,
+        team_b_id: null,
+        next_match_id: null, // Finals has no next match
+      };
+
+      if (gender === 'boys') {
+        insertData.boys_stage_groups = nextStatus;
+      } else {
+        insertData.girls_stage_groups = nextStatus;
+      }
+
+      const { data: newFinalsMatch, error: createError } = await supabase
+        .from('matches')
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Error creating finals match:', createError);
+        return null;
+      }
+
+      console.log(`Created THE finals match: ${newFinalsMatch.id}`);
+      return newFinalsMatch.id.toString();
+    }
+
+    // Step 5: For non-finals rounds, find a next match with less than 2 feeders
+    if (existingNextMatches && existingNextMatches.length > 0) {
+      for (const nextMatch of existingNextMatches) {
+        const matchId = nextMatch.id.toString();
+        const currentCount = nextMatchCounts.get(matchId) || 0;
+        
+        if (currentCount < 2) {
+          console.log(`Found next match ${matchId} with ${currentCount} feeders - can accept one more`);
+          return matchId;
+        }
+      }
+      
+      console.log('All existing next matches are full (have 2 feeders each)');
+    }
+
+    // Step 6: No suitable match found, create a new one
     console.log(`Creating new ${nextStatus} match for ${gender}`);
     
-    // Recursively create the next match's next match (if not final)
-    const subsequentMatchId = nextStatus !== 'finals' 
+    // Recursively create the next match's next match (if not finals)
+    const subsequentMatchId = !isFinalRound(nextStatus)
       ? await findOrCreateNextMatch(championship_id, sport_type, gender, nextStatus)
       : null;
 
@@ -135,6 +194,80 @@ async function findOrCreateNextMatch(
   }
 }
 
+async function validateTournamentIntegrity(
+  supabase: any,
+  championship_id: string,
+  sport_type: string,
+  gender: 'boys' | 'girls'
+): Promise<{ valid: boolean; issues: string[] }> {
+  const issues: string[] = [];
+  const stageField = gender === 'boys' ? 'boys_stage_groups' : 'girls_stage_groups';
+
+  try {
+    // Check 1: Ensure only ONE finals match exists
+    const { data: finalsMatches } = await supabase
+      .from('matches')
+      .select('id')
+      .eq('championship_id', championship_id)
+      .eq('sport_type', sport_type)
+      .eq(stageField, 'finals');
+
+    if (finalsMatches && finalsMatches.length > 1) {
+      issues.push(`Multiple finals matches found (${finalsMatches.length}) - there should only be ONE`);
+    }
+
+    // Check 2: Ensure no match has more than 2 feeders
+    const { data: allMatches } = await supabase
+      .from('matches')
+      .select('id, next_match_id')
+      .eq('championship_id', championship_id)
+      .eq('sport_type', sport_type)
+      .not('next_match_id', 'is', null);
+
+    if (allMatches) {
+      const nextMatchCounts = new Map<string, number>();
+      allMatches.forEach((match: any) => {
+        if (match.next_match_id) {
+          const id = match.next_match_id.toString();
+          nextMatchCounts.set(id, (nextMatchCounts.get(id) || 0) + 1);
+        }
+      });
+
+      for (const [matchId, count] of nextMatchCounts.entries()) {
+        if (count > 2) {
+          issues.push(`Match ${matchId} has ${count} feeders - should have at most 2`);
+        }
+      }
+    }
+
+    // Check 3: Ensure finals matches have no next_match_id
+    if (finalsMatches) {
+      for (const finalsMatch of finalsMatches) {
+        const { data: matchData } = await supabase
+          .from('matches')
+          .select('next_match_id')
+          .eq('id', finalsMatch.id)
+          .single();
+
+        if (matchData && matchData.next_match_id !== null) {
+          issues.push(`Finals match ${finalsMatch.id} has a next_match_id - finals should not have next matches`);
+        }
+      }
+    }
+
+    return {
+      valid: issues.length === 0,
+      issues
+    };
+  } catch (error) {
+    console.error('Error validating tournament integrity:', error);
+    return {
+      valid: false,
+      issues: ['Failed to validate tournament integrity']
+    };
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -145,11 +278,14 @@ export async function POST(request: NextRequest) {
       team_b_id, 
       championship_id, 
       sport_type, 
-      status = 'not_yet_scheduled',
       gender = 'boys',
       boys_stage_groups = 'preliminary',
       girls_stage_groups = 'preliminary'
     } = body;
+
+    // Always set status to not_yet_scheduled for new matches
+    const finalStatus = 'not_yet_scheduled';
+    console.log('🔒 Setting status to:', finalStatus, '(always not_yet_scheduled for new matches)');
 
     if (!team_a_id || !team_b_id || !championship_id || !sport_type || !gender) {
       console.log('Missing required fields:', { team_a_id, team_b_id, championship_id, sport_type, gender });
@@ -175,21 +311,46 @@ export async function POST(request: NextRequest) {
       // Get the current stage based on gender
       const currentStage = gender === 'boys' ? boys_stage_groups : girls_stage_groups;
       
-      // Find or create the next match
-      const nextMatchId = await findOrCreateNextMatch(
-        championship_id, 
-        sport_type, 
-        gender, 
-        currentStage
-      );
+      // Validate that the stage is valid for the gender
+      const validStages = TOURNAMENT_STATUSES[gender as 'boys' | 'girls'];
+      if (!validStages.includes(currentStage)) {
+        return NextResponse.json(
+          { error: `Invalid stage "${currentStage}" for ${gender}. Valid stages: ${validStages.join(', ')}` },
+          { status: 400 }
+        );
+      }
 
-      // Prepare insert data
+      // Check if this is a finals match - finals matches should not have next_match_id
+      const isFinals = isFinalRound(currentStage);
+      let nextMatchId: string | null = null;
+
+      if (!isFinals) {
+        // Find or create the next match
+        nextMatchId = await findOrCreateNextMatch(
+          championship_id, 
+          sport_type, 
+          gender, 
+          currentStage
+        );
+
+        if (!nextMatchId && getNextStatus(currentStage, gender) !== null) {
+          return NextResponse.json(
+            { error: 'Failed to create or find next match. The tournament bracket may be full.' },
+            { status: 500 }
+          );
+        }
+      } else {
+        console.log('Creating finals match - no next match needed');
+      }
+
+      // Prepare insert data - always set status to not_yet_scheduled for new matches
       const insertData: any = {
         team_a_id: parseInt(team_a_id),
         team_b_id: parseInt(team_b_id),
         championship_id: parseInt(championship_id),
         sport_type: sport_type,
-        status: status,
+        gender: matchGenderToTeamGender(gender), // Convert boys/girls to male/female
+        status: finalStatus, // Always 'not_yet_scheduled' for new matches
         next_match_id: nextMatchId ? parseInt(nextMatchId) : null,
       };
 
@@ -216,13 +377,26 @@ export async function POST(request: NextRequest) {
       }
 
       console.log('Match created successfully:', match);
-      console.log(`Linked to next match ID: ${nextMatchId}`);
+      console.log(`Linked to next match ID: ${nextMatchId || 'none (finals)'}`);
+
+      // Validate tournament integrity after creation
+      const validation = await validateTournamentIntegrity(
+        supabase,
+        championship_id,
+        sport_type,
+        gender
+      );
+
+      if (!validation.valid) {
+        console.warn('Tournament integrity issues detected:', validation.issues);
+      }
 
       return NextResponse.json(
         { 
           message: 'Match created successfully',
           match,
-          next_match_id: nextMatchId
+          next_match_id: nextMatchId,
+          integrity_check: validation
         },
         { status: 201 }
       );
@@ -250,13 +424,19 @@ export async function GET(request: NextRequest) {
     const gender = searchParams.get('gender');
     const boys_stage_groups = searchParams.get('boys_stage_groups');
     const girls_stage_groups = searchParams.get('girls_stage_groups');
+    const validate = searchParams.get('validate') === 'true';
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    let query = supabase.from('matches').select('*');
+    let query = supabase.from('matches').select(`
+      *,
+      teamA:teams!team_a_id(id, name, grade, gender),
+      teamB:teams!team_b_id(id, name, grade, gender),
+      championship:championships(id, name, status)
+    `);
 
     if (championship_id) {
       query = query.eq('championship_id', championship_id);
@@ -267,11 +447,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (gender) {
-      if (gender === 'boys') {
-        query = query.not('boys_stage_groups', 'is', null);
-      } else if (gender === 'girls') {
-        query = query.not('girls_stage_groups', 'is', null);
-      }
+      query = query.eq('gender', gender);
     }
 
     if (boys_stage_groups) {
@@ -294,7 +470,24 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(matches);
+    // Optionally validate tournament integrity
+    let validation = null;
+    if (validate && championship_id && gender) {
+      const sport_type = matches?.[0]?.sport_type;
+      if (sport_type) {
+        validation = await validateTournamentIntegrity(
+          supabase,
+          championship_id,
+          sport_type,
+          gender as 'boys' | 'girls'
+        );
+      }
+    }
+
+    return NextResponse.json({
+      matches,
+      ...(validation && { integrity_check: validation })
+    });
   } catch (error) {
     console.error('Error in GET matches:', error);
     return NextResponse.json(
@@ -336,6 +529,17 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
+      // Validate winner is one of the teams in the match
+      if (winner_id !== undefined) {
+        const winnerId = parseInt(winner_id);
+        if (winnerId !== currentMatch.team_a_id && winnerId !== currentMatch.team_b_id) {
+          return NextResponse.json(
+            { error: 'Winner must be one of the teams in the match' },
+            { status: 400 }
+          );
+        }
+      }
+
       // Build update object
       const updateData: any = {};
       
@@ -374,6 +578,35 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
+      // If winner is set, update prediction scores
+      if (winner_id !== undefined) {
+        console.log(`Updating prediction scores for match ${match_id} with winner ${winner_id}`);
+        
+        // Get all predictions for this match
+        const { data: predictions, error: fetchPredictionsError } = await supabase
+          .from('predictions')
+          .select('id, predicted_winner_id')
+          .eq('match_id', match_id);
+
+        if (fetchPredictionsError) {
+          console.error('Error fetching predictions:', fetchPredictionsError);
+        } else if (predictions) {
+          // Update each prediction with correct/incorrect status
+          for (const prediction of predictions) {
+            const isCorrect = prediction.predicted_winner_id === parseInt(winner_id);
+            const { error: updateError } = await supabase
+              .from('predictions')
+              .update({ is_correct: isCorrect })
+              .eq('id', prediction.id);
+
+            if (updateError) {
+              console.error('Error updating prediction:', updateError);
+            }
+          }
+          console.log(`Updated ${predictions.length} predictions`);
+        }
+      }
+
       // If winner set and next match exists, advance the winner
       if (winner_id && currentMatch.next_match_id) {
         const { data: nextMatch, error: nextMatchError } = await supabase
@@ -387,10 +620,19 @@ export async function PATCH(request: NextRequest) {
           
           if (!nextMatch.team_a_id) {
             updateNextMatch.team_a_id = parseInt(winner_id);
+            console.log(`Advancing winner ${winner_id} to team_a_id of next match ${currentMatch.next_match_id}`);
           } else if (!nextMatch.team_b_id) {
             updateNextMatch.team_b_id = parseInt(winner_id);
+            console.log(`Advancing winner ${winner_id} to team_b_id of next match ${currentMatch.next_match_id}`);
           } else {
-            console.log('Warning: Next match already has both teams assigned');
+            console.warn('Warning: Next match already has both teams assigned');
+            return NextResponse.json(
+              { 
+                message: 'Match updated successfully but winner could not be advanced - next match is full',
+                match: updatedMatch 
+              },
+              { status: 200 }
+            );
           }
 
           if (Object.keys(updateNextMatch).length > 0) {
@@ -401,6 +643,14 @@ export async function PATCH(request: NextRequest) {
 
             if (advanceError) {
               console.error('Error advancing winner to next match:', advanceError);
+              return NextResponse.json(
+                { 
+                  message: 'Match updated successfully but failed to advance winner',
+                  match: updatedMatch,
+                  error: advanceError.message
+                },
+                { status: 200 }
+              );
             } else {
               console.log(`Winner ${winner_id} advanced to next match ${currentMatch.next_match_id}`);
             }
@@ -426,6 +676,57 @@ export async function PATCH(request: NextRequest) {
     console.error('Unexpected error in PATCH /api/matches:', error);
     return NextResponse.json(
       { error: 'Failed to update match', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  console.log('🗑️ Match deletion request received');
+  
+  try {
+    const { searchParams } = new URL(request.url);
+    const match_id = searchParams.get('match_id');
+    
+    console.log('📦 Match ID:', match_id);
+
+    if (!match_id) {
+      console.log('❌ Validation failed: Match ID is required');
+      return NextResponse.json(
+        { error: 'Match ID is required' },
+        { status: 400 }
+      );
+    }
+
+    console.log('🔧 Creating Supabase admin client...');
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    console.log('💾 Deleting match from database...');
+    const { error } = await supabase
+      .from('matches')
+      .delete()
+      .eq('id', match_id);
+
+    if (error) {
+      console.error('❌ Database error:', error);
+      return NextResponse.json(
+        { error: 'Failed to delete match', details: error.message },
+        { status: 500 }
+      );
+    }
+
+    console.log('✅ Match deleted successfully');
+    return NextResponse.json(
+      { message: 'Match deleted successfully' },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('💥 Unexpected error in match deletion:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete match', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

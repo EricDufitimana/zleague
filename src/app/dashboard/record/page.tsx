@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Trophy, Calendar, Users, Target, CheckCircle, AlertCircle, Clock, BarChart3 } from "lucide-react";
+import { Trophy, Calendar, Users, Target, CheckCircle, AlertCircle, Clock, BarChart3, Loader2 } from "lucide-react";
 
 interface Championship {
   id: number;
@@ -38,11 +38,18 @@ interface Match {
   championship: Championship;
 }
 
+interface MatchWithScores extends Match {
+  team_a_score?: number;
+  team_b_score?: number;
+}
+
 interface BasketballScore {
   team_id: number;
   points: number;
   rebounds: number;
   assists: number;
+  three_points_made?: number;
+  three_points_attempted?: number;
   player_id?: number;
 }
 
@@ -50,6 +57,8 @@ interface FootballScore {
   team_id: number;
   goals: number;
   assists: number;
+  shots_on_target?: number;
+  saves?: number;
   player_id?: number;
 }
 
@@ -64,6 +73,7 @@ export default function RecordPage() {
   const [championships, setChampionships] = useState<Championship[]>([]);
   const [selectedChampionship, setSelectedChampionship] = useState<string>("");
   const [matches, setMatches] = useState<Match[]>([]);
+  const [matchesWithScores, setMatchesWithScores] = useState<MatchWithScores[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<string>("");
   const [selectedMatchData, setSelectedMatchData] = useState<Match | null>(null);
   const [winningTeam, setWinningTeam] = useState<string>("");
@@ -85,16 +95,16 @@ export default function RecordPage() {
   });
   
   const [individualStats, setIndividualStats] = useState<{
-    teamA: Array<{ player_id: number; points: number; rebounds: number; assists: number }>;
-    teamB: Array<{ player_id: number; points: number; rebounds: number; assists: number }>;
+    teamA: Array<{ player_id: number; points: number; rebounds: number; assists: number; three_points_made: number; three_points_attempted: number }>;
+    teamB: Array<{ player_id: number; points: number; rebounds: number; assists: number; three_points_made: number; three_points_attempted: number }>;
   }>({
     teamA: [],
     teamB: []
   });
   
   const [footballIndividualStats, setFootballIndividualStats] = useState<{
-    teamA: Array<{ player_id: number; goals: number; assists: number }>;
-    teamB: Array<{ player_id: number; goals: number; assists: number }>;
+    teamA: Array<{ player_id: number; goals: number; assists: number; shots_on_target: number; saves: number }>;
+    teamB: Array<{ player_id: number; goals: number; assists: number; shots_on_target: number; saves: number }>;
   }>({
     teamA: [],
     teamB: []
@@ -110,6 +120,7 @@ export default function RecordPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingPlayers, setIsLoadingPlayers] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [validationErrors, setValidationErrors] = useState<{
     teamAPoints: boolean;
@@ -239,8 +250,9 @@ export default function RecordPage() {
       console.log('📡 API Response ok:', response.ok);
       
       if (response.ok) {
-        const data = await response.json();
-        console.log('📊 Raw matches data received:', data);
+        const responseData = await response.json();
+        const data = responseData.matches || [];
+        console.log('📊 Raw matches data received:', responseData);
         console.log('📊 Total matches received:', data?.length || 0);
         
         // Log each match status for debugging
@@ -262,6 +274,8 @@ export default function RecordPage() {
         console.log('✅ Total matches:', data.length);
         
         setMatches(data);
+        // Fetch scores for all matches
+        await fetchAllMatchScores(data);
       } else {
         console.error('❌ API request failed with status:', response.status);
         const errorText = await response.text();
@@ -276,26 +290,88 @@ export default function RecordPage() {
     }
   };
 
-  const fetchPlayers = async (teamAId: number, teamBId: number) => {
+  const fetchAllMatchScores = async (matchesData: Match[]) => {
     try {
+      const matchesWithScoresData: MatchWithScores[] = await Promise.all(
+        matchesData.map(async (match) => {
+          if (match.status !== 'played') {
+            return { ...match, team_a_score: undefined, team_b_score: undefined };
+          }
+
+          try {
+            let team_a_score = 0;
+            let team_b_score = 0;
+
+            if (match.sport_type === 'basketball') {
+              const response = await fetch(`/api/basketball-scores?match_id=${match.id}`);
+              if (response.ok) {
+                const scores = await response.json();
+                // Filter team scores (not player scores) and sum points
+                const teamScores = scores.filter((s: any) => !s.player_id);
+                const teamAScore = teamScores.find((s: any) => s.team_id === match.team_a_id);
+                const teamBScore = teamScores.find((s: any) => s.team_id === match.team_b_id);
+                team_a_score = teamAScore?.points || 0;
+                team_b_score = teamBScore?.points || 0;
+              }
+            } else if (match.sport_type === 'football') {
+              const response = await fetch(`/api/football-scores?match_id=${match.id}`);
+              if (response.ok) {
+                const scores = await response.json();
+                // Filter team scores (not player scores) and sum goals
+                const teamScores = scores.filter((s: any) => !s.player_id);
+                const teamAScore = teamScores.find((s: any) => s.team_id === match.team_a_id);
+                const teamBScore = teamScores.find((s: any) => s.team_id === match.team_b_id);
+                team_a_score = teamAScore?.goals || 0;
+                team_b_score = teamBScore?.goals || 0;
+              }
+            }
+
+            return { ...match, team_a_score, team_b_score };
+          } catch (error) {
+            console.error(`Error fetching scores for match ${match.id}:`, error);
+            return { ...match, team_a_score: undefined, team_b_score: undefined };
+          }
+        })
+      );
+
+      setMatchesWithScores(matchesWithScoresData);
+    } catch (error) {
+      console.error('Error fetching all match scores:', error);
+    }
+  };
+
+  const fetchPlayers = async (teamAId: number, teamBId: number) => {
+    setIsLoadingPlayers(true);
+    try {
+      console.log('🎯 Fetching players for teams:', { teamAId, teamBId });
       const response = await fetch(`/api/players?team_a_id=${teamAId}&team_b_id=${teamBId}`);
+      console.log('📡 Players API Response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
-        setPlayers(data);
+        console.log('👥 Players data received:', data);
+        console.log('👥 Total players:', data?.length || 0);
+        
+        // Ensure data is an array
+        const playersArray = Array.isArray(data) ? data : [];
+        setPlayers(playersArray);
         
         // Initialize individual stats for each player
-        const teamAPlayers = data.filter((p: Player) => p.team_id === teamAId);
-        const teamBPlayers = data.filter((p: Player) => p.team_id === teamBId);
+        const teamAPlayers = playersArray.filter((p: Player) => p.team_id === teamAId);
+        const teamBPlayers = playersArray.filter((p: Player) => p.team_id === teamBId);
+        
+        console.log('👥 Team A players:', teamAPlayers.length);
+        console.log('👥 Team B players:', teamBPlayers.length);
         
         setIndividualStats({
-          teamA: teamAPlayers.map((p: Player) => ({ player_id: p.id, points: 0, rebounds: 0, assists: 0 })),
-          teamB: teamBPlayers.map((p: Player) => ({ player_id: p.id, points: 0, rebounds: 0, assists: 0 }))
+          teamA: teamAPlayers.map((p: Player) => ({ player_id: p.id, points: 0, rebounds: 0, assists: 0, three_points_made: 0, three_points_attempted: 0 })),
+          teamB: teamBPlayers.map((p: Player) => ({ player_id: p.id, points: 0, rebounds: 0, assists: 0, three_points_made: 0, three_points_attempted: 0 }))
         });
         
         // Initialize football individual stats for each player
         setFootballIndividualStats({
-          teamA: teamAPlayers.map((p: Player) => ({ player_id: p.id, goals: 0, assists: 0 })),
-          teamB: teamBPlayers.map((p: Player) => ({ player_id: p.id, goals: 0, assists: 0 }))
+          teamA: teamAPlayers.map((p: Player) => ({ player_id: p.id, goals: 0, assists: 0, shots_on_target: 0, saves: 0 })),
+          teamB: teamBPlayers.map((p: Player) => ({ player_id: p.id, goals: 0, assists: 0, shots_on_target: 0, saves: 0 }))
         });
         
         // Initialize selected players as empty
@@ -303,9 +379,21 @@ export default function RecordPage() {
           teamA: [],
           teamB: []
         });
+      } else {
+        console.error('❌ Players API request failed with status:', response.status);
+        const errorText = await response.text();
+        console.error('❌ Players error response body:', errorText);
+        setPlayers([]);
       }
     } catch (error) {
-      console.error('Error fetching players:', error);
+      console.error('💥 Error fetching players:', error);
+      console.error('💥 Players error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace'
+      });
+      setPlayers([]);
+    } finally {
+      setIsLoadingPlayers(false);
     }
   };
 
@@ -606,6 +694,8 @@ export default function RecordPage() {
             points: stat.points,
             rebounds: stat.rebounds,
             assists: stat.assists,
+            three_points_made: stat.three_points_made || 0,
+            three_points_attempted: stat.three_points_attempted || 0,
             player_id: stat.player_id
           })),
           ...individualStats.teamB.map(stat => ({
@@ -614,6 +704,8 @@ export default function RecordPage() {
             points: stat.points,
             rebounds: stat.rebounds,
             assists: stat.assists,
+            three_points_made: stat.three_points_made || 0,
+            three_points_attempted: stat.three_points_attempted || 0,
             player_id: stat.player_id
           }))
         ];
@@ -641,6 +733,8 @@ export default function RecordPage() {
             team_id: selectedMatchData.team_a_id,
             goals: stat.goals,
             assists: stat.assists,
+            shots_on_target: stat.shots_on_target || 0,
+            saves: stat.saves || 0,
             player_id: stat.player_id
           })),
           ...footballIndividualStats.teamB.map(stat => ({
@@ -648,6 +742,8 @@ export default function RecordPage() {
             team_id: selectedMatchData.team_b_id,
             goals: stat.goals,
             assists: stat.assists,
+            shots_on_target: stat.shots_on_target || 0,
+            saves: stat.saves || 0,
             player_id: stat.player_id
           }))
         ];
@@ -668,7 +764,9 @@ export default function RecordPage() {
 
       setMessage({ 
         type: "success", 
-        text: "Match result recorded successfully!" 
+        text: selectedMatchData.status === 'played' 
+          ? "Match result updated successfully!" 
+          : "Match result recorded successfully!" 
       });
 
       // Reset form
@@ -695,9 +793,9 @@ export default function RecordPage() {
         teamB: []
       });
 
-      // Refresh matches
+      // Refresh matches and scores table
       if (selectedChampionship) {
-        fetchMatches(selectedChampionship);
+        await fetchMatches(selectedChampionship);
       }
 
     } catch (error) {
@@ -730,25 +828,38 @@ export default function RecordPage() {
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
+  // get the grade badge color
+  const getGradeBadgeColor = (grade: string) => {
+    switch (grade) {
+      case 'ey': return 'bg-grade-1/50 text-grade-1/900 border-grade-1/300';
+      case 's5': return 'bg-grade-2/50 text-grade-2/900 border-grade-2/300';
+      case 's6': return 'bg-grade-3/50 text-grade-3/900 border-grade-3/300';
+      case 's4': return 'bg-grade-4/50 text-grade-4/900 border-grade-4/300';
+      default: return 'bg-gray-50/50 text-gray-900 border-gray-300';
+    }
+  };
+
   return (
     <div className="space-y-6 px-4 lg:px-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-muted rounded-lg">
-          <Trophy className="h-6 w-6 text-muted-foreground" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold">Record Match Results</h1>
-          <p className="text-muted-foreground">Record winning teams and match statistics</p>
+      <div className="">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-white/60 rounded-lg border">
+            <Trophy className="h-4 w-4 text-yellow-600" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold">Record Match Results</h1>
+            <p className="text-muted-foreground text-sm">Pick a match, set a winner, add the stats</p>
+          </div>
         </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="bg-gradient-to-b from-amber-50 to-white border-amber-100">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Championships</CardTitle>
-            <Trophy className="h-4 w-4 text-muted-foreground" />
+            <Trophy className="h-4 w-4 text-amber-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-black">{championships.length}</div>
@@ -756,21 +867,21 @@ export default function RecordPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-b from-blue-50 to-white border-blue-100">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Matches</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
+            <Target className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-black">{matches.length}</div>
-            <p className="text-xs text-muted-foreground">Matches in selected championship</p>
+            <p className="text-xs text-muted-foreground">In selected championship</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-b from-lime-50 to-white border-lime-100">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Played Matches</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            <CheckCircle className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-black">
@@ -780,25 +891,30 @@ export default function RecordPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-b from-sky-50 to-white border-sky-100">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Matches</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <Clock className="h-4 w-4 text-sky-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-black">
               {matches.filter(m => m.status === 'scheduled').length}
             </div>
-            <p className="text-xs text-muted-foreground">Scheduled but not played</p>
+            <p className="text-xs text-muted-foreground">Scheduled, not yet played</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters Section */}
+      {/* Selection Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Select Match</CardTitle>
-          <CardDescription>Choose a championship and match to record results</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">Select Match</CardTitle>
+              <CardDescription>Choose a championship and match to record results</CardDescription>
+            </div>
+      
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
@@ -835,7 +951,7 @@ export default function RecordPage() {
                     {matches.map((match) => (
                       <SelectItem key={match.id} value={match.id.toString()}>
                         <div className="flex items-center gap-2">
-                          <span>{match.teamA.name} vs {match.teamB.name}</span>
+                          <span>{match.teamA?.name || 'Unknown Team'} vs {match.teamB?.name || 'Unknown Team'}</span>
                           <Badge variant="outline" className="text-xs">
                             {getSportIcon(match.sport_type)} {match.sport_type}
                           </Badge>
@@ -855,170 +971,96 @@ export default function RecordPage() {
       </Card>
 
       {/* Match Details and Recording Form */}
-      {selectedMatchData && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              {selectedMatchData?.status === 'played' ? 'Edit Match Results' : 'Record Match Results'}
-            </CardTitle>
-            <CardDescription>
-              {selectedMatchData?.status === 'played' 
-                ? 'Edit the winning team and match statistics for this completed match'
-                : 'Record the winning team and match statistics'
-              }
-            </CardDescription>
-            {selectedMatchData?.status === 'played' && (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  This match has already been recorded. You can edit the results below.
-                </AlertDescription>
-              </Alert>
-            )}
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Match Info */}
+      {selectedMatchData && selectedMatchData.teamA && selectedMatchData.teamB && (
+        <div className="grid gap-4">
+          {/* Recording Form */}
+          <div>
             <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Match Details</CardTitle>
-                  {getStatusBadge(selectedMatchData.status)}
-                </div>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  {selectedMatchData?.status === 'played' ? 'Edit Match Results' : 'Record Match Results'}
+                </CardTitle>
+                <CardDescription>
+                  {selectedMatchData?.status === 'played' 
+                    ? 'Edit the winning team and match statistics for this completed match'
+                    : 'Record the winning team and match statistics'
+                  }
+                </CardDescription>
+                {selectedMatchData?.status === 'played' && (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      This match has already been recorded. You can edit the results below.
+                    </AlertDescription>
+                  </Alert>
+                )}
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Championship</Label>
-                    <p className="text-sm font-medium">{selectedMatchData.championship.name}</p>
+              <CardContent className="space-y-6">
+                {/* Winner Selection */}
+                <section className="rounded-lg border bg-gradient-to-b from-emerald-50/60 to-white p-4">
+                  <div className="mb-3">
+                    <h3 className="text-sm font-semibold text-emerald-900">Winner Selection</h3>
+                    <p className="text-xs text-emerald-700/80">Select the winning team for this match</p>
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Sport</Label>
-                    <div className="flex items-center gap-2">
-                      <span>{getSportIcon(selectedMatchData.sport_type)}</span>
-                      <span className="text-sm font-medium capitalize">{selectedMatchData.sport_type}</span>
+                  <div className="space-y-2">
+                    <Label htmlFor="winning-team" className="text-sm font-medium">
+                      Winning Team *
+                    </Label>
+                    <Select value={winningTeam} onValueChange={setWinningTeam}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select the winning team" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={selectedMatchData.teamA.id.toString()}>
+                          {selectedMatchData.teamA?.name || 'Unknown Team'} ({selectedMatchData.teamA?.grade || 'Unknown'})
+                        </SelectItem>
+                        <SelectItem value={selectedMatchData.teamB.id.toString()}>
+                          {selectedMatchData.teamB?.name || 'Unknown Team'} ({selectedMatchData.teamB?.grade || 'Unknown'})
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </section>
+
+                {/* Basketball Statistics */}
+                {selectedMatchData.sport_type === 'basketball' && (
+                  <section className="rounded-lg border bg-gradient-to-b from-gray-50/60 to-white p-4 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900">Basketball Statistics</h3>
+                        <p className="text-xs text-gray-700/80">Record team and individual player statistics</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Label htmlFor="team-filter" className="text-sm font-medium">
+                          Show Stats For:
+                        </Label>
+                        <Select value={selectedTeamForStats} onValueChange={(value: 'teamA' | 'teamB' | 'both') => setSelectedTeamForStats(value)}>
+                          <SelectTrigger id="team-filter" className="w-40">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="both">Both Teams</SelectItem>
+                            <SelectItem value="teamA">{selectedMatchData.teamA.name} ({selectedMatchData.teamA.grade})</SelectItem>
+                            <SelectItem value="teamB">{selectedMatchData.teamB.name} ({selectedMatchData.teamB.grade})</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                  </div>
-                  {selectedMatchData.match_time && (
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Scheduled Time</Label>
-                      <p className="text-sm font-medium">
-                        {new Date(selectedMatchData.match_time).toLocaleString()}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Teams Display */}
-            <div className="grid gap-4 md:grid-cols-2">
-              {/* Team A */}
-              <Card className="border-slate-200 hover:shadow-sm transition-shadow">
-                <CardHeader className="pb-3 bg-slate-50/30">
-                  <CardTitle className="text-base text-center text-slate-800">{selectedMatchData.teamA.name}</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="text-center space-y-1">
-                    <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-300">{selectedMatchData.teamA.grade}</Badge>
-                    {selectedMatchData.teamA.gender && (
-                      <p className="text-sm text-slate-600">{selectedMatchData.teamA.gender}</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Team B */}
-              <Card className="border-slate-200 hover:shadow-sm transition-shadow">
-                <CardHeader className="pb-3 bg-slate-50/30">
-                  <CardTitle className="text-base text-center text-slate-800">{selectedMatchData.teamB.name}</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="text-center space-y-1">
-                    <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-300">{selectedMatchData.teamB.grade}</Badge>
-                    {selectedMatchData.teamB.gender && (
-                      <p className="text-sm text-slate-600">{selectedMatchData.teamB.gender}</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Separator />
-
-            {/* Winner Selection */}
-            <Card className="border-slate-200">
-              <CardHeader className="pb-3 bg-slate-50/30">
-                <CardTitle className="text-base text-slate-800">Winner Selection</CardTitle>
-                <CardDescription className="text-slate-600">Select the winning team for this match</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <Label htmlFor="winning-team" className="text-sm font-medium">
-                    Winning Team *
-                  </Label>
-                  <Select value={winningTeam} onValueChange={setWinningTeam}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select the winning team" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={selectedMatchData.teamA.id.toString()}>
-                        {selectedMatchData.teamA.name} ({selectedMatchData.teamA.grade})
-                      </SelectItem>
-                      <SelectItem value={selectedMatchData.teamB.id.toString()}>
-                        {selectedMatchData.teamB.name} ({selectedMatchData.teamB.grade})
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Basketball Statistics */}
-            {selectedMatchData.sport_type === 'basketball' && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-lg">Basketball Statistics</CardTitle>
-                      <CardDescription>Record team and individual player statistics</CardDescription>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Label htmlFor="team-filter" className="text-sm font-medium">
-                        Show Stats For:
-                      </Label>
-                      <Select value={selectedTeamForStats} onValueChange={(value: 'teamA' | 'teamB' | 'both') => setSelectedTeamForStats(value)}>
-                        <SelectTrigger id="team-filter" className="w-40">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="both">Both Teams</SelectItem>
-                          <SelectItem value="teamA">{selectedMatchData.teamA.name} ({selectedMatchData.teamA.grade})</SelectItem>
-                          <SelectItem value="teamB">{selectedMatchData.teamB.name} ({selectedMatchData.teamB.grade})</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
                 
                 {/* Team A Stats */}
                 {(selectedTeamForStats === 'teamA' || selectedTeamForStats === 'both') && (
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        {selectedMatchData.teamA.name}
-                        <Badge variant="outline">{selectedMatchData.teamA.grade}</Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
+                  <section className="rounded-md border bg-gray-50/40 p-4 space-y-4">
+                    <div className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                      {selectedMatchData.teamA.name}
+                      <Badge variant="outline" className={getGradeBadgeColor(selectedMatchData.teamA.grade)}>{selectedMatchData.teamA.grade}</Badge>
+                    </div>
                       <div className="grid grid-cols-3 gap-4">
                       <div>
                         <Label htmlFor="team-a-points">Team Points</Label>
                         <Input
                           id="team-a-points"
                           type="number"
-                          min="0"
                           value={basketballScores.teamA.points}
                           onChange={(e) => {
                             setBasketballScores(prev => ({
@@ -1043,7 +1085,6 @@ export default function RecordPage() {
                         <Input
                           id="team-a-rebounds"
                           type="number"
-                          min="0"
                           value={basketballScores.teamA.rebounds}
                           onChange={(e) => {
                             setBasketballScores(prev => ({
@@ -1068,7 +1109,6 @@ export default function RecordPage() {
                         <Input
                           id="team-a-assists"
                           type="number"
-                          min="0"
                           value={basketballScores.teamA.assists}
                           onChange={(e) => {
                             setBasketballScores(prev => ({
@@ -1089,9 +1129,8 @@ export default function RecordPage() {
                         )}
                       </div>
                     </div>
-                    
                     {/* Statistics Summary */}
-                    <div className="bg-blue-100 p-3 rounded-lg mb-4">
+                    <div className="bg-blue-100 p-3 rounded-lg">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
                           <span className="font-medium text-gray-700">Points:</span>
@@ -1153,10 +1192,14 @@ export default function RecordPage() {
                         </Button>
                       </div>
                       
-                      {players.length === 0 ? (
+                      {isLoadingPlayers ? (
                         <div className="text-center py-4 text-gray-500">
                           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
                           Loading players...
+                        </div>
+                      ) : players.length === 0 ? (
+                        <div className="text-center py-4 text-gray-500">
+                          No players found for this team. Please add players to the team first.
                         </div>
                       ) : (
                         individualStats.teamA.map((playerStat, index) => {
@@ -1168,7 +1211,7 @@ export default function RecordPage() {
                                   {player?.first_name} {player?.last_name}
                                 </span>
                               </div>
-                              <div className="grid grid-cols-3 gap-2">
+                              <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
                                 <div>
                                   <Label className="text-xs">Points</Label>
                                   <Input
@@ -1227,33 +1270,64 @@ export default function RecordPage() {
                                     className="h-8 text-sm"
                                   />
                                 </div>
+                                <div>
+                                  <Label className="text-xs">3PT Made</Label>
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    value={playerStat.three_points_made}
+                                    onChange={(e) => {
+                                      const newValue = parseInt(e.target.value) || 0;
+                                      setIndividualStats(prev => ({
+                                        ...prev,
+                                        teamA: prev.teamA.map((stat, i) => 
+                                          i === index ? { ...stat, three_points_made: newValue } : stat
+                                        )
+                                      }));
+                                    }}
+                                    className="h-8 text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs">3PT Att</Label>
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    value={playerStat.three_points_attempted}
+                                    onChange={(e) => {
+                                      const newValue = parseInt(e.target.value) || 0;
+                                      setIndividualStats(prev => ({
+                                        ...prev,
+                                        teamA: prev.teamA.map((stat, i) => 
+                                          i === index ? { ...stat, three_points_attempted: newValue } : stat
+                                        )
+                                      }));
+                                    }}
+                                    className="h-8 text-sm"
+                                  />
+                                </div>
                               </div>
                             </div>
                           );
                         })
                       )}
                     </div>
-                    </CardContent>
-                  </Card>
+                  </section>
                 )}
 
                 {/* Team B Stats */}
                 {(selectedTeamForStats === 'teamB' || selectedTeamForStats === 'both') && (
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        {selectedMatchData.teamB.name}
-                        <Badge variant="outline">{selectedMatchData.teamB.grade}</Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
+                  <section className="rounded-md border bg-grade-1-50/40 p-4 space-y-4">
+                    <div className="text-base font-semibold text-green-900 flex items-center gap-2">
+                      {selectedMatchData.teamB.name}
+                      <Badge variant="outline" className={getGradeBadgeColor(selectedMatchData.teamB.grade)}>{selectedMatchData.teamB.grade}</Badge>
+                    </div>
                       <div className="grid grid-cols-3 gap-4">
                       <div>
                         <Label htmlFor="team-b-points">Team Points</Label>
                         <Input
                           id="team-b-points"
                           type="number"
-                          min="0"
                           value={basketballScores.teamB.points}
                           onChange={(e) => {
                             setBasketballScores(prev => ({
@@ -1278,7 +1352,6 @@ export default function RecordPage() {
                         <Input
                           id="team-b-rebounds"
                           type="number"
-                          min="0"
                           value={basketballScores.teamB.rebounds}
                           onChange={(e) => {
                             setBasketballScores(prev => ({
@@ -1303,7 +1376,6 @@ export default function RecordPage() {
                         <Input
                           id="team-b-assists"
                           type="number"
-                          min="0"
                           value={basketballScores.teamB.assists}
                           onChange={(e) => {
                             setBasketballScores(prev => ({
@@ -1324,9 +1396,8 @@ export default function RecordPage() {
                         )}
                       </div>
                     </div>
-                    
                     {/* Statistics Summary */}
-                    <div className="bg-green-100 p-3 rounded-lg mb-4">
+                    <div className="bg-green-100 p-3 rounded-lg">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
                           <span className="font-medium text-gray-700">Points:</span>
@@ -1397,12 +1468,11 @@ export default function RecordPage() {
                                 {player?.first_name} {player?.last_name}
                               </span>
                             </div>
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
                               <div>
                                 <Label className="text-xs">Points</Label>
                                 <Input
                                   type="number"
-                                  min="0"
                                   value={playerStat.points}
                                   onChange={(e) => {
                                     const newValue = parseInt(e.target.value) || 0;
@@ -1420,7 +1490,6 @@ export default function RecordPage() {
                                 <Label className="text-xs">Rebounds</Label>
                                 <Input
                                   type="number"
-                                  min="0"
                                   value={playerStat.rebounds}
                                   onChange={(e) => {
                                     const newValue = parseInt(e.target.value) || 0;
@@ -1438,7 +1507,6 @@ export default function RecordPage() {
                                 <Label className="text-xs">Assists</Label>
                                 <Input
                                   type="number"
-                                  min="0"
                                   value={playerStat.assists}
                                   onChange={(e) => {
                                     const newValue = parseInt(e.target.value) || 0;
@@ -1452,47 +1520,77 @@ export default function RecordPage() {
                                   className="h-8 text-sm"
                                 />
                               </div>
+                              <div>
+                                <Label className="text-xs">3PT Made</Label>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={playerStat.three_points_made}
+                                  onChange={(e) => {
+                                    const newValue = parseInt(e.target.value) || 0;
+                                    setIndividualStats(prev => ({
+                                      ...prev,
+                                      teamB: prev.teamB.map((stat, i) => 
+                                        i === index ? { ...stat, three_points_made: newValue } : stat
+                                      )
+                                    }));
+                                  }}
+                                  className="h-8 text-sm"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs">3PT Att</Label>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={playerStat.three_points_attempted}
+                                  onChange={(e) => {
+                                    const newValue = parseInt(e.target.value) || 0;
+                                    setIndividualStats(prev => ({
+                                      ...prev,
+                                      teamB: prev.teamB.map((stat, i) => 
+                                        i === index ? { ...stat, three_points_attempted: newValue } : stat
+                                      )
+                                    }));
+                                  }}
+                                  className="h-8 text-sm"
+                                />
+                              </div>
                             </div>
                           </div>
                         );
                       })}
                     </div>
-                    </CardContent>
-                  </Card>
+                  </section>
                 )}
-                </CardContent>
-              </Card>
-            )}
+                  </section>
+                )}
 
-            {/* Football Statistics */}
-            {selectedMatchData.sport_type === 'football' && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-lg">Football Statistics</CardTitle>
-                      <CardDescription>Record team and individual player statistics</CardDescription>
+                {/* Football Statistics */}
+                {selectedMatchData.sport_type === 'football' && (
+                  <section className="rounded-lg border bg-gradient-to-b from-rose-50/60 to-white p-4 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-semibold text-rose-900">Football Statistics</h3>
+                        <p className="text-xs text-rose-700/80">Record team and individual player statistics</p>
+                      </div>
+                      {/* Team Filter for Statistics */}
+                      <div className="flex items-center gap-3">
+                        <Label htmlFor="team-filter-football" className="text-sm font-medium">
+                          Show Stats For:
+                        </Label>
+                        <Select value={selectedTeamForStats} onValueChange={(value: 'teamA' | 'teamB' | 'both') => setSelectedTeamForStats(value)}>
+                          <SelectTrigger id="team-filter-football" className="w-40">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="both">Both Teams</SelectItem>
+                            <SelectItem value="teamA">{selectedMatchData.teamA.name} ({selectedMatchData.teamA.grade})</SelectItem>
+                            <SelectItem value="teamB">{selectedMatchData.teamB.name} ({selectedMatchData.teamB.grade})</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                  
-                    {/* Team Filter for Statistics */}
-                    <div className="flex items-center gap-3">
-                      <Label htmlFor="team-filter-football" className="text-sm font-medium">
-                        Show Stats For:
-                      </Label>
-                      <Select value={selectedTeamForStats} onValueChange={(value: 'teamA' | 'teamB' | 'both') => setSelectedTeamForStats(value)}>
-                        <SelectTrigger id="team-filter-football" className="w-40">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="both">Both Teams</SelectItem>
-                          <SelectItem value="teamA">{selectedMatchData.teamA.name} ({selectedMatchData.teamA.grade})</SelectItem>
-                          <SelectItem value="teamB">{selectedMatchData.teamB.name} ({selectedMatchData.teamB.grade})</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
                 
                 {/* Team A Stats */}
                 {(selectedTeamForStats === 'teamA' || selectedTeamForStats === 'both') && (
@@ -1509,7 +1607,6 @@ export default function RecordPage() {
                         <Input
                           id="team-a-goals"
                           type="number"
-                          min="0"
                           value={footballScores.teamA.goals}
                           onChange={(e) => {
                             setFootballScores(prev => ({
@@ -1534,7 +1631,6 @@ export default function RecordPage() {
                         <Input
                           id="team-a-assists-football"
                           type="number"
-                          min="0"
                           value={footballScores.teamA.assists}
                           onChange={(e) => {
                             setFootballScores(prev => ({
@@ -1605,10 +1701,14 @@ export default function RecordPage() {
                         </Button>
                       </div>
                       
-                      {players.length === 0 ? (
+                      {isLoadingPlayers ? (
                         <div className="text-center py-4 text-gray-500">
                           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
                           Loading players...
+                        </div>
+                      ) : players.length === 0 ? (
+                        <div className="text-center py-4 text-gray-500">
+                          No players found for this team. Please add players to the team first.
                         </div>
                       ) : (
                         footballIndividualStats.teamA.map((playerStat, index) => {
@@ -1620,14 +1720,13 @@ export default function RecordPage() {
                                   {player?.first_name} {player?.last_name}
                                 </span>
                               </div>
-                              <div className="grid grid-cols-2 gap-2">
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                                 <div>
                                   <Label className="text-xs">Goals</Label>
                                   <Input
                                     type="number"
-                                    min="0"
                                     value={playerStat.goals}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newValue = parseInt(e.target.value) || 0;
                                       setFootballIndividualStats(prev => ({
                                         ...prev,
@@ -1647,9 +1746,8 @@ export default function RecordPage() {
                                   <Label className="text-xs">Assists</Label>
                                   <Input
                                     type="number"
-                                    min="0"
                                     value={playerStat.assists}
-                                    onChange={(e) => {
+                                    onChange={(e: any) => {
                                       const newValue = parseInt(e.target.value) || 0;
                                       setFootballIndividualStats(prev => ({
                                         ...prev,
@@ -1661,6 +1759,42 @@ export default function RecordPage() {
                                       if (validationErrors.teamAAssistsFootball) {
                                         setValidationErrors(prev => ({ ...prev, teamAAssistsFootball: false }));
                                       }
+                                    }}
+                                    className="h-8 text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs">Shots on Target</Label>
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    value={playerStat.shots_on_target}
+                                    onChange={(e: any) => {
+                                      const newValue = parseInt(e.target.value) || 0;
+                                      setFootballIndividualStats(prev => ({
+                                        ...prev,
+                                        teamA: prev.teamA.map((stat, i) => 
+                                          i === index ? { ...stat, shots_on_target: newValue } : stat
+                                        )
+                                      }));
+                                    }}
+                                    className="h-8 text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs">Saves</Label>
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    value={playerStat.saves}
+                                    onChange={(e: any) => {
+                                      const newValue = parseInt(e.target.value) || 0;
+                                      setFootballIndividualStats(prev => ({
+                                        ...prev,
+                                        teamA: prev.teamA.map((stat, i) => 
+                                          i === index ? { ...stat, saves: newValue } : stat
+                                        )
+                                      }));
                                     }}
                                     className="h-8 text-sm"
                                   />
@@ -1689,7 +1823,6 @@ export default function RecordPage() {
                         <Input
                           id="team-b-goals"
                           type="number"
-                          min="0"
                           value={footballScores.teamB.goals}
                           onChange={(e) => {
                             setFootballScores(prev => ({
@@ -1714,7 +1847,7 @@ export default function RecordPage() {
                         <Input
                           id="team-b-assists-football"
                           type="number"
-                          min="0"
+                          
                           value={footballScores.teamB.assists}
                           onChange={(e) => {
                             setFootballScores(prev => ({
@@ -1794,14 +1927,14 @@ export default function RecordPage() {
                                 {player?.first_name} {player?.last_name}
                               </span>
                             </div>
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                               <div>
                                 <Label className="text-xs">Goals</Label>
                                 <Input
                                   type="number"
-                                  min="0"
+                                  
                                   value={playerStat.goals}
-                                  onChange={(e) => {
+                                  onChange={(e: any) => {
                                     const newValue = parseInt(e.target.value) || 0;
                                     setFootballIndividualStats(prev => ({
                                       ...prev,
@@ -1821,9 +1954,9 @@ export default function RecordPage() {
                                 <Label className="text-xs">Assists</Label>
                                 <Input
                                   type="number"
-                                  min="0"
+                                  
                                   value={playerStat.assists}
-                                  onChange={(e) => {
+                                  onChange={(e: any) => {
                                     const newValue = parseInt(e.target.value) || 0;
                                     setFootballIndividualStats(prev => ({
                                       ...prev,
@@ -1839,6 +1972,42 @@ export default function RecordPage() {
                                   className="h-8 text-sm"
                                 />
                               </div>
+                              <div>
+                                <Label className="text-xs">Shots on Target</Label>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={playerStat.shots_on_target}
+                                  onChange={(e: any) => {
+                                    const newValue = parseInt(e.target.value) || 0;
+                                    setFootballIndividualStats(prev => ({
+                                      ...prev,
+                                      teamB: prev.teamB.map((stat, i) => 
+                                        i === index ? { ...stat, shots_on_target: newValue } : stat
+                                      )
+                                    }));
+                                  }}
+                                  className="h-8 text-sm"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs">Saves</Label>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={playerStat.saves}
+                                  onChange={(e: any) => {
+                                    const newValue = parseInt(e.target.value) || 0;
+                                    setFootballIndividualStats(prev => ({
+                                      ...prev,
+                                      teamB: prev.teamB.map((stat, i) => 
+                                        i === index ? { ...stat, saves: newValue } : stat
+                                      )
+                                    }));
+                                  }}
+                                  className="h-8 text-sm"
+                                />
+                              </div>
                             </div>
                           </div>
                         );
@@ -1846,35 +2015,34 @@ export default function RecordPage() {
                     </div>
                   </div>
                 )}
-                </CardContent>
-              </Card>
-            )}
+                  </section>
+                )}
 
-            {/* Submit Button */}
-            <Card>
-              <CardContent className="pt-6">
-                <Button 
-                  onClick={handleSubmit} 
-                  disabled={isSubmitting || !winningTeam}
-                  className="w-full"
-                  size="lg"
-                >
-                  {isSubmitting ? (
-                    <div className="flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      {selectedMatchData?.status === 'played' ? 'Updating Results...' : 'Recording Results...'}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4" />
-                      {selectedMatchData?.status === 'played' ? 'Update Match Results' : 'Record Match Results'}
-                    </div>
-                  )}
-                </Button>
+                {/* Submit Button */}
+                <div className="pt-2">
+                  <Button 
+                    onClick={handleSubmit} 
+                    disabled={isSubmitting || !winningTeam}
+                    className="w-full"
+                    size="lg"
+                  >
+                    {isSubmitting ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {selectedMatchData?.status === 'played' ? 'Updating Results...' : 'Recording Results...'}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4" />
+                        {selectedMatchData?.status === 'played' ? 'Update Match Results' : 'Record Match Results'}
+                      </div>
+                    )}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Message Display */}
@@ -1931,7 +2099,7 @@ export default function RecordPage() {
                   </h4>
                   <div className="grid grid-cols-2 gap-2">
                     {players
-                      .filter(p => p.team_id === selectedMatchData.team_a_id)
+                      .filter(p => p && p.team_id === selectedMatchData.team_a_id)
                       .map(player => (
                         <label key={player.id} className="flex items-center space-x-2 cursor-pointer p-2 rounded hover:bg-muted/50">
                           <input
@@ -1941,7 +2109,7 @@ export default function RecordPage() {
                             className="rounded border-gray-300"
                           />
                           <span className="text-sm">
-                            {player.first_name} {player.last_name}
+                            {player?.first_name || 'Unknown'} {player?.last_name || 'Player'}
                           </span>
                         </label>
                       ))}
@@ -1955,7 +2123,7 @@ export default function RecordPage() {
                   </h4>
                   <div className="grid grid-cols-2 gap-2">
                     {players
-                      .filter(p => p.team_id === selectedMatchData.team_b_id)
+                      .filter(p => p && p.team_id === selectedMatchData.team_b_id)
                       .map(player => (
                         <label key={player.id} className="flex items-center space-x-2 cursor-pointer p-2 rounded hover:bg-muted/50">
                           <input
@@ -1965,7 +2133,7 @@ export default function RecordPage() {
                             className="rounded border-gray-300"
                           />
                           <span className="text-sm">
-                            {player.first_name} {player.last_name}
+                            {player?.first_name || 'Unknown'} {player?.last_name || 'Player'}
                           </span>
                         </label>
                       ))}
@@ -1990,6 +2158,85 @@ export default function RecordPage() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Matches Table with Scores */}
+      {selectedChampionship && matchesWithScores.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              All Matches with Scores
+            </CardTitle>
+            <CardDescription>Complete list of matches in this championship with their scores</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Match</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Sport</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">Team A Score</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">Team B Score</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Winner</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {matchesWithScores.map((match) => (
+                    <tr key={match.id} className="border-b hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">{match.teamA?.name || 'Unknown'}</span>
+                            <Badge variant="outline" className="text-xs">{match.teamA?.grade || 'N/A'}</Badge>
+                          </div>
+                          <div className="text-xs text-gray-500">vs</div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">{match.teamB?.name || 'Unknown'}</span>
+                            <Badge variant="outline" className="text-xs">{match.teamB?.grade || 'N/A'}</Badge>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span>{getSportIcon(match.sport_type)}</span>
+                          <span className="text-sm capitalize">{match.sport_type}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`text-lg font-bold ${match.winner_id === match.team_a_id ? 'text-green-600' : 'text-gray-900'}`}>
+                          {match.team_a_score !== undefined ? match.team_a_score : '-'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`text-lg font-bold ${match.winner_id === match.team_b_id ? 'text-green-600' : 'text-gray-900'}`}>
+                          {match.team_b_score !== undefined ? match.team_b_score : '-'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {match.winner_id ? (
+                          <div className="flex items-center gap-2">
+                            <Trophy className="h-4 w-4 text-yellow-500" />
+                            <span className="text-sm font-medium">
+                              {match.winner_id === match.team_a_id ? match.teamA?.name : match.teamB?.name}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {getStatusBadge(match.status)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

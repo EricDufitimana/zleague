@@ -145,6 +145,35 @@ export async function PUT(request: NextRequest) {
     console.log('🔧 Creating Supabase admin client...');
     
     const supabase = createAdminClient();
+
+    // If setting status to 'ongoing', check if another championship is already ongoing
+    if (status === 'ongoing') {
+      console.log('🔍 Checking for existing ongoing championships...');
+      const { data: existingOngoing, error: checkError } = await supabase
+        .from('championships')
+        .select('id, name')
+        .eq('status', 'ongoing')
+        .neq('id', id);
+
+      if (checkError) {
+        console.error('❌ Error checking for ongoing championships:', checkError);
+        return NextResponse.json(
+          { error: 'Failed to check existing championships' },
+          { status: 500 }
+        );
+      }
+
+      if (existingOngoing && existingOngoing.length > 0) {
+        console.log('❌ Another championship is already ongoing:', existingOngoing);
+        return NextResponse.json(
+          { 
+            error: `Cannot set championship to ongoing. Another championship "${existingOngoing[0].name}" is already ongoing. Please end it first.` 
+          },
+          { status: 400 }
+        );
+      }
+      console.log('✅ No ongoing championships found, proceeding with update');
+    }
     console.log('✅ Supabase admin client created successfully');
 
     const updateData: { name: string; status?: string } = {

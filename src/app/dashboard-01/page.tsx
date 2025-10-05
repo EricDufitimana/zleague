@@ -1,6 +1,6 @@
-import { AppSidebar } from "@/components/app-sidebar"
-import { SportsStats } from "@/components/sports-stats"
-import { SportsHeader } from "@/components/sports-header"
+import { AppSidebar } from "@/components/layout/app-sidebar"
+import { SportsStats } from "@/components/sports/sports-stats"
+import { SportsHeader } from "@/components/sports/sports-header"
 import {
   SidebarInset,
   SidebarProvider,

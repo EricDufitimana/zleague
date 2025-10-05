@@ -11,9 +11,10 @@ import { IconTrophy, IconPlus, IconLoader2, IconUsers, IconCalendar, IconArrowRi
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Badge } from '@/components/ui/badge';
-import { SportsHeader } from "@/components/sports-header";
+import { SportsHeader } from "@/components/sports/sports-header";
 import { deleteChampionship } from "@/actions/championships/deleteChampionship";
 import { updateChampionship } from "@/actions/championships/updateChampionship";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Championship {
   id: number;
@@ -28,6 +29,7 @@ export default function CreateChampionshipPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [name, setName] = useState('');
   const [editName, setEditName] = useState('');
+  const [editStatus, setEditStatus] = useState<string>('ongoing');
   const [editingChampionshipId, setEditingChampionshipId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isEditLoading, setIsEditLoading] = useState(false);
@@ -66,6 +68,7 @@ export default function CreateChampionshipPage() {
     if (championship) {
       setEditingChampionshipId(championshipId);
       setEditName(championship.name);
+      setEditStatus(championship.status);
       setIsEditDialogOpen(true);
     }
   };
@@ -75,15 +78,29 @@ export default function CreateChampionshipPage() {
 
     setIsEditLoading(true);
     try {
-      const response = await updateChampionship(editingChampionshipId, editName);
-      if (response.success) {
+      const response = await fetch('/api/championships', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: editingChampionshipId,
+          name: editName.trim(),
+          status: editStatus
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
         toast.success("Championship Updated Successfully");
         setIsEditDialogOpen(false);
         setEditName('');
+        setEditStatus('ongoing');
         setEditingChampionshipId(null);
         fetchChampionships();
       } else {
-        toast.error("Failed To Update Championship");
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed To Update Championship");
       }
     } catch (error) {
       console.error("Error Updating Championship:", error);
@@ -239,7 +256,7 @@ export default function CreateChampionshipPage() {
                 Edit Championship
               </DialogTitle>
               <DialogDescription>
-                Update the name of your championship.
+                Update the name and status of your championship.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -260,6 +277,20 @@ export default function CreateChampionshipPage() {
                   }}
                 />
               </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="editStatus" className="text-right">
+                  Status
+                </Label>
+                <Select value={editStatus} onValueChange={setEditStatus}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ongoing">Ongoing</SelectItem>
+                    <SelectItem value="ended">Ended</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <DialogFooter>
               <Button
@@ -268,6 +299,7 @@ export default function CreateChampionshipPage() {
                 onClick={() => {
                   setIsEditDialogOpen(false);
                   setEditName('');
+                  setEditStatus('ongoing');
                   setEditingChampionshipId(null);
                 }}
                 disabled={isEditLoading}

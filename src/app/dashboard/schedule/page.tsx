@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Clock, Trophy, Users, Loader2, Target, CheckCircle, Settings } from "lucide-react";
+import { Calendar, Trophy, Loader2, Target, Settings, CalendarDays } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "react-hot-toast";
@@ -29,6 +29,7 @@ interface Match {
   team_a_id: number;
   team_b_id: number;
   sport_type: string;
+  gender: string;
   status: string;
   match_time?: string;
   teamA?: Team;
@@ -47,6 +48,7 @@ export default function RecordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedMatchForSchedule, setSelectedMatchForSchedule] = useState<Match | null>(null);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [activeView, setActiveView] = useState<'unscheduled' | 'scheduled'>('unscheduled');
 
   // Fetch all data once
   useEffect(() => {
@@ -72,7 +74,13 @@ export default function RecordPage() {
       }
 
       if (matchesRes.ok) {
-        const matchesData = await matchesRes.json();
+        const responseData = await matchesRes.json();
+        const matchesData = responseData.matches || [];
+        console.log('📡 Loaded matches data:', {
+          totalMatches: matchesData.length,
+          sampleMatch: matchesData[0],
+          allMatches: matchesData
+        });
         setAllMatches(matchesData);
       }
     } catch (error) {
@@ -83,26 +91,52 @@ export default function RecordPage() {
 
   // Memoized computed values to avoid re-computation on every render
   const { unscheduledMatches, scheduledMatches, playedMatches, filteredMatches } = useMemo(() => {
-    const unscheduled = allMatches.filter(match => match.status === 'not_yet_scheduled');
-    const scheduled = allMatches.filter(match => match.status === 'scheduled' && match.match_time);
-    const played = allMatches.filter(match => match.status === 'played');
+    console.log('🔍 Filtering matches:', {
+      totalMatches: allMatches.length,
+      selectedChampionship,
+      selectedGender,
+      selectedSportType
+    });
+
+    // Filter out matches that don't have teams assigned (tournament bracket placeholders)
+    const matchesWithTeams = allMatches.filter(match => 
+      match.team_a_id !== null && match.team_b_id !== null
+    );
+
+    const unscheduled = matchesWithTeams.filter(match => match.status === 'not_yet_scheduled');
+    const scheduled = matchesWithTeams.filter(match => match.status === 'scheduled' && match.match_time);
+    const played = matchesWithTeams.filter(match => match.status === 'played');
+
+    console.log('📊 Match counts:', {
+      totalMatches: allMatches.length,
+      matchesWithTeams: matchesWithTeams.length,
+      unscheduled: unscheduled.length,
+      scheduled: scheduled.length,
+      played: played.length
+    });
 
     // Apply filters to unscheduled matches
     let filtered = unscheduled;
 
     if (selectedChampionship !== "all") {
+      const beforeChampionshipFilter = filtered.length;
       filtered = filtered.filter(match => match.championship?.id === parseInt(selectedChampionship));
+      console.log(`🏆 Championship filter (${selectedChampionship}): ${beforeChampionshipFilter} → ${filtered.length}`);
     }
 
     if (selectedGender !== "all") {
-      filtered = filtered.filter(match => 
-        match.teamA?.gender === selectedGender && match.teamB?.gender === selectedGender
-      );
+      const beforeGenderFilter = filtered.length;
+      filtered = filtered.filter(match => match.gender === selectedGender);
+      console.log(`👥 Gender filter (${selectedGender}): ${beforeGenderFilter} → ${filtered.length}`);
     }
 
     if (selectedSportType !== "all") {
+      const beforeSportFilter = filtered.length;
       filtered = filtered.filter(match => match.sport_type === selectedSportType);
+      console.log(`⚽ Sport filter (${selectedSportType}): ${beforeSportFilter} → ${filtered.length}`);
     }
+
+    console.log('✅ Final filtered matches:', filtered.length);
 
     return {
       unscheduledMatches: unscheduled,
@@ -111,6 +145,19 @@ export default function RecordPage() {
       filteredMatches: filtered
     };
   }, [allMatches, selectedChampionship, selectedGender, selectedSportType]);
+
+  // Group scheduled matches by date for Calendar view
+  const scheduledByDate = useMemo(() => {
+    const groups: Record<string, Match[]> = {};
+    for (const match of scheduledMatches) {
+      if (!match.match_time) continue;
+      const dateKey = new Date(match.match_time).toISOString().split('T')[0];
+      if (!groups[dateKey]) groups[dateKey] = [];
+      groups[dateKey].push(match);
+    }
+    const sortedKeys = Object.keys(groups).sort();
+    return sortedKeys.map((key) => ({ date: key, matches: groups[key] }));
+  }, [scheduledMatches]);
 
   // Helper function to format match display name
   const getMatchDisplayName = (match: Match) => {
@@ -136,6 +183,20 @@ export default function RecordPage() {
   };
 
   const handleQuickSchedule = (match: Match) => {
+    // Smart defaults: today and next quarter-hour
+    const now = new Date();
+    const next = new Date(now.getTime());
+    const minutes = next.getMinutes();
+    const add = 15 - (minutes % 15 || 15);
+    next.setMinutes(minutes + add);
+    next.setSeconds(0);
+    next.setMilliseconds(0);
+
+    const isoDate = new Date().toISOString().split('T')[0];
+    const timeStr = next.toTimeString().slice(0,5);
+
+    setSelectedDate(isoDate);
+    setSelectedTime(timeStr);
     setSelectedMatchForSchedule(match);
     setShowScheduleModal(true);
   };
@@ -156,7 +217,8 @@ export default function RecordPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           match_id: selectedMatchForSchedule.id,
-          match_time: `${selectedDate}T${selectedTime}`
+          match_time: `${selectedDate}T${selectedTime}`,
+          status: 'scheduled',
         }),
       });
 
@@ -195,282 +257,250 @@ export default function RecordPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="px-4 lg:px-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Schedule</h1>
-        <p className="text-muted-foreground">Quickly schedule matches with filters and one-click scheduling</p>
+      <div className="px-4 lg:px-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Schedule</h1>
+          <p className="text-muted-foreground">Professional, interconnected view to plan your matches</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant={activeView === 'unscheduled' ? 'default' : 'outline'} size="sm" onClick={() => setActiveView('unscheduled')}>
+            <Target className="size-4 mr-2" /> Not scheduled
+          </Button>
+          <Button variant={activeView === 'scheduled' ? 'default' : 'outline'} size="sm" onClick={() => setActiveView('scheduled')}>
+            <CalendarDays className="size-4 mr-2" /> Scheduled
+          </Button>
+        </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-3">
-        <Card className="@container/card">
-          <CardHeader>
-            <CardDescription>Played Games</CardDescription>
-            <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl text-black">
-              {playedMatches.length}
-            </CardTitle>
-            <CardAction>
-              <Badge variant="outline">
-                <Trophy className="size-3" />
-                Completed
-              </Badge>
-            </CardAction>
-          </CardHeader>
-          <CardFooter className="flex-col items-start gap-1.5 text-sm">
-            <div className="line-clamp-1 flex gap-2 font-medium">
-              Total games finished <Trophy className="size-4" />
-            </div>
-            <div className="text-muted-foreground">
-              Matches with recorded results
-            </div>
-          </CardFooter>
-        </Card>
-        
-        <Card className="@container/card">
-          <CardHeader>
-            <CardDescription>Unscheduled Matches</CardDescription>
-            <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl text-black">
-              {unscheduledMatches.length}
-            </CardTitle>
-            <CardAction>
-              <Badge variant="outline">
-                <Calendar className="size-3" />
-                Pending
-              </Badge>
-            </CardAction>
-          </CardHeader>
-          <CardFooter className="flex-col items-start gap-1.5 text-sm">
-            <div className="line-clamp-1 flex gap-2 font-medium">
-              Awaiting schedule <Calendar className="size-4" />
-            </div>
-            <div className="text-muted-foreground">
-              Matches need date and time
-            </div>
-          </CardFooter>
-        </Card>
-        
-        <Card className="@container/card">
-          <CardHeader>
-            <CardDescription>Filtered Matches</CardDescription>
-            <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl text-black">
-              {filteredMatches.length}
-            </CardTitle>
-            <CardAction>
-              <Badge variant="outline">
-                <Target className="size-3" />
-                Available
-              </Badge>
-            </CardAction>
-          </CardHeader>
-          <CardFooter className="flex-col items-start gap-1.5 text-sm">
-            <div className="line-clamp-1 flex gap-2 font-medium">
-              Ready to schedule <Target className="size-4" />
-            </div>
-            <div className="text-muted-foreground">
-              Matches ready for scheduling
-            </div>
-          </CardFooter>
-        </Card>
-      </div>
-
-      {/* Filters */}
+      {/* Main Grid */}
       <div className="px-4 lg:px-6">
-        <Card className="@container/card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="size-5" />
-              Filters
-            </CardTitle>
-            <CardDescription>
-              Filter matches by championship, gender, and sport to find what you want to schedule
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="championship-filter" className="text-sm font-medium">
-                  Championship
-                </Label>
-                <Select value={selectedChampionship} onValueChange={setSelectedChampionship}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Championships" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Championships</SelectItem>
-                    {championships.map((championship) => (
-                      <SelectItem key={championship.id} value={championship.id.toString()}>
-                        <div className="flex items-center gap-2">
-                          <span>{championship.name}</span>
-                          <Badge variant={championship.status === 'ongoing' ? 'default' : 'secondary'} className="text-xs">
-                            {championship.status}
-                          </Badge>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="gender-filter" className="text-sm font-medium">
-                  Gender
-                </Label>
-                <Select value={selectedGender} onValueChange={setSelectedGender}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Genders" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Genders</SelectItem>
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="sport-filter" className="text-sm font-medium">
-                  Sport
-                </Label>
-                <Select value={selectedSportType} onValueChange={setSelectedSportType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Sports" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Sports</SelectItem>
-                    <SelectItem value="basketball">Basketball</SelectItem>
-                    <SelectItem value="football">Football</SelectItem>
-                    <SelectItem value="volleyball">Volleyball</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Sticky Filters + Stats */}
+          <div className="lg:col-span-4 space-y-4 lg:sticky lg:top-4 self-start">
+            {/* Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              <Card className="@container/card">
+                <CardHeader className="space-y-1 overflow-hidden">
+                  <CardDescription className="truncate">Played</CardDescription>
+                  <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl text-black break-words">
+                    {playedMatches.length}
+                  </CardTitle>
+       
+                </CardHeader>
+              </Card>
+              <Card className="@container/card">
+                <CardHeader className="space-y-1 overflow-hidden">
+                  <CardDescription className="truncate">Not Scheduled</CardDescription>
+                  <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl text-black break-words">
+                    {unscheduledMatches.length}
+                  </CardTitle>
+                  <CardAction>
+               
+                  </CardAction>
+                </CardHeader>
+              </Card>
+              <Card className="@container/card">
+                <CardHeader className="space-y-1 overflow-hidden">
+                  <CardDescription className="truncate">Scheduled</CardDescription>
+                  <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl text-black break-words">
+                    {scheduledMatches.length}
+                  </CardTitle>
+                  <CardAction>
+                    
+                  </CardAction>
+                </CardHeader>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
-      </div>
 
-      {/* Filtered Matches List */}
-      <div className="px-4 lg:px-6">
-        <Card className="@container/card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="size-5" />
-              Unscheduled Matches
-            </CardTitle>
-            <CardDescription>
-              Click on any match to quickly schedule it with date and time
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {filteredMatches.length > 0 ? (
-              <div className="space-y-3">
-                {filteredMatches.map((match) => {
-                  const { teamAName, teamBName } = getMatchDisplayName(match);
-                  return (
-                    <div 
-                      key={match.id} 
-                      className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
-                      onClick={() => handleQuickSchedule(match)}
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                          <Badge variant="outline" className="text-xs">
-                            {match.sport_type}
-                          </Badge>
-                          <span className="font-medium">
-                            {teamAName} vs {teamBName}
-                          </span>
-                        </div>
-                        <div className="mt-1 text-sm text-muted-foreground">
-                          Championship: {match.championship?.name || 'Unknown'}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-xs">
-                          {match.teamA?.gender} {match.sport_type}
-                        </Badge>
-                        <Button size="sm" variant="outline">
-                          <Calendar className="size-4 mr-2" />
-                          Schedule
-                        </Button>
-                      </div>
+            {/* Filters */}
+            <Card className="@container/card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="size-5" />
+                  Filters
+                </CardTitle>
+                <CardDescription>
+                  Narrow down by championship, gender, and sport
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="championship-filter" className="text-sm font-medium">
+                      Championship
+                    </Label>
+                    <Select value={selectedChampionship} onValueChange={setSelectedChampionship}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All Championships" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Championships</SelectItem>
+                        {championships.map((championship) => (
+                          <SelectItem key={championship.id} value={championship.id.toString()}>
+                            <div className="flex items-center gap-2">
+                              <span>{championship.name}</span>
+                              <Badge variant={championship.status === 'ongoing' ? 'default' : 'secondary'} className="text-xs">
+                                {championship.status}
+                              </Badge>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gender-filter" className="text-sm font-medium">
+                      Gender
+                    </Label>
+                    <Select value={selectedGender} onValueChange={setSelectedGender}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All Genders" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Genders</SelectItem>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="sport-filter" className="text-sm font-medium">
+                      Sport
+                    </Label>
+                    <Select value={selectedSportType} onValueChange={setSelectedSportType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All Sports" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Sports</SelectItem>
+                        <SelectItem value="basketball">Basketball</SelectItem>
+                        <SelectItem value="football">Football</SelectItem>
+                        <SelectItem value="volleyball">Volleyball</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {hasActiveFilters && (
+                    <Button variant="outline" size="sm" onClick={clearFilters}>
+                      Clear filters
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Content Area */}
+          <div className="lg:col-span-8 space-y-4">
+            {activeView === 'unscheduled' ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="size-5" /> Not scheduled
+                  </CardTitle>
+                  <CardDescription>Click a match to quickly set date and time</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {filteredMatches.length > 0 ? (
+                    <div className="space-y-3">
+                      {filteredMatches.map((match) => {
+                        const { teamAName, teamBName } = getMatchDisplayName(match);
+                        return (
+                          <button
+                            key={match.id}
+                            className="w-full text-left p-3 bg-muted/30 rounded-lg border hover:bg-muted/50 transition-colors"
+                            onClick={() => handleQuickSchedule(match)}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-xs capitalize">{match.sport_type}</Badge>
+                                  <Badge variant="secondary" className="text-[10px] capitalize">{match.gender}</Badge>
+                                </div>
+                                <div className="mt-1 font-medium truncate">
+                                  {teamAName} vs {teamBName}
+                                </div>
+                                <div className="text-xs text-muted-foreground truncate">
+                                  {match.championship?.name || 'Unknown championship'}
+                                </div>
+                              </div>
+                              <div>
+                                <Badge variant="outline" className="text-[10px]">Schedule</Badge>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground py-6 text-center">No matches match current filters</div>
+                  )}
+                </CardContent>
+              </Card>
             ) : (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Target className="size-16 text-muted-foreground/50 mb-4" />
-                <h3 className="text-xl font-semibold text-muted-foreground mb-2">No Matches Found</h3>
-                <p className="text-muted-foreground text-center mb-6 max-w-sm">
-                  {hasActiveFilters
-                    ? "No unscheduled matches match your current filters" 
-                    : "No unscheduled matches available"}
-                </p>
-                {hasActiveFilters && (
-                  <Button variant="outline" onClick={clearFilters}>
-                    Clear Filters
-                  </Button>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Scheduled Matches Display */}
-      <div className="px-4 lg:px-6">
-        <Card className="@container/card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="size-5" />
-              Scheduled Matches
-            </CardTitle>
-            <CardDescription>
-              All matches that have been scheduled with date and time
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {scheduledMatches.length > 0 ? (
-              <div className="space-y-3">
-                {scheduledMatches.map((match) => {
-                  const { teamAName, teamBName } = getMatchDisplayName(match);
-                  return (
-                    <div key={match.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                          <Badge variant="outline" className="text-xs">
-                            {match.sport_type}
-                          </Badge>
-                          <span className="font-medium">
-                            {teamAName} vs {teamBName}
-                          </span>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CalendarDays className="size-5" /> Scheduled
+                  </CardTitle>
+                  <CardDescription>Grouped agenda of upcoming matches</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {scheduledByDate.length > 0 ? (
+                    <div className="space-y-6">
+                      {scheduledByDate.map(({ date, matches }) => (
+                        <div key={date} className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-px flex-1 bg-muted" />
+                            <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                              {new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                            </div>
+                            <div className="h-px flex-1 bg-muted" />
+                          </div>
+                          <div className="space-y-2">
+                            {matches
+                              .sort((a, b) => new Date(a.match_time || 0).getTime() - new Date(b.match_time || 0).getTime())
+                              .map((match) => {
+                                const { teamAName, teamBName } = getMatchDisplayName(match);
+                                return (
+                                  <div key={match.id} className="p-3 bg-muted/30 rounded-lg border">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <Badge variant="outline" className="text-xs capitalize">{match.sport_type}</Badge>
+                                          <Badge variant="secondary" className="text-[10px] capitalize">{match.gender}</Badge>
+                                        </div>
+                                        <div className="mt-1 font-medium truncate">
+                                          {teamAName} vs {teamBName}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground truncate">
+                                          {match.championship?.name || 'Unknown championship'}
+                                        </div>
+                                      </div>
+                                      <div className="text-right text-xs font-semibold text-black">
+                                        {match.match_time && new Date(match.match_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                          </div>
                         </div>
-                        <div className="mt-1 text-sm text-muted-foreground">
-                          Championship: {match.championship?.name || 'Unknown'}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-semibold text-black">
-                          {match.match_time && formatMatchTime(match.match_time)}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Status: {match.status}
-                        </div>
-                      </div>
+                      ))}
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Calendar className="size-16 text-muted-foreground/50 mb-4" />
-                <h3 className="text-xl font-semibold text-muted-foreground mb-2">No Scheduled Matches</h3>
-                <p className="text-muted-foreground text-center mb-6 max-w-sm">
-                  Schedule some matches to see them here
-                </p>
-              </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <Calendar className="size-16 text-muted-foreground/50 mb-4" />
+                      <h3 className="text-xl font-semibold text-muted-foreground mb-2">No Scheduled Matches</h3>
+                      <p className="text-muted-foreground text-center mb-6 max-w-sm">
+                        Schedule some matches to see them here
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Quick Schedule Modal */}

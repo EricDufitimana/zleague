@@ -14,13 +14,13 @@ import { updateTeam, deleteTeam, type TeamData } from '@/actions/teams';
 import { IconArrowLeft, IconPlus, IconLoader2, IconUsers, IconTrophy, IconShield, IconEdit, IconTrash, IconDotsVertical, IconRefresh } from '@tabler/icons-react';
 import { toast } from 'react-hot-toast';
 import { Badge } from '@/components/ui/badge';
-import { AppSidebar } from "@/components/app-sidebar";
-import { SportsHeader } from "@/components/sports-header";
+import { AppSidebar } from "@/components/layout/app-sidebar";
+import { SportsHeader } from "@/components/sports/sports-header";
 import {
   SidebarInset,
   SidebarProvider,
 } from "@/components/ui/sidebar";
-import { FamilySelector } from '@/components/FamilySelector';
+import { FamilySelector } from '@/components/sports/FamilySelector';
 
 interface Championship {
   id: number;

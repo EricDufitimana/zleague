@@ -11,8 +11,8 @@ import { IconTrophy, IconPlus, IconLoader2, IconUsers, IconCalendar, IconArrowRi
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Badge } from '@/components/ui/badge';
-import { AppSidebar } from "@/components/app-sidebar";
-import { SportsHeader } from "@/components/sports-header";
+import { AppSidebar } from "@/components/layout/app-sidebar";
+import { SportsHeader } from "@/components/sports/sports-header";
 import {
   SidebarInset,
   SidebarProvider,
