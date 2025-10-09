@@ -12,9 +12,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { IconLogout, IconSettings, IconUser, IconShield } from "@tabler/icons-react";
+import { LogOut, Settings, User, Shield } from "lucide-react";
 import Link from "next/link";
-
+  
 export function UserAvatar() {
   const { user, isAdmin, isLoading, signOut } = useSession();
   const router = useRouter();
@@ -39,7 +39,7 @@ export function UserAvatar() {
         </Link>
         <Link 
           href="/register" 
-          className="px-4 py-2 text-sm font-medium bg-black-600 text-white rounded-md hover:bg-black-700 transition-colors"
+          className="px-4 py-2 text-sm font-medium bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors"
         >
           Register
         </Link>
@@ -98,10 +98,10 @@ export function UserAvatar() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         
-        {!isAdmin && (
+        {isAdmin && (
           <DropdownMenuItem asChild>
             <Link href="/dashboard" className="flex items-center">
-              <IconUser className="mr-2 h-4 w-4" />
+              <Shield className="mr-2 h-4 w-4" />
               Dashboard
             </Link>
           </DropdownMenuItem>
@@ -109,7 +109,7 @@ export function UserAvatar() {
 
         
         <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
-          <IconLogout className="mr-2 h-4 w-4" />
+          <LogOut className="mr-2 h-4 w-4" />
           Sign Out
         </DropdownMenuItem>
       </DropdownMenuContent>

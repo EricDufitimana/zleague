@@ -6,6 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Navbar } from "@/components/navigation/Navbar"
 import { FilterBar } from "@/components/sports/FilterBar"
 import { MatchCard } from "@/components/sports/MatchCard"
+import { MatchStatsDialog } from "@/components/sports/MatchStatsDialog"
+import { ArrowUpDown } from "lucide-react"
 
 interface Match {
   id: number
@@ -15,6 +17,8 @@ interface Match {
   sport_type: string
   status: string
   winner_id?: number
+  team_a_score?: number
+  team_b_score?: number
   teamA?: {
     id: number
     name: string
@@ -36,6 +40,8 @@ export default function ScoresPage() {
   const [selectedGender, setSelectedGender] = useState("all")
   const [isLoading, setIsLoading] = useState(false)
   const [matches, setMatches] = useState<Match[]>([])
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
+  const [statsDialogOpen, setStatsDialogOpen] = useState(false)
 
   // Fetch matches from API
   useEffect(() => {
@@ -45,7 +51,22 @@ export default function ScoresPage() {
         const response = await fetch('/api/matches')
         if (response.ok) {
           const data = await response.json()
-          console.log('Fetched matches:', data.matches)
+          console.log('📊 Fetched matches from API:', data.matches?.length || 0, 'matches')
+          
+          // Debug: Log first match with scores to verify data
+          if (data.matches && data.matches.length > 0) {
+            const firstMatch = data.matches[0]
+            console.log('🔍 Sample match data:', {
+              id: firstMatch.id,
+              teamA: firstMatch.teamA?.name,
+              teamB: firstMatch.teamB?.name,
+              team_a_score: firstMatch.team_a_score,
+              team_b_score: firstMatch.team_b_score,
+              status: firstMatch.status,
+              sport_type: firstMatch.sport_type
+            })
+          }
+          
           setMatches(data.matches || [])
         }
       } catch (error) {
@@ -71,28 +92,43 @@ export default function ScoresPage() {
   }
 
   // Convert API match to MatchCard format
-  const convertToMatchCard = (match: Match) => ({
-    id: match.id.toString(),
-    homeTeam: { 
-      name: match.teamA?.name || 'Unknown Team', 
-      score: match.status === 'played' ? (Math.floor(Math.random() * 5)) : 0 
-    },
-    awayTeam: { 
-      name: match.teamB?.name || 'Unknown Team', 
-      score: match.status === 'played' ? (Math.floor(Math.random() * 5)) : 0 
-    },
-    status: match.status === 'played' ? 'final' as const : 
-            match.status === 'scheduled' ? 'not_played' as const : 
-            match.status === 'not_yet_scheduled' ? 'not_played' as const : 'live' as const,
-    sport: match.sport_type as "football" | "basketball" | "volleyball",
-    time: (match.status === 'scheduled' || match.status === 'not_yet_scheduled') ? 
-      `${new Date(match.created_at).toLocaleDateString('en-US', { weekday: 'short' })} ${new Date(match.created_at).toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: false 
-      })}` : undefined,
-    date: match.created_at
-  })
+  const convertToMatchCard = (match: Match) => {
+    const converted = {
+      id: match.id.toString(),
+      homeTeam: { 
+        name: match.teamA?.name || 'Unknown Team', 
+        score: match.status === 'played' ? (match.team_a_score ?? 0) : null
+      },
+      awayTeam: { 
+        name: match.teamB?.name || 'Unknown Team', 
+        score: match.status === 'played' ? (match.team_b_score ?? 0) : null
+      },
+      status: match.status === 'played' ? 'final' as const : 
+              match.status === 'scheduled' ? 'not_played' as const : 
+              match.status === 'not_yet_scheduled' ? 'not_played' as const : 'live' as const,
+      sport: match.sport_type as "football" | "basketball" | "volleyball",
+      time: (match.status === 'scheduled' || match.status === 'not_yet_scheduled') ? 
+        `${new Date(match.created_at).toLocaleDateString('en-US', { weekday: 'short' })} ${new Date(match.created_at).toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: false 
+        })}` : undefined,
+      date: match.created_at
+    }
+    
+    // Debug: Log scores for played matches
+    if (match.status === 'played' && (match.team_a_score !== undefined || match.team_b_score !== undefined)) {
+      console.log('⚽ Match scores:', {
+        match_id: match.id,
+        teamA: match.teamA?.name,
+        teamB: match.teamB?.name,
+        team_a_score: match.team_a_score,
+        team_b_score: match.team_b_score
+      })
+    }
+    
+    return converted
+  }
 
   // Filter matches based on selected sport, date, and gender
   const filteredMatches = matches
@@ -138,6 +174,15 @@ export default function ScoresPage() {
       acc[weekLabel].push(match)
       return acc
     }, {} as Record<string, typeof filteredMatches>) : null
+
+  // Handle match click to show stats
+  const handleMatchClick = (matchId: string) => {
+    const match = matches.find(m => m.id.toString() === matchId)
+    if (match) {
+      setSelectedMatch(match)
+      setStatsDialogOpen(true)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -204,13 +249,17 @@ export default function ScoresPage() {
                   matches.length > 0 && (
                     <section key={weekLabel} className="space-y-3">
                       <div className="flex items-center gap-3">
-                        <div className="h-[1px] w-6 bg-primary/30" />
-                        <h2 className="text-sm font-medium uppercase tracking-wider text-primary/80">{weekLabel}</h2>
+                        <div className="h-[1px] w-6 bg-[#E67514]/30" />
+                        <h2 className="text-sm font-medium uppercase tracking-wider text-[#E67514]/80">{weekLabel}</h2>
                         <div className="flex-1 h-[1px] bg-gray-200" />
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {matches.map((match) => (
-                          <MatchCard key={match.id} match={match} />
+                          <MatchCard 
+                            key={match.id} 
+                            match={match}
+                            onClick={() => handleMatchClick(match.id)}
+                          />
                         ))}
                       </div>
                     </section>
@@ -221,7 +270,11 @@ export default function ScoresPage() {
               // Regular matches (not grouped)
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredMatches.map((match) => (
-                  <MatchCard key={match.id} match={match} />
+                  <MatchCard 
+                    key={match.id} 
+                    match={match}
+                    onClick={() => handleMatchClick(match.id)}
+                  />
                 ))}
               </div>
             )
@@ -237,6 +290,18 @@ export default function ScoresPage() {
           )}
         </div>
       </main>
+
+      {/* Match Stats Dialog */}
+      {selectedMatch && (
+        <MatchStatsDialog
+          open={statsDialogOpen}
+          onOpenChange={setStatsDialogOpen}
+          matchId={selectedMatch.id.toString()}
+          sport={selectedMatch.sport_type as "football" | "basketball" | "volleyball"}
+          homeTeamName={selectedMatch.teamA?.name || 'Team A'}
+          awayTeamName={selectedMatch.teamB?.name || 'Team B'}
+        />
+      )}
     </div>
   )
 }

@@ -146,7 +146,8 @@ export async function GET(request: NextRequest) {
       .from('football_scores')
       .select(`
         *,
-        team:teams(*)
+        team:teams(*),
+        player:players(*)
       `)
       .eq('match_id', match_id)
       .order('created_at', { ascending: false });
@@ -158,7 +159,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(scores);
+    return NextResponse.json({ scores });
   } catch (error) {
     return NextResponse.json(
       { error: 'Failed to fetch football scores', details: error instanceof Error ? error.message : 'Unknown error' },

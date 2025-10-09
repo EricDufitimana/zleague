@@ -3,7 +3,8 @@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { CalendarIcon } from "lucide-react"
+import { CalendarIcon, ChevronDown } from "lucide-react"
+import { Label } from "@/components/ui/label"
 
 interface FilterBarProps {
   selectedSport: string
@@ -56,48 +57,68 @@ export function FilterBar({ selectedSport, onSportChange, selectedDate, onDateCh
       </Tabs>
 
       {/* Date and Gender Filters */}
-      <div className="flex flex-col sm:flex-row gap-2">
+      <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
         {/* Date Picker */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="w-full sm:w-auto border-gray-200 shadow-sm hover:bg-gray-50">
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {currentDateLabel}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            {dateOptions.map((option) => (
-              <DropdownMenuItem
-                key={option.value}
-                onClick={() => onDateChange(option.value)}
-                className={selectedDate === option.value ? "bg-accent" : ""}
+        <div>
+          <Label htmlFor="date-filter" className="text-sm font-medium text-gray-700 mb-1.5 block">
+            Date Range
+          </Label>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                id="date-filter"
+                variant="outline" 
+                className="w-full sm:w-auto border-gray-200 shadow-none hover:bg-gray-50"
               >
-                {option.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {currentDateLabel}
+                <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {dateOptions.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  onClick={() => onDateChange(option.value)}
+                  className={selectedDate === option.value ? "bg-accent" : ""}
+                >
+                  {option.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
         {/* Gender Picker */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="w-full sm:w-auto border-gray-200 shadow-sm hover:bg-gray-50">
-              <span className="mr-2">👥</span>
-              {currentGenderLabel}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            {genderOptions.map((option) => (
-              <DropdownMenuItem
-                key={option.value}
-                onClick={() => onGenderChange(option.value)}
-                className={selectedGender === option.value ? "bg-accent" : ""}
+        <div>
+          <Label htmlFor="gender-filter" className="text-sm font-medium text-gray-700 mb-1.5 block">
+            Gender
+          </Label>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                id="gender-filter"
+                variant="outline" 
+                className="w-full sm:w-auto border-gray-200 shadow-sm hover:bg-gray-50"
               >
-                {option.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+                <span className="mr-2">👥</span>
+                {currentGenderLabel}
+                <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {genderOptions.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  onClick={() => onGenderChange(option.value)}
+                  className={selectedGender === option.value ? "bg-accent" : ""}
+                >
+                  {option.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </div>
   )

@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { IconLogout, IconSettings, IconUser, IconShield } from "@tabler/icons-react";
+import { LogOut, Shield } from "lucide-react";
 import Link from "next/link";
 import { AuthDialog } from "@/components/auth/AuthDialog";
 
@@ -119,7 +119,7 @@ export function UserAvatar() {
         {isAdmin && (
           <DropdownMenuItem asChild>
             <Link href="/dashboard" className="flex items-center">
-              <IconShield className="mr-2 h-4 w-4" />
+              <Shield className="mr-2 h-4 w-4" />
               Dashboard
             </Link>
           </DropdownMenuItem>
@@ -127,7 +127,7 @@ export function UserAvatar() {
 
         
         <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
-          <IconLogout className="mr-2 h-4 w-4" />
+          <LogOut className="mr-2 h-4 w-4" />
           Sign Out
         </DropdownMenuItem>
       </DropdownMenuContent>

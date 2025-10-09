@@ -11,10 +11,6 @@ interface SessionData {
   error: string | null;
 }
 
-// Longer timeouts for development/localhost environments
-const ADMIN_CHECK_TIMEOUT = process.env.NODE_ENV === 'development' ? 15000 : 5000;
-const SESSION_INIT_TIMEOUT = process.env.NODE_ENV === 'development' ? 30000 : 10000;
-
 export function useSession() {
   const [sessionData, setSessionData] = useState<SessionData>({
     user: null,
@@ -28,36 +24,28 @@ export function useSession() {
 
   const checkAdminStatus = useCallback(async (userId: string): Promise<boolean> => {
     try {
-      const startTime = Date.now();
+      console.log('🔐 Checking admin status for user:', userId);
       
-      const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Admin check timeout')), ADMIN_CHECK_TIMEOUT)
-      );
-      
-      const queryPromise = supabaseRef.current
+      const { data, error } = await supabaseRef.current
         .from('users')
         .select('role')
         .eq('user_id', userId)
         .single();
 
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
-
-      const duration = Date.now() - startTime;
-      if (duration > 3000) {
-        console.warn(`[useSession] Admin check took ${duration}ms (slow connection)`);
-      }
-
       // User not found in users table (PGRST116) or any other error = not admin
       if (error) {
         if (error.code !== 'PGRST116') {
-          console.warn('[useSession] Admin check error:', error.message);
+          console.warn('⚠️ Admin check error:', error.message);
         }
+        console.log('👤 User role: regular user');
         return false;
       }
 
-      return data?.role === 'admin';
+      const isAdmin = data?.role === 'admin';
+      console.log('👑 User role:', isAdmin ? 'admin' : 'regular user');
+      return isAdmin;
     } catch (error) {
-      console.error('[useSession] Admin check failed:', error);
+      console.error('❌ Admin check failed:', error);
       return false;
     }
   }, []);
@@ -69,16 +57,14 @@ export function useSession() {
 
   const initializeSession = useCallback(async () => {
     try {
-      const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Session initialization timeout')), SESSION_INIT_TIMEOUT)
-      );
-
-      const userPromise = supabaseRef.current.auth.getUser();
-      const { data: { user }, error } = await Promise.race([userPromise, timeoutPromise]);
+      console.log('🔄 Initializing session...');
+      
+      const { data: { user }, error } = await supabaseRef.current.auth.getUser();
 
       if (!mountedRef.current) return;
 
       if (error || !user) {
+        console.log('👤 No authenticated user found');
         updateSessionData({
           isLoading: false,
           user: null,
@@ -88,11 +74,17 @@ export function useSession() {
         return;
       }
 
-      // Check admin status in parallel with setting user
+      console.log('✅ User authenticated:', {
+        id: user.id,
+        email: user.email
+      });
+
+      // Check admin status
       const isAdmin = await checkAdminStatus(user.id);
 
       if (!mountedRef.current) return;
 
+      console.log('🎉 Session initialized successfully');
       updateSessionData({
         isLoading: false,
         user,
@@ -102,7 +94,7 @@ export function useSession() {
     } catch (error) {
       if (!mountedRef.current) return;
       
-      console.error('[useSession] Initialization failed:', error);
+      console.error('❌ Session initialization failed:', error);
       updateSessionData({
         isLoading: false,
         user: null,
@@ -114,7 +106,9 @@ export function useSession() {
 
   const signOut = useCallback(async () => {
     try {
+      console.log('👋 Signing out...');
       await supabaseRef.current.auth.signOut();
+      console.log('✅ Sign out successful');
       updateSessionData({ 
         user: null,
         isAdmin: false,
@@ -122,7 +116,7 @@ export function useSession() {
         isLoading: false
       });
     } catch (error) {
-      console.error('[useSession] Sign out failed:', error);
+      console.error('❌ Sign out failed:', error);
     }
   }, [updateSessionData]);
 
@@ -137,8 +131,11 @@ export function useSession() {
       async (event, session) => {
         if (!mountedRef.current) return;
 
+        console.log('🔔 Auth state changed:', event);
+
         switch (event) {
           case 'SIGNED_OUT':
+            console.log('👋 User signed out');
             updateSessionData({ 
               user: null,
               isAdmin: false,
@@ -149,6 +146,7 @@ export function useSession() {
 
           case 'SIGNED_IN':
             if (session?.user) {
+              console.log('✅ User signed in:', session.user.email);
               const isAdmin = await checkAdminStatus(session.user.id);
               if (mountedRef.current) {
                 updateSessionData({ 
@@ -162,12 +160,14 @@ export function useSession() {
             break;
 
           case 'TOKEN_REFRESHED':
+            console.log('🔄 Token refreshed');
             if (session?.user && mountedRef.current) {
               updateSessionData({ user: session.user });
             }
             break;
 
           case 'USER_UPDATED':
+            console.log('📝 User data updated');
             if (session?.user && mountedRef.current) {
               updateSessionData({ user: session.user });
             }

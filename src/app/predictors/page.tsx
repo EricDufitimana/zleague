@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Navbar } from "@/components/navigation/Navbar"
-import { Search, History } from "lucide-react"
+import { Search, History, Loader2 } from "lucide-react"
 import { useSession } from "@/hooks/useSession"
 import { toast } from "sonner"
 import {
@@ -502,34 +502,57 @@ export default function PredictorsPage() {
               <CardHeader className="pb-0">
                 <CardTitle className="text-base font-medium text-gray-900">Scheduled Matches</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {isLoading ? (
-                  <div className="text-sm text-gray-500 p-6">Loading scheduled matches…</div>
-                ) : availableMatches.length === 0 ? (
-                  <div className="text-sm text-gray-500 p-6">
-                    {upcomingMatches.length === 0 
-                      ? "No scheduled matches available." 
-                      : "You have already made predictions on all available matches."}
-                  </div>
-                ) : (
-                  availableMatches.map((match) => (
-                  <div key={match.id} className="rounded border border-gray-200">
+              <CardContent>
+                <div className="space-y-4">
+                  {isLoading ? (
+                    <div className="flex items-center justify-center gap-2 text-sm text-gray-500 p-6">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Loading scheduled matches…</span>
+                    </div>
+                  ) : availableMatches.length === 0 ? (
+                    <div className="text-sm text-gray-500 p-6">
+                      {upcomingMatches.length === 0 
+                        ? "No scheduled matches available." 
+                        : "You have already made predictions on all available matches."}
+                    </div>
+                  ) : (
+                    availableMatches.map((match) => (
+                  <div key={match.id} className="group rounded-xl border border-gray-200 bg-white/80 hover:bg-white shadow-sm hover:shadow-md transition-all">
                     <div className="p-5">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-5">
-                          <div className="flex items-center gap-2">
-                       
-                            <span className="text-base font-medium text-gray-900">{match.homeTeam.name}</span>
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Avatar className="h-8 w-8 border border-gray-100 shrink-0">
+                              <AvatarImage src={match.homeTeam.logo} alt={match.homeTeam.name} />
+                              <AvatarFallback className="bg-gray-50 text-gray-600 font-semibold text-[10px]">
+                                {match.homeTeam.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm sm:text-base font-medium text-gray-900 truncate">
+                              {match.homeTeam.name}
+                            </span>
                           </div>
-                          <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">vs</span>
-                          <div className="flex items-center gap-2">
-                      
-                            <span className="text-base font-medium text-gray-900">{match.awayTeam.name}</span>
+                          <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                            vs
+                          </span>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Avatar className="h-8 w-8 border border-gray-100 shrink-0">
+                              <AvatarImage src={match.awayTeam.logo} alt={match.awayTeam.name} />
+                              <AvatarFallback className="bg-gray-50 text-gray-600 font-semibold text-[10px]">
+                                {match.awayTeam.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm sm:text-base font-medium text-gray-900 truncate">
+                              {match.awayTeam.name}
+                            </span>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-xs text-gray-500">{match.date}</div>
-                          <div className="text-base font-semibold text-gray-900">{match.time}</div>
+                        <div className="text-right shrink-0">
+                          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-gray-200 bg-gray-50">
+                            <span className="text-xs text-gray-500">{match.date}</span>
+                            <span className="w-1 h-1 rounded-full bg-gray-300" />
+                            <span className="text-xs font-medium text-gray-900">{match.time}</span>
+                          </div>
                         </div>
                       </div>
 
@@ -541,41 +564,56 @@ export default function PredictorsPage() {
                         >
                           <label 
                             htmlFor={`${match.id}-home`} 
-                            className={`flex items-center gap-2 rounded border p-3 cursor-pointer transition-all ${
+                            className={`flex items-center gap-2 rounded-lg border p-3 md:p-4 cursor-pointer transition-all ${
                               predictions[match.id] === "home" 
-                                ? "bg-cyan-50 border-cyan-300" 
-                                : "border-gray-200 hover:bg-gray-50 hover:border-gray-300"
+                                ? "border-emerald-500 bg-emerald-500 shadow-md" 
+                                : "border-gray-200 bg-white/70 hover:bg-gray-50/80 hover:border-gray-300"
                             }`}
                           >
-                            <RadioGroupItem value="home" id={`${match.id}-home`} />
-                            <span className="text-sm text-gray-900">{match.homeTeam.name}</span>
+                            <RadioGroupItem value="home" id={`${match.id}-home`} className="sr-only" />
+                            <span className={`text-sm truncate font-medium ${
+                              predictions[match.id] === "home" ? "text-white" : "text-gray-900"
+                            }`}>
+                              {match.homeTeam.name}
+                            </span>
                           </label>
                           <label 
                             htmlFor={`${match.id}-away`} 
-                            className={`flex items-center gap-2 rounded border p-3 cursor-pointer transition-all ${
+                            className={`flex items-center gap-2 rounded-lg border p-3 md:p-4 cursor-pointer transition-all ${
                               predictions[match.id] === "away" 
-                                ? "bg-cyan-50 border-cyan-300" 
-                                : "border-gray-200 hover:bg-gray-50 hover:border-gray-300"
+                                ? "border-emerald-500 bg-emerald-500 shadow-md" 
+                                : "border-gray-200 bg-white/70 hover:bg-gray-50/80 hover:border-gray-300"
                             }`}
                           >
-                            <RadioGroupItem value="away" id={`${match.id}-away`} />
-                            <span className="text-sm text-gray-900">{match.awayTeam.name}</span>
+                            <RadioGroupItem value="away" id={`${match.id}-away`} className="sr-only" />
+                            <span className={`text-sm truncate font-medium ${
+                              predictions[match.id] === "away" ? "text-white" : "text-gray-900"
+                            }`}>
+                              {match.awayTeam.name}
+                            </span>
                           </label>
                         </RadioGroup>
                       </div>
                     </div>
                   </div>
                   )))}
-
-                <div className="flex justify-end pt-4">
-                  <Button 
-                    onClick={handleSubmitPredictions} 
-                    className="px-7 bg-emerald-600 hover:bg-emerald-700 text-white" 
-                    variant="default" 
-                    disabled={Object.keys(predictions).length === 0 || isSubmitting}
-                  >
-                    {isSubmitting ? "Submitting..." : "Submit"}
-                  </Button>
+                  <div className="flex justify-end pt-4">
+                    <Button 
+                      onClick={handleSubmitPredictions} 
+                      className="px-7 bg-emerald-600 hover:bg-emerald-700 text-white" 
+                      variant="default" 
+                      disabled={Object.keys(predictions).length === 0 || isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Submitting
+                        </>
+                      ) : (
+                        "Submit"
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

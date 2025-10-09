@@ -8,12 +8,12 @@ interface Match {
   homeTeam: {
     name: string
     logo?: string
-    score: number
+    score: number | null
   }
   awayTeam: {
     name: string
     logo?: string
-    score: number
+    score: number | null
   }
   status: "scheduled" | "live" | "final" | "not_played"
   time?: string
@@ -24,6 +24,7 @@ interface Match {
 interface MatchCardProps {
   match: Match
   className?: string
+  onClick?: () => void
 }
 
 const sportIcons = {
@@ -39,22 +40,20 @@ const statusConfig = {
   not_played: { label: "Not Played", variant: "outline" as const },
 }
 
-export function MatchCard({ match, className }: MatchCardProps) {
+export function MatchCard({ match, className, onClick }: MatchCardProps) {
   const status = statusConfig[match.status]
   const sportIcon = sportIcons[match.sport]
 
   return (
-    <Card className={cn("bg-white shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-200 relative", className)}>
+    <Card 
+      className={cn(
+        "bg-white shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200",
+        onClick && "cursor-pointer hover:border-gray-300",
+        className
+      )}
+      onClick={onClick}
+    >
       <CardContent className="p-3">
-        {/* Not Played Badge - Top Right Corner */}
-        {match.status === "not_played" && (
-          <Badge 
-            variant="outline"
-            className="absolute top-2 right-2 px-2 text-xs font-medium bg-orange-100 text-orange-700 border-orange-300 hover:bg-orange-200"
-          >
-            Not Played
-          </Badge>
-        )}
         <div className="flex items-center justify-between">
           {/* Home Team */}
           <div className="flex items-center space-x-2 flex-1 min-w-0">
@@ -72,14 +71,18 @@ export function MatchCard({ match, className }: MatchCardProps) {
           {/* Score Section */}
           <div className="flex items-center space-x-2 px-3">
             <div className="text-center">
-              <div className="text-xl font-bold text-gray-900">{match.homeTeam.score}</div>
+              <div className="text-xl font-bold text-gray-900">
+                {match.homeTeam.score !== null ? match.homeTeam.score : <span className="text-gray-400">--</span>}
+              </div>
             </div>
             <div className="text-center">
               <div className="text-lg mb-0.5">{sportIcon}</div>
               <div className="text-xs text-gray-500">vs</div>
             </div>
             <div className="text-center">
-              <div className="text-xl font-bold text-gray-900">{match.awayTeam.score}</div>
+              <div className="text-xl font-bold text-gray-900">
+                {match.awayTeam.score !== null ? match.awayTeam.score : <span className="text-gray-400">--</span>}
+              </div>
             </div>
           </div>
 

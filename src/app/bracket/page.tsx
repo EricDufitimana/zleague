@@ -2,13 +2,15 @@
 
 import { useEffect, useMemo, useState, useCallback, memo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
 import { Navbar } from "@/components/navigation/Navbar"
 import { cn } from "@/lib/utils"
+import { Bracket, type IRoundProps, Seed, SeedItem, SeedTeam, type IRenderSeedProps } from "@sportsgram/brackets"
 
 type ApiTeam = { id: number; name: string; grade: string; gender?: string }
 type ApiMatch = {
@@ -111,6 +113,50 @@ const NextMatchCard = memo(({ teamA, teamB }: { teamA: string; teamB: string }) 
 })
 NextMatchCard.displayName = "NextMatchCard"
 
+// Custom styled seed component following @sportsgram/brackets structure
+const CustomSeed = ({ seed, breakpoint }: IRenderSeedProps) => {
+  const getInitials = (name: string) => 
+    name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+
+  // @ts-ignore - accessing custom winner property
+  const winnerIndex = seed.winner
+
+  return (
+    <Seed mobileBreakpoint={breakpoint} style={{ backgroundColor: 'transparent' }}>
+      <SeedItem style={{ backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden' }}>
+        <div className="flex flex-col gap-2 p-4 bg-white border border-gray-200 rounded-[10px] hover:shadow-lg hover:border-gray-300 transition-all min-w-[280px]">
+          {/* Team A */}
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-[11px] font-semibold text-gray-600 shrink-0">
+              {getInitials(seed.teams?.[0]?.name || 'TBD')}
+            </div>
+            <SeedTeam className="flex-1 text-sm font-medium text-gray-900 truncate">
+              {seed.teams?.[0]?.name || 'TBD'}
+            </SeedTeam>
+            {winnerIndex === 0 && (
+              <Badge className="bg-green-600 text-white text-xs">Winner</Badge>
+            )}
+          </div>
+          {/* Divider */}
+          <div className="h-px bg-gray-100 -mx-4" />
+          {/* Team B */}
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-[11px] font-semibold text-gray-600 shrink-0">
+              {getInitials(seed.teams?.[1]?.name || 'TBD')}
+            </div>
+            <SeedTeam className="flex-1 text-sm font-medium text-gray-900 truncate">
+              {seed.teams?.[1]?.name || 'TBD'}
+            </SeedTeam>
+            {winnerIndex === 1 && (
+              <Badge className="bg-green-600 text-white text-xs">Winner</Badge>
+            )}
+          </div>
+        </div>
+      </SeedItem>
+    </Seed>
+  )
+}
+
 // Optimized bracket building logic
 function buildBracketStructure(matches: ApiMatch[]) {
   if (matches.length === 0) return { columns: [], matchById: new Map(), depthById: new Map() }
@@ -178,11 +224,11 @@ function buildBracketStructure(matches: ApiMatch[]) {
 
 export default function BracketPage() {
   const [selectedSport, setSelectedSport] = useState("football")
-  const [selectedGender, setSelectedGender] = useState<"all" | "male" | "female">("all")
+  const [selectedGender, setSelectedGender] = useState<"male" | "female">("male")
   const [matches, setMatches] = useState<ApiMatch[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
-  const [showDebug, setShowDebug] = useState(false)
+  
 
   useEffect(() => {
     const fetchMatches = async () => {
@@ -216,7 +262,7 @@ export default function BracketPage() {
   const filteredMatches = useMemo(() => {
     return matches.filter(m => 
       m.sport_type === selectedSport && 
-      (selectedGender === 'all' || m.gender === selectedGender)
+      m.gender === selectedGender
     )
   }, [matches, selectedSport, selectedGender])
 
@@ -227,15 +273,6 @@ export default function BracketPage() {
   )
 
   const { columns, matchById, feedersByNextId } = bracketData
-
-  // Diagnostic info
-  const diagnostics = useMemo(() => ({
-    total: matches.length,
-    filtered: filteredMatches.length,
-    columns: columns.length,
-    withNext: filteredMatches.filter(m => m.next_match_id).length,
-    finals: filteredMatches.filter(m => !m.next_match_id).length
-  }), [matches.length, filteredMatches, columns.length])
 
   const renderBracketColumn = useCallback((col: ApiMatch[], colIdx: number) => {
     // Hide matches that are targets of feeders (they will be rendered as centered preview from previous column)
@@ -276,24 +313,31 @@ export default function BracketPage() {
                       wonA={wonA} 
                       wonB={wonB} 
                     />
-                    {/* Horizontal line from match to connector */}
+                    {/* Modern horizontal connector to bus */}
                     {isNotFinals && nextMatch && (
-                      <div className="absolute top-1/2 -right-6 w-6 h-0.5 bg-gray-300" />
+                      <>
+                        <div className="absolute top-1/2 -right-7 w-7 h-[2px] rounded-full bg-gradient-to-r from-gray-200 to-gray-300 -translate-y-1/2" />
+                        <div className="absolute top-1/2 -right-8 h-1.5 w-1.5 rounded-full bg-gray-300 -translate-y-1/2" />
+                      </>
                     )}
                   </div>
                 )
               })}
-              {/* Vertical connector line between matches */}
+              {/* Modern vertical bus connecting feeder pair */}
               {isNotFinals && nextMatch && group.length >= 2 && (
+                <>
                 <div 
-                  className="absolute right-0 w-0.5 bg-gray-300"
+                    className="absolute right-0 w-[2px] rounded-full bg-gradient-to-b from-gray-200 to-gray-300"
                   style={{
-                    top: 'calc(50% - 0.125rem)',
-                    bottom: 'calc(50% - 0.125rem)',
+                      top: 'calc(50% - 0.5rem)',
+                      bottom: 'calc(50% - 0.5rem)',
                     height: 'auto',
                     transform: 'translateY(-50%)'
                   }}
                 />
+                  <div className="absolute right-0 -translate-x-1 top-[calc(50%-0.5rem)] h-1.5 w-1.5 rounded-full bg-gray-300" />
+                  <div className="absolute right-0 -translate-x-1 bottom-[calc(50%-0.5rem)] h-1.5 w-1.5 rounded-full bg-gray-300" />
+                </>
               )}
             </div>
 
@@ -302,7 +346,7 @@ export default function BracketPage() {
               <>
                 {/* Center: Vertical connector */}
                 <div className="h-full flex items-center justify-center">
-                  <div className="w-0.5 h-32 bg-gray-300" />
+                  <div className="w-[2px] h-32 rounded-full bg-gradient-to-b from-gray-200 to-gray-300" />
                 </div>
                 
                 <div className="relative flex justify-center">
@@ -311,7 +355,8 @@ export default function BracketPage() {
                     teamB={nextMatch.teamB?.name || 'TBD'} 
                   />
                   {/* Horizontal line from connector to next match */}
-                  <div className="absolute top-1/2 -left-10 w-10 h-0.5 bg-gray-300" />
+                  <div className="absolute top-1/2 -left-10 w-10 h-[2px] rounded-full bg-gradient-to-r from-gray-200 to-gray-300 -translate-y-1/2" />
+                  <div className="absolute top-1/2 -left-10 -translate-x-2 h-1.5 w-1.5 rounded-full bg-gray-300 -translate-y-1/2" />
                 </div>
               </>
             )}
@@ -334,22 +379,19 @@ export default function BracketPage() {
             <h1 className="text-3xl font-bold text-gray-900 mb-1">Tournament Bracket</h1>
             <p className="text-gray-600">Follow match progression</p>
           </div>
-          <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  {selectedGender === 'all' ? 'All Genders' : selectedGender === 'male' ? 'Male' : 'Female'}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setSelectedGender('all')}>All Genders</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSelectedGender('male')}>Male</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSelectedGender('female')}>Female</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button variant="outline" size="sm" onClick={() => setShowDebug(v => !v)}>
-              {showDebug ? '🔍 Hide' : '🔍 Show'} Debug
-            </Button>
+          <div className="flex items-end gap-3">
+            <div className="flex flex-col">
+              <Label htmlFor="gender-select" className="text-sm text-gray-700">Gender</Label>
+              <Select value={selectedGender} onValueChange={(v) => setSelectedGender(v as 'male' | 'female')}>
+                <SelectTrigger id="gender-select" className="w-[160px] bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
@@ -370,11 +412,67 @@ export default function BracketPage() {
         )}
 
         {isLoading && (
-          <Card className="mb-4 border-gray-200 bg-gray-50">
-            <CardContent className="p-4">
-              <p className="text-sm text-gray-600">⏳ Loading bracket…</p>
-            </CardContent>
-          </Card>
+          <div className="w-full overflow-x-auto pb-4">
+            <div className="flex gap-16">
+              {/* Round 1 Skeleton */}
+              <div className="space-y-4 min-w-[280px]">
+                <Skeleton className="h-6 w-20 mx-auto mb-4" />
+                <div className="space-y-8">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="bg-white border border-gray-200 rounded-[10px] p-4 space-y-2">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="w-8 h-8 rounded-full" />
+                        <Skeleton className="h-4 flex-1" />
+                      </div>
+                      <Skeleton className="h-px w-full" />
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="w-8 h-8 rounded-full" />
+                        <Skeleton className="h-4 flex-1" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Round 2 Skeleton */}
+              <div className="space-y-4 min-w-[280px]">
+                <Skeleton className="h-6 w-20 mx-auto mb-4" />
+                <div className="space-y-16">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="bg-white border border-gray-200 rounded-[10px] p-4 space-y-2">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="w-8 h-8 rounded-full" />
+                        <Skeleton className="h-4 flex-1" />
+                      </div>
+                      <Skeleton className="h-px w-full" />
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="w-8 h-8 rounded-full" />
+                        <Skeleton className="h-4 flex-1" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Finals Skeleton */}
+              <div className="space-y-4 min-w-[280px]">
+                <Skeleton className="h-6 w-24 mx-auto mb-4" />
+                <div className="flex items-center justify-center min-h-[400px]">
+                  <div className="bg-white border border-gray-200 rounded-[10px] p-4 space-y-2 w-full">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="w-8 h-8 rounded-full" />
+                      <Skeleton className="h-4 flex-1" />
+                    </div>
+                    <Skeleton className="h-px w-full" />
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="w-8 h-8 rounded-full" />
+                      <Skeleton className="h-4 flex-1" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {!isLoading && !fetchError && matches.length === 0 && (
@@ -401,86 +499,59 @@ export default function BracketPage() {
           </Card>
         )}
 
-        {showDebug && (
-          <Card className="mb-6 border-gray-300">
-            <CardContent className="p-4">
-              <h3 className="font-semibold text-sm mb-2">Debug Information</h3>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
-                <div className="bg-blue-50 p-2 rounded">
-                  <div className="text-gray-600">Total Matches</div>
-                  <div className="text-lg font-bold text-blue-700">{diagnostics.total}</div>
-                </div>
-                <div className="bg-green-50 p-2 rounded">
-                  <div className="text-gray-600">Filtered</div>
-                  <div className="text-lg font-bold text-green-700">{diagnostics.filtered}</div>
-                </div>
-                <div className="bg-purple-50 p-2 rounded">
-                  <div className="text-gray-600">Rounds</div>
-                  <div className="text-lg font-bold text-purple-700">{diagnostics.columns}</div>
-                </div>
-                <div className="bg-orange-50 p-2 rounded">
-                  <div className="text-gray-600">Linked</div>
-                  <div className="text-lg font-bold text-orange-700">{diagnostics.withNext}</div>
-                </div>
-                <div className="bg-red-50 p-2 rounded">
-                  <div className="text-gray-600">Finals</div>
-                  <div className="text-lg font-bold text-red-700">{diagnostics.finals}</div>
-                </div>
-    </div>
-            </CardContent>
-          </Card>
-        )}
+        
 
         {!showEmptyState && !isLoading && !fetchError && columns.length > 0 && (
           <div className="w-full overflow-x-auto pb-4">
-            <div 
-              className="grid gap-10 md:gap-14" 
-              style={{ 
-                gridTemplateColumns: `repeat(${columns.length}, minmax(240px, 1fr))` 
-              }}
-            >
-              {columns.map((col, colIdx) => (
-                <div key={colIdx} className="space-y-2">
-                  {colIdx === columns.length - 1 ? (
-                    <div className="text-xs font-semibold text-gray-700 mb-3 text-center">🏆 Finals</div>
-                  ) : (
-                    <div className="text-xs font-semibold text-gray-500 mb-3 text-center">Round {columns.length - colIdx}</div>
+            <style dangerouslySetInnerHTML={{__html: `
+              .react-brackets__bracket {
+                gap: 60px !important;
+              }
+              .react-brackets__round {
+                gap: 40px !important;
+              }
+            `}} />
+            {(() => {
+              const rounds: IRoundProps[] = columns.map((col, idx) => ({
+                title: idx === columns.length - 1 ? '🏆 Finals' : `Round ${idx + 1}`,
+                seeds: col.map((m) => {
+                  // Determine winner index (0 for team A, 1 for team B, undefined for no winner)
+                  let winnerIndex: number | undefined = undefined
+                  if (m.winner_id && m.team_a_id && m.team_b_id) {
+                    if (m.winner_id === m.team_a_id) {
+                      winnerIndex = 0
+                    } else if (m.winner_id === m.team_b_id) {
+                      winnerIndex = 1
+                    }
+                  }
+                  
+                  return {
+                    id: m.id,
+                    date: (m.match_time ?? m.created_at) || new Date().toISOString(),
+                    teams: [
+                      { name: m.teamA?.name || 'TBD' },
+                      { name: m.teamB?.name || 'TBD' }
+                    ],
+                    winner: winnerIndex // Custom property for winner highlighting
+                  }
+                })
+              }))
+              return (
+                <Bracket 
+                  rounds={rounds}
+                  mobileBreakpoint={992}
+                  renderSeedComponent={CustomSeed}
+                  roundTitleComponent={(title) => (
+                    <div className="text-sm font-semibold text-gray-800 text-center mb-4 tracking-wide">
+                      {title}
+                    </div>
                   )}
-                  {renderBracketColumn(col, colIdx)}
-                  {/* Finals center card (single finals match) */}
-                  {colIdx === columns.length - 1 && col.length === 1 && (() => {
-                    // Center the finals beside the previous round's feeders group
-                    const prevCol = columns[colIdx - 1] || []
-                    const feeders = prevCol.filter(m => m.next_match_id === col[0].id)
-                    return (
-                      <div className="grid grid-cols-[1fr_auto_auto] items-center gap-6 mt-4">
-                        {/* Left: invisible spacer matching feeders height */}
-                        <div className="space-y-6 opacity-0 pointer-events-none">
-                          {feeders.map(f => (
-                            <BracketMiniCard key={f.id} titleA={f.teamA?.name || 'TBD'} titleB={f.teamB?.name || 'TBD'} />
-                          ))}
-                        </div>
-                        {/* Vertical connector */}
-                        <div className="h-full flex items-center justify-center">
-                          <div className="w-0.5 h-32 bg-gray-300" />
-                        </div>
-                        {/* Finals centered card */}
-                        <div className="relative flex justify-center">
-                          <NextMatchCard 
-                            teamA={col[0].teamA?.name || 'TBD'}
-                            teamB={col[0].teamB?.name || 'TBD'}
-                          />
-                          <div className="absolute top-1/2 -left-10 w-10 h-0.5 bg-gray-300" />
-                        </div>
-                      </div>
+                />
                     )
                   })()}
-          </div>
-            ))}
-          </div>
         </div>
         )}
       </main>
     </div>
   )
-} 
+}
