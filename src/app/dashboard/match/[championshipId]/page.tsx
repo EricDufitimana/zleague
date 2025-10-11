@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Trophy, Shuffle, Play, RotateCcw, Check, X, Loader2, ArrowLeft, Users, Shield, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Trophy, Shuffle, Play, RotateCcw, Check, X, Loader2, ArrowLeft, Users, Shield, Trash2, Maximize2 } from 'lucide-react';
 import { ImprovedWheel } from '@/components/shared/ImprovedWheel';
 import '@/styles/fireworks.css';
 
@@ -54,6 +55,7 @@ export default function MatchPage() {
   const [pendingMatchup, setPendingMatchup] = useState<Matchup | null>(null);
   const [isCreatingMatch, setIsCreatingMatch] = useState(false);
   const [currentPointerTeam, setCurrentPointerTeam] = useState<Team | null>(null);
+  const [isEnlargedView, setIsEnlargedView] = useState(false);
   
   // Predefined matchup pairs
   const [predefinedPairs, setPredefinedPairs] = useState<Array<{teamA: Team, teamB: Team}>>([]);
@@ -688,7 +690,7 @@ export default function MatchPage() {
       <div className="container mx-auto p-3">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <Loader2 className="w-8 h-8 animate-spin text-redish" />
             <p className="text-lg font-medium text-gray-600">Loading championship data...</p>
             <p className="text-sm text-gray-500">Fetching teams and match information</p>
           </div>
@@ -797,6 +799,20 @@ export default function MatchPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                
+                {/* Enlarge Button */}
+                <div>
+                  <Button 
+                    onClick={() => setIsEnlargedView(true)}
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    disabled={selectedGender === 'all' || selectedSportType === 'all'}
+                  >
+                    <Maximize2 className="w-4 h-4 mr-2" />
+                    Enlarge View
+                  </Button>
+                </div>
               </div>
             )}
           </div>
@@ -859,19 +875,8 @@ export default function MatchPage() {
                       }}
                     />
                     
-                    {/* Spin / Reset under the wheel */}
+                    {/* Reset button under the wheel */}
                     <div className="mt-4 flex items-center justify-center gap-3">
-                      <Button
-                        onClick={spinWheel}
-                        disabled={isSpinning || getWheelTeams().length === 0 || selectedGender === 'all' || selectedSportType === 'all'}
-                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                        size="sm"
-                      >
-                        <Shuffle className="w-4 h-4 mr-2" />
-                        {isSpinning ? 'Spinning...' : 
-                         getWheelTeams().length === 2 ? 'Auto-Assign Final Match' :
-                         spinCount === 0 ? 'Spin for First' : 'Spin for Second'}
-                      </Button>
                       <Button onClick={resetWheel} variant="outline" size="sm">
                         <RotateCcw className="w-4 h-4 mr-2" />
                         Reset
@@ -1044,6 +1049,174 @@ export default function MatchPage() {
 
       {/* Right panel includes matchups table now; removed separate cards below */}
       </div>
+
+      {/* Enlarged View Dialog for Presentation */}
+      <Dialog open={isEnlargedView} onOpenChange={setIsEnlargedView}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] p-8">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-center">Match Selection - Presentation View</DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-4">
+            {/* Enlarged Wheel */}
+            <div className="lg:col-span-2 flex flex-col items-center justify-center">
+              {getWheelTeams().length >= 1 ? (
+                <div className="flex flex-col items-center w-full">
+                  {/* Live team display above the wheel */}
+                  <div className="text-center mb-6">
+                    {selectedTeam ? (
+                      <div className="bg-green-100 border-2 border-green-400 rounded-xl px-8 py-4">
+                        <span className="text-3xl font-bold text-green-700">
+                          {selectedTeam.name}
+                        </span>
+                        <div className="text-lg text-green-600 mt-2">
+                          {isSpinning ? 'Spinning...' : 'Selected!'}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-500 text-xl">Click wheel to spin and select a team</span>
+                    )}
+                  </div>
+                  
+                  {/* Enlarged Wheel Component */}
+                  <ImprovedWheel
+                    teams={getWheelTeams()}
+                    isSpinning={isSpinning}
+                    size={500}
+                    onSelectWinner={(winner) => {
+                      setSelectedTeam(winner);
+                      
+                      // Trigger fireworks
+                      const pyroContainer = document.createElement("div");
+                      pyroContainer.className = "pyro";
+                      const beforeElement = document.createElement("div");
+                      beforeElement.className = "before";
+                      const afterElement = document.createElement("div");
+                      afterElement.className = "after";
+                      pyroContainer.appendChild(beforeElement);
+                      pyroContainer.appendChild(afterElement);
+                      document.body.appendChild(pyroContainer);
+                      setTimeout(() => {
+                        if (document.body.contains(pyroContainer)) {
+                          document.body.removeChild(pyroContainer);
+                        }
+                      }, 4000);
+                    }}
+                    onSpinComplete={() => {
+                      setIsSpinning(false);
+                    }}
+                  />
+                  
+                  {/* Reset button under the wheel */}
+                  <div className="mt-8 flex items-center justify-center gap-3">
+                    <Button onClick={resetWheel} variant="outline" size="lg">
+                      <RotateCcw className="w-5 h-5 mr-2" />
+                      Reset
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-2xl font-medium text-gray-600 mb-2">No Teams Available</p>
+                  <p className="text-lg text-gray-500">
+                    {teams.length > 0 
+                      ? 'No teams match the current gender filter.'
+                      : 'No teams have been loaded yet.'}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Enlarged Team Selection Cards */}
+            <div className="flex flex-col gap-6">
+              {/* Team Cards */}
+              <div className="space-y-4">
+                <Card className="bg-white border-2 border-gray-200 shadow-lg">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg font-semibold text-gray-700">1st Team</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {firstTeam ? (
+                      <div className="space-y-2">
+                        <div className="text-2xl font-bold text-gray-900">{firstTeam.name}</div>
+                        <div className="text-base text-gray-600">Grade: {firstTeam.grade ? firstTeam.grade.toUpperCase() : 'Unknown'}</div>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border-2 border-dashed border-gray-300 py-8 text-center">
+                        <div className="text-lg text-gray-500">No team selected yet</div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-white border-2 border-gray-200 shadow-lg">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg font-semibold text-gray-700">2nd Team</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {secondTeam ? (
+                      <div className="space-y-2">
+                        <div className="text-2xl font-bold text-gray-900">{secondTeam.name}</div>
+                        <div className="text-base text-gray-600">Grade: {secondTeam.grade ? secondTeam.grade.toUpperCase() : 'Unknown'}</div>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border-2 border-dashed border-gray-300 py-8 text-center">
+                        <div className="text-lg text-gray-500">Awaiting selection</div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                {pendingMatchup && (
+                  <div className="flex flex-col gap-3">
+                    <Button onClick={confirmMatchup} className="bg-green-600 hover:bg-green-700 text-lg py-6" disabled={isCreatingMatch}>
+                      {isCreatingMatch ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-5 h-5 mr-2" />
+                          Confirm Match
+                        </>
+                      )}
+                    </Button>
+                    <Button onClick={rejectMatchup} variant="outline" className="border-red-300 text-red-600 hover:bg-red-50 text-lg py-6">
+                      <X className="w-5 h-5 mr-2" />
+                      Reject
+                    </Button>
+                  </div>
+                )}
+                
+                <div className="flex flex-col gap-3">
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    disabled={!selectedTeam || isSpinning || spinCount !== 0} 
+                    onClick={() => selectedTeam && handleTeamSelection(selectedTeam)}
+                    className="text-lg py-6"
+                  >
+                    Set as 1st Team
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    disabled={!selectedTeam || isSpinning || spinCount !== 1} 
+                    onClick={() => selectedTeam && handleTeamSelection(selectedTeam)}
+                    className="text-lg py-6"
+                  >
+                    Set as 2nd Team
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

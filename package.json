@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -37,7 +37,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@sportsgram/brackets": "^0.0.1",
     "@supabase/ssr": "^0.6.1",
-    "@supabase/supabase-js": "^2.56.1",
+    "@supabase/supabase-js": "^2.75.0",
     "@tabler/icons-react": "^3.34.1",
     "@tanstack/react-table": "^8.21.3",
     "class-variance-authority": "^0.7.1",

@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { IconUsers, IconCheck, IconX } from '@tabler/icons-react';
+import { Users, Check, X } from 'lucide-react';
 
 // Families organized by grade
 const FAMILIES_BY_GRADE = {
@@ -48,13 +48,15 @@ interface FamilySelectorProps {
   onFamiliesChange: (families: string[]) => void;
   playersByFamily?: { [family: string]: number };
   disabled?: boolean;
+  isLoading?: boolean;
 }
 
 export function FamilySelector({ 
   selectedFamilies, 
   onFamiliesChange, 
   playersByFamily = {},
-  disabled = false 
+  disabled = false,
+  isLoading = false
 }: FamilySelectorProps) {
   const [selectAll, setSelectAll] = useState(false);
 
@@ -106,7 +108,7 @@ export function FamilySelector({
             onClick={handleSelectAll}
             disabled={disabled}
           >
-            <IconCheck className="size-4 mr-2" />
+            <Check className="size-4 mr-2" />
             Select All
           </Button>
           <Button
@@ -115,7 +117,7 @@ export function FamilySelector({
             onClick={handleSelectNone}
             disabled={disabled}
           >
-            <IconX className="size-4 mr-2" />
+            <X className="size-4 mr-2" />
             Select None
           </Button>
         </div>
@@ -161,8 +163,16 @@ export function FamilySelector({
                           {family}
                         </div>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <IconUsers className="size-2" />
-                          <span>{playerCount}</span>
+                          <Users className="size-2" />
+                          {isLoading ? (
+                            <div className="flex gap-0.5">
+                              <span className="w-1 h-1 bg-muted-foreground/60 rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
+                              <span className="w-1 h-1 bg-muted-foreground/60 rounded-full animate-pulse" style={{ animationDelay: '150ms' }} />
+                              <span className="w-1 h-1 bg-muted-foreground/60 rounded-full animate-pulse" style={{ animationDelay: '300ms' }} />
+                            </div>
+                          ) : (
+                            <span>{playerCount}</span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -177,7 +187,7 @@ export function FamilySelector({
       {selectedFamilies.length > 0 && (
         <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
           <div className="flex items-center gap-2">
-            <IconCheck className="size-4 text-primary" />
+            <Check className="size-4 text-primary" />
             <span className="text-sm font-medium">
               {selectedFamilies.length} families selected
             </span>

@@ -27,7 +27,7 @@ export function NavMain({
   const getIsActive = (itemUrl: string) => {
     // Check if the current pathname matches the item's URL
     if (pathname === itemUrl) {
-      return 'bg-primary text-primary-foreground hover:bg-primary hover:text-white'
+      return 'bg-gray-100 text-black hover:bg-gray-200 hover:text-black'
     }
     
     // For dynamic routes, check if the pathname starts with the item URL
@@ -35,7 +35,7 @@ export function NavMain({
       // Handle dynamic routes like /dashboard/match/[championshipId]
       const basePath = itemUrl.split('[')[0].replace(/\/$/, '') // Remove trailing slash
       if (pathname.startsWith(basePath)) {
-        return 'bg-primary text-primary-foreground hover:bg-primary hover:text-white'
+        return 'bg-gray-100 text-black hover:bg-gray-200 hover:text-black'
       }
     }
     

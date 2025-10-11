@@ -114,14 +114,14 @@ const NextMatchCard = memo(({ teamA, teamB }: { teamA: string; teamB: string }) 
 NextMatchCard.displayName = "NextMatchCard"
 
 // Custom styled seed component following @sportsgram/brackets structure
-const CustomSeed = ({ seed, breakpoint }: IRenderSeedProps) => {
+const CustomSeed = ({ seed }: IRenderSeedProps) => {
   const getInitials = (name: string) => 
     name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
 
   const winnerIndex = seed.winner
 
   return (
-    <Seed mobileBreakpoint={breakpoint} style={{ backgroundColor: 'transparent' }}>
+    <Seed style={{ backgroundColor: 'transparent' }}>
       <SeedItem style={{ backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden' }}>
         <div className="flex flex-col gap-2 p-4 bg-white border border-gray-200 rounded-[10px] hover:shadow-lg hover:border-gray-300 transition-all min-w-[280px]">
           {/* Team A */}
@@ -538,7 +538,6 @@ export default function BracketPage() {
               return (
                 <Bracket 
                   rounds={rounds}
-                  mobileBreakpoint={992}
                   renderSeedComponent={CustomSeed}
                   roundTitleComponent={(title) => (
                     <div className="text-sm font-semibold text-gray-800 text-center mb-4 tracking-wide">

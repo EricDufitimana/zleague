@@ -14,7 +14,8 @@ module.exports = {
           2: "#A8FBD3",
           3: "#F97A00",
           4: "#1B3C53"
-        }
+        },
+        "redish": "#BF092F"
       }
     },
   },

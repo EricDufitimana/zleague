@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { IconTrophy, IconPlus, IconLoader2, IconUsers, IconCalendar, IconArrowRight, IconDots, IconEdit, IconTrash } from '@tabler/icons-react';
+import { Trophy, Plus, Loader2, Users, Calendar, ArrowRight, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Badge } from '@/components/ui/badge';
@@ -161,7 +161,7 @@ export default function CreateChampionshipPage() {
   };
 
   const handleChampionshipClick = (championshipId: number) => {
-    router.push(`/dashboard-01/create-championship/${championshipId}/teams`);
+    router.push(`/dashboard/create-championship/${championshipId}/teams`);
   };
 
   const formatDate = (dateString: string) => {
@@ -182,15 +182,15 @@ export default function CreateChampionshipPage() {
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className='bg-blue-600 hover:bg-blue-700'>
-              <IconPlus className="size-4 mr-2" />
+            <Button className='bg-redish hover:bg-redish/80'>
+              <Plus className="size-4 mr-2" />
               Create Championship
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <IconTrophy className="size-5 text-yellow-500" />
+                <Trophy className="size-5 text-yellow-500" />
                 Create New Championship
               </DialogTitle>
               <DialogDescription>
@@ -229,16 +229,16 @@ export default function CreateChampionshipPage() {
                 type="button"
                 onClick={handleCreateChampionship}
                 disabled={!name.trim() || isLoading}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-redish hover:bg-redish/80"
               >
                 {isLoading ? (
                   <>
-                    <IconLoader2 className="size-4 mr-2 animate-spin" />
+                    <Loader2 className="size-4 mr-2 animate-spin" />
                     Creating...
                   </>
                 ) : (
                   <>
-                    <IconPlus className="size-4 mr-2" />
+                    <Plus className="size-4 mr-2" />
                     Create Championship
                   </>
                 )}
@@ -252,7 +252,7 @@ export default function CreateChampionshipPage() {
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <IconTrophy className="size-5 text-yellow-500" />
+                <Trophy className="size-5 text-yellow-500" />
                 Edit Championship
               </DialogTitle>
               <DialogDescription>
@@ -310,16 +310,16 @@ export default function CreateChampionshipPage() {
                 type="button"
                 onClick={handleUpdateChampionship}
                 disabled={!editName.trim() || isEditLoading}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-blueish hover:bg-blueish/80"
               >
                 {isEditLoading ? (
                   <>
-                    <IconLoader2 className="size-4 mr-2 animate-spin" />
+                    <Loader2 className="size-4 mr-2 animate-spin" />
                     Updating...
                   </>
                 ) : (
                   <>
-                    <IconEdit className="size-4 mr-2" />
+                    <Pencil className="size-4 mr-2" />
                     Update Championship
                   </>
                 )}
@@ -332,12 +332,12 @@ export default function CreateChampionshipPage() {
       {/* Championships List */}
       {isFetching ? (
         <div className="flex justify-center items-center py-12">
-          <IconLoader2 className="size-8 animate-spin text-muted-foreground" />
+          <Loader2 className="size-8 animate-spin text-muted-foreground" />
         </div>
       ) : championships.length === 0 ? (
         <Card className="@container/card">
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <IconTrophy className="size-16 text-muted-foreground/50 mb-4" />
+            <Trophy className="size-16 text-muted-foreground/50 mb-4" />
             <h3 className="text-xl font-semibold text-muted-foreground mb-2">No Championships Yet</h3>
             <p className="text-muted-foreground text-center mb-6 max-w-sm">
               Create your first championship to get started with organizing tournaments
@@ -345,7 +345,7 @@ export default function CreateChampionshipPage() {
             <Button 
               onClick={() => setIsDialogOpen(true)}
             >
-              <IconPlus className="size-4 mr-2" />
+              <Plus className="size-4 mr-2" />
               Create First Championship
             </Button>
           </CardContent>
@@ -365,17 +365,17 @@ export default function CreateChampionshipPage() {
                       {championship.name}
                     </CardTitle>
                     <CardDescription className="flex items-center gap-2 mt-2">
-                      <IconCalendar className="size-4" />
+                      <Calendar className="size-4" />
                       {formatDate(championship.created_at)}
                     </CardDescription>
                   </div>
-                  <IconArrowRight className="size-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                  <ArrowRight className="size-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <IconUsers className="size-4 text-muted-foreground" />
+                    <Users className="size-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">
                       {championship.team_count === 1 ? '1 team' : `${championship.team_count} teams`}
                     </span>
@@ -392,7 +392,7 @@ export default function CreateChampionshipPage() {
                           className="h-8 w-8 p-0 hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <IconDots className="size-4" />
+                          <MoreVertical className="size-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
@@ -402,7 +402,7 @@ export default function CreateChampionshipPage() {
                             handleEditChampionship(championship.id);
                           }}
                         >
-                          <IconEdit className="size-4 mr-2" />
+                          <Pencil className="size-4 mr-2" />
                           Update
                         </DropdownMenuItem>
                         <DropdownMenuItem 
@@ -412,7 +412,7 @@ export default function CreateChampionshipPage() {
                             handleDeleteChampionship(championship.id);
                           }}
                         >
-                          <IconTrash className="size-4 mr-2" />
+                          <Trash2 className="size-4 mr-2" />
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>

@@ -9,6 +9,8 @@ type MatchItem = {
   id: number
   match_time?: string
   status?: string
+  team_a_score?: number
+  team_b_score?: number
   teamA?: { id: number; name: string }
   teamB?: { id: number; name: string }
 }
@@ -170,7 +172,13 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
                       <span className="text-sm font-medium text-gray-900 truncate">{m.teamA?.name || 'Team A'}</span>
-                      <Badge variant="outline" className="h-5 px-2 text-xs rounded-full border-gray-300 text-gray-600">vs</Badge>
+                      {m.team_a_score !== undefined && m.team_b_score !== undefined ? (
+                        <Badge variant="outline" className="h-5 px-2 text-xs rounded-full border-gray-300 text-gray-900 font-semibold shrink-0">
+                          {m.team_a_score} - {m.team_b_score}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="h-5 px-2 text-xs rounded-full border-gray-300 text-gray-600 shrink-0">vs</Badge>
+                      )}
                       <span className="text-sm font-medium text-gray-900 truncate">{m.teamB?.name || 'Team B'}</span>
                     </div>
                     <span className="text-sm text-gray-500 shrink-0">{formatDate(m.match_time)}</span>

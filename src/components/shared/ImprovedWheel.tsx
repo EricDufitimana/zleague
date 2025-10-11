@@ -15,6 +15,7 @@ interface ImprovedWheelProps {
   onSelectWinner?: (winner: Team) => void;
   isSpinning: boolean;
   onSpinComplete?: () => void;
+  size?: number;
 }
 
 export const ImprovedWheel: React.FC<ImprovedWheelProps> = ({
@@ -22,6 +23,7 @@ export const ImprovedWheel: React.FC<ImprovedWheelProps> = ({
   onSelectWinner,
   isSpinning,
   onSpinComplete,
+  size = 400,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [angle, setAngle] = useState(0);
@@ -84,7 +86,7 @@ export const ImprovedWheel: React.FC<ImprovedWheelProps> = ({
       ctx.rotate(Math.PI / 2);
       ctx.rotate(Math.PI / 2);
 
-      const fontSize = Math.min(24, 240 / Math.max(5, numSlices));
+      const fontSize = Math.min(18, 200 / Math.max(5, numSlices));
       ctx.font = `${fontSize}px Arial, sans-serif`;
       ctx.fillStyle = "white";
       ctx.textAlign = "center";
@@ -216,8 +218,8 @@ export const ImprovedWheel: React.FC<ImprovedWheelProps> = ({
           ref={canvasRef}
           className="block rounded-full shadow-lg"
           style={{ 
-            width: '400px', 
-            height: '400px',
+            width: `${size}px`, 
+            height: `${size}px`,
             cursor: teams.length < 2 ? 'not-allowed' : 'pointer',
             opacity: teams.length < 2 ? 0.5 : 1
           }}
