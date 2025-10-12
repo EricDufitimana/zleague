@@ -3,13 +3,13 @@
 import * as React from "react"
 import Link from "next/link"
 import {
-  IconTrophy,
-  IconCalendar,
-  IconChartBar,
-  IconSettings,
-  IconHome,
-  IconUsers
-} from "@tabler/icons-react"
+  Trophy,
+  Calendar,
+  BarChart3,
+  Settings,
+  Home,
+  Users
+} from "lucide-react"
 
 import { NavMain } from "@/components/navigation/nav-main"
 import { NavSecondary } from "@/components/navigation/nav-secondary"
@@ -31,27 +31,27 @@ const navMainData = [
   {
     title: "Dashboard",
     url: "/dashboard",
-    icon: IconHome,
+    icon: Home,
   },
   {
     title: "Championships",
     url: "/dashboard/create-championship", 
-    icon: IconTrophy,
+    icon: Trophy,
   },
   {
     title: "Matches",
     url: "/dashboard/match",
-    icon: IconUsers,
+    icon: Users,
   },
   {
     title: "Schedule",
     url: "/dashboard/schedule",
-    icon: IconCalendar,
+    icon: Calendar,
   },
   {
     title: "Record Results",
     url: "/dashboard/record",
-    icon: IconChartBar,
+    icon: BarChart3,
   },
 ]
 
@@ -153,7 +153,7 @@ export function SportsSidebar({ ...props }: React.ComponentProps<typeof Sidebar>
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
               <Link href="/dashboard">
-                <IconTrophy className="!size-5" />
+                <Trophy className="!size-5" />
                 <span className="text-base font-semibold">ZLeague</span>
               </Link>
             </SidebarMenuButton>
