@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, AlertCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useUserData } from "@/hooks/useUserData"
+import { createClient } from "@/utils/supabase/client"
+import { toast } from "sonner"
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -47,6 +49,24 @@ export default function AuthCallbackPage() {
 
         console.log('User authenticated with ID:', userId);
 
+        // First check if user already exists in users table
+        const userCheckResponse = await fetch(`/api/user-profile?userId=${userId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (userCheckResponse.ok) {
+          const userData = await userCheckResponse.json();
+          if (userData.user) {
+            // User already exists, redirect to home
+            console.log('User already exists, redirecting to home');
+            router.push('/');
+            return;
+          }
+        }
+
         // Check for pending user metadata from registration
         const pendingMetadataStr = localStorage.getItem('pending_user_metadata');
         let pendingMetadata = null;
@@ -58,6 +78,19 @@ export default function AuthCallbackPage() {
           } catch (e) {
             console.error('Failed to parse pending metadata:', e);
           }
+        }
+
+        // If no pending metadata, user tried to sign in directly
+        if (!pendingMetadata) {
+          console.log('No pending metadata found - user tried to sign in directly');
+          toast.error("You must first create an account before signing in. Please register first.");
+          
+          // Sign out the user
+          const supabase = createClient();
+          await supabase.auth.signOut();
+          
+          router.push('/');
+          return;
         }
 
         console.log('Making API call to create account...');

@@ -1,190 +1,126 @@
-"use client"
-
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useState, useEffect } from 'react';
 import { createClient } from "@/utils/supabase/client";
-import { User } from "@supabase/supabase-js";
+import { toast } from "sonner";
+
+interface UserData {
+  userId: string | null;
+  isLoading: boolean;
+  error: string | null;
+}
 
 interface SessionData {
-  user: User | null;
-  isLoading: boolean;
+  user: any | null;
+  userData: any | null;
   isAdmin: boolean;
+  isLoading: boolean;
   error: string | null;
+  userExists: boolean;
 }
 
 export function useSession() {
   const [sessionData, setSessionData] = useState<SessionData>({
     user: null,
-    isLoading: true,
+    userData: null,
     isAdmin: false,
+    isLoading: true,
     error: null,
+    userExists: false
   });
 
-  const mountedRef = useRef(true);
-  const supabaseRef = useRef(createClient());
-
-  const checkAdminStatus = useCallback(async (userId: string): Promise<boolean> => {
+  const checkUserExists = async (userId: string): Promise<{ userData: any | null; exists: boolean; isAdmin: boolean }> => {
     try {
-      console.log('🔐 Checking admin status for user:', userId);
-      
-      const { data, error } = await supabaseRef.current
-        .from('users')
-        .select('role')
-        .eq('user_id', userId)
-        .single();
+      const response = await fetch(`/api/user-profile?userId=${userId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      // User not found in users table (PGRST116) or any other error = not admin
-      if (error) {
-        if (error.code !== 'PGRST116') {
-          console.warn('⚠️ Admin check error:', error.message);
-        }
-        console.log('👤 User role: regular user');
-        return false;
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          userData: data.user,
+          exists: !!data.user,
+          isAdmin: data.user?.role === 'admin'
+        };
       }
-
-      const isAdmin = data?.role === 'admin';
-      console.log('👑 User role:', isAdmin ? 'admin' : 'regular user');
-      return isAdmin;
+      return { userData: null, exists: false, isAdmin: false };
     } catch (error) {
-      console.error('❌ Admin check failed:', error);
-      return false;
+      console.error('Error checking user status:', error);
+      return { userData: null, exists: false, isAdmin: false };
     }
-  }, []);
+  };
 
-  const updateSessionData = useCallback((updates: Partial<SessionData>) => {
-    if (!mountedRef.current) return;
-    setSessionData(prev => ({ ...prev, ...updates }));
-  }, []);
-
-  const initializeSession = useCallback(async () => {
+  const fetchSession = async () => {
     try {
-      console.log('🔄 Initializing session...');
+      setSessionData(prev => ({ ...prev, isLoading: true, error: null }));
       
-      const { data: { user }, error } = await supabaseRef.current.auth.getUser();
-
-      if (!mountedRef.current) return;
-
-      if (error || !user) {
-        console.log('👤 No authenticated user found');
-        updateSessionData({
-          isLoading: false,
-          user: null,
-          isAdmin: false,
-          error: error?.message || null
-        });
+      const supabase = createClient();
+      const { data: { user }, error: sessionError } = await supabase.auth.getUser();
+      
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        setSessionData(prev => ({ ...prev, isLoading: false, error: sessionError.message }));
+        return;
+      }
+      
+      if (!user) {
+        setSessionData(prev => ({ 
+          ...prev, 
+          user: null, 
+          userData: null,
+          isAdmin: false, 
+          userExists: false,
+          isLoading: false 
+        }));
         return;
       }
 
-      console.log('✅ User authenticated:', {
-        id: user.id,
-        email: user.email
-      });
-
-      // Check admin status
-      const isAdmin = await checkAdminStatus(user.id);
-
-      if (!mountedRef.current) return;
-
-      console.log('🎉 Session initialized successfully');
-      updateSessionData({
-        isLoading: false,
-        user,
-        isAdmin,
-        error: null
-      });
-    } catch (error) {
-      if (!mountedRef.current) return;
+      // Check if user exists in users table
+      const { userData, exists, isAdmin } = await checkUserExists(user.id);
       
-      console.error('❌ Session initialization failed:', error);
-      updateSessionData({
-        isLoading: false,
-        user: null,
-        isAdmin: false,
-        error: error instanceof Error ? error.message : 'Session initialization failed'
-      });
-    }
-  }, [checkAdminStatus, updateSessionData]);
-
-  const signOut = useCallback(async () => {
-    try {
-      console.log('👋 Signing out...');
-      await supabaseRef.current.auth.signOut();
-      console.log('✅ Sign out successful');
-      updateSessionData({ 
-        user: null,
-        isAdmin: false,
-        error: null,
+      if (!exists) {
+        // User is authenticated but doesn't exist in users table
+        toast.error("You must first create an account before signing in. Please register first.");
+        
+        // Sign out the user since they shouldn't be authenticated
+        await supabase.auth.signOut();
+        
+        setSessionData(prev => ({
+          ...prev,
+          user: null,
+          userData: null,
+          isAdmin: false,
+          userExists: false,
+          isLoading: false
+        }));
+        return;
+      }
+      
+      setSessionData(prev => ({
+        ...prev,
+        user,
+        userData,
+        isAdmin,
+        userExists: true,
         isLoading: false
-      });
+      }));
     } catch (error) {
-      console.error('❌ Sign out failed:', error);
+      console.error('Error fetching session:', error);
+      setSessionData(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        isLoading: false
+      }));
     }
-  }, [updateSessionData]);
+  };
 
   useEffect(() => {
-    mountedRef.current = true;
-
-    // Initialize session
-    initializeSession();
-
-    // Set up auth state listener
-    const { data: { subscription } } = supabaseRef.current.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!mountedRef.current) return;
-
-        console.log('🔔 Auth state changed:', event);
-
-        switch (event) {
-          case 'SIGNED_OUT':
-            console.log('👋 User signed out');
-            updateSessionData({ 
-              user: null,
-              isAdmin: false,
-              error: null,
-              isLoading: false
-            });
-            break;
-
-          case 'SIGNED_IN':
-            if (session?.user) {
-              console.log('✅ User signed in:', session.user.email);
-              const isAdmin = await checkAdminStatus(session.user.id);
-              if (mountedRef.current) {
-                updateSessionData({ 
-                  user: session.user,
-                  isAdmin,
-                  error: null,
-                  isLoading: false
-                });
-              }
-            }
-            break;
-
-          case 'TOKEN_REFRESHED':
-            console.log('🔄 Token refreshed');
-            if (session?.user && mountedRef.current) {
-              updateSessionData({ user: session.user });
-            }
-            break;
-
-          case 'USER_UPDATED':
-            console.log('📝 User data updated');
-            if (session?.user && mountedRef.current) {
-              updateSessionData({ user: session.user });
-            }
-            break;
-        }
-      }
-    );
-
-    return () => {
-      mountedRef.current = false;
-      subscription.unsubscribe();
-    };
-  }, [initializeSession, checkAdminStatus, updateSessionData]);
+    fetchSession();
+  }, []);
 
   return {
     ...sessionData,
-    signOut,
-    refetch: initializeSession, // Expose refetch in case needed
+    refreshSession: fetchSession
   };
-}
+} 

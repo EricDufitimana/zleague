@@ -544,6 +544,7 @@ export default function BracketPage() {
                       {title}
                     </div>
                   )}
+                  mobileBreakpoint={768}
                 />
                     )
                   })()}

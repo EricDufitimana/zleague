@@ -1,59 +1,88 @@
-import { createClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    console.log('🔍 user-profile API: Starting request')
     
-    // Get authenticated user from Supabase Auth
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Get userId from query parameters
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get('userId')
     
-    if (authError || !user) {
+    if (!userId) {
+      console.log('❌ user-profile API: No userId provided')
       return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
+        { error: 'userId parameter is required' },
+        { status: 400 }
       )
     }
 
-    // Try to get user details from admins table first
-    const { data: adminData, error: adminError } = await supabase
-      .from('admins')
-      .select('first_name, last_name')
-      .eq('user_id', user.id)
+    console.log('✅ user-profile API: userId provided', { userId })
+    
+    const supabase = await createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    // Get user details from users table
+    console.log('🔍 user-profile API: Checking users table for userId:', userId)
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('user_id', userId)
       .single()
 
-    let firstName = ''
-    let lastName = ''
-
-    if (adminData && !adminError) {
-      firstName = adminData.first_name
-      lastName = adminData.last_name
-    } else {
-      // Try users table if not found in admins
-      const { data: usersData, error: usersError } = await supabase
-        .from('users')
-        .select('first_name, last_name')
-        .eq('user_id', user.id)
-        .single()
-
-      if (usersData && !usersError) {
-        firstName = usersData.first_name
-        lastName = usersData.last_name
-      }
+    if (userError) {
+      // User not found in users table
+      console.log('❌ user-profile API: User not found in users table', { userError, userId })
+      return NextResponse.json(
+        { error: 'User not found in database' },
+        { status: 404 }
+      )
     }
 
-    // Get user metadata for avatar if available
-    const avatarUrl = user.user_metadata?.avatar_url || '/avatars/default.jpg'
+    console.log('✅ user-profile API: User found in database', { 
+      userId: userData.user_id, 
+      role: userData.role,
+      username: userData.username 
+    })
 
-    const userData = {
-      name: firstName && lastName ? `${firstName} ${lastName}` : user.email?.split('@')[0] || 'User',
-      email: user.email || 'no-email@zleague.com',
+    // Get user email from auth table using admin client
+    const adminClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+    
+    const { data: authUser, error: authError } = await adminClient.auth.admin.getUserById(userId)
+    
+    if (authError) {
+      console.log('❌ user-profile API: Error getting auth user', { authError, userId })
+    }
+
+    const userEmail = authUser?.user?.email || 'no-email@zleague.com'
+    const avatarUrl = authUser?.user?.user_metadata?.avatar_url || userData.avatar_url || '/avatars/default.jpg'
+
+    console.log('✅ user-profile API: Got auth user data', { 
+      email: userEmail,
+      hasAvatar: !!avatarUrl
+    })
+
+    const responseData = {
+      user: userData,
+      name: userData.first_name && userData.last_name ? `${userData.first_name} ${userData.last_name}` : userData.username || 'User',
+      email: userEmail,
       avatar: avatarUrl,
     }
 
-    return NextResponse.json(userData)
+    console.log('✅ user-profile API: Returning user data', { 
+      hasUser: !!responseData.user,
+      role: responseData.user?.role,
+      name: responseData.name 
+    })
+
+    return NextResponse.json(responseData)
   } catch (error) {
-    console.error('Error fetching user profile:', error)
+    console.error('❌ user-profile API: Unexpected error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -2,16 +2,7 @@ import { type NextRequest } from 'next/server'
 import { updateSession } from '@/utils/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
-  console.log('🟢 ROOT MIDDLEWARE CALLED:', request.nextUrl.pathname)
-  console.error('🟢 ROOT MIDDLEWARE CALLED (ERROR LOG):', request.nextUrl.pathname)
-  
-  const response = await updateSession(request)
-  
-  // Add a header to prove middleware ran
-  response.headers.set('x-middleware-executed', 'true')
-  response.headers.set('x-middleware-path', request.nextUrl.pathname)
-  
-  return response
+  return await updateSession(request)
 }
 
 export const config = {

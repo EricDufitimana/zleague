@@ -31,6 +31,11 @@ export function AuthDialog({ open, onOpenChange, defaultMode = "login" }: AuthDi
   }, [defaultMode])
 
   const handleGoogleAuth = async () => {
+    // For login mode, we'll allow it but check if user exists after OAuth
+    if (mode === "login") {
+      // Allow sign-in but we'll validate in the callback
+      console.log("Sign-in mode - will validate user existence after OAuth");
+    }
    
     // Validate fields for register mode
     if (mode === "register") {
@@ -68,7 +73,9 @@ export function AuthDialog({ open, onOpenChange, defaultMode = "login" }: AuthDi
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/exchange`,
+          redirectTo: mode === "login" 
+            ? `${window.location.origin}/auth/exchange?type=login` 
+            : `${window.location.origin}/auth/exchange?type=register`,
           queryParams: mode === "register" ? {
             access_type: 'offline',
             prompt: 'consent',

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/hooks/useSession";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,10 +14,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LogOut, Shield } from "lucide-react";
 import Link from "next/link";
+import { createClient } from "@/utils/supabase/client";
 import { AuthDialog } from "@/components/auth/AuthDialog";
-
+  
 export function UserAvatar() {
-  const { user, isAdmin, isLoading, signOut } = useSession();
+  const { user, isAdmin, isLoading, refreshSession } = useSession();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
@@ -32,33 +32,36 @@ export function UserAvatar() {
     );
   }
 
+  const handleSignIn = () => {
+    setAuthMode("login");
+    setAuthDialogOpen(true);
+  };
+
+  const handleRegister = () => {
+    setAuthMode("register");
+    setAuthDialogOpen(true);
+  };
+
   if (!user) {
     return (
       <>
         <div className="flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setAuthMode("login");
-              setAuthDialogOpen(true);
-            }}
-            className="text-sm font-medium"
+          <button 
+            onClick={handleSignIn}
+            className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
           >
             Sign In
-          </Button>
-          <Button
-            onClick={() => {
-              setAuthMode("register");
-              setAuthDialogOpen(true);
-            }}
-            className="text-sm font-medium bg-indigo-600 hover:bg-indigo-700"
+          </button>
+          <button 
+            onClick={handleRegister}
+            className="px-4 py-2 text-sm font-medium bg-blueish hover:bg-blueish/80 text-white rounded-md transition-colors"
           >
-            Register
-          </Button>
+            Create Account
+          </button>
         </div>
         <AuthDialog 
           open={authDialogOpen} 
-          onOpenChange={setAuthDialogOpen} 
+          onOpenChange={setAuthDialogOpen}
           defaultMode={authMode}
         />
       </>
@@ -66,9 +69,15 @@ export function UserAvatar() {
   }
 
   const handleSignOut = async () => {
-    await signOut();
-    setIsOpen(false);
-    router.push("/");
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      refreshSession();
+      setIsOpen(false);
+      router.push("/");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   const getInitials = (name: string) => {
@@ -80,9 +89,9 @@ export function UserAvatar() {
       .slice(0, 2);
   };
 
-  const displayName = user.user_metadata?.full_name || 
-                     user.user_metadata?.name || 
-                     user.email?.split('@')[0] || 
+  const displayName = user?.user_metadata?.full_name || 
+                     user?.user_metadata?.name || 
+                     user?.email?.split('@')[0] || 
                      'User';
 
   return (

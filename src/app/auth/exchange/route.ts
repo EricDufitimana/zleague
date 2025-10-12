@@ -4,8 +4,10 @@ import { createClient } from '@/utils/supabase/server'
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  // if "next" is in param, use it as the redirect URL
-  const next = searchParams.get('next') ?? '/auth/callback'
+  const type = searchParams.get('type') // 'login' or 'register'
+  
+  // Determine redirect based on type
+  const next = type === 'login' ? '/auth/login-callback' : '/auth/callback'
 
   if (code) {
     const supabase = await createClient()

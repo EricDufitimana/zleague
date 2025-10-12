@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
+import { createClient } from "@/utils/supabase/client"
 
 const navMainData = [
   {
@@ -79,6 +80,23 @@ function NavUserSkeleton() {
   )
 }
 
+function NavMainSkeleton() {
+  return (
+    <div className="space-y-2">
+      {navMainData.map((item, index) => (
+        <SidebarMenu key={index}>
+          <SidebarMenuItem>
+            <SidebarMenuButton>
+              <Skeleton className="h-4 w-4" />
+              <Skeleton className="h-4 w-20" />
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      ))}
+    </div>
+  )
+}
+
 export function SportsSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [userData, setUserData] = useState<UserData>({
     name: "Loading...",
@@ -90,7 +108,18 @@ export function SportsSidebar({ ...props }: React.ComponentProps<typeof Sidebar>
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const response = await fetch('/api/user-profile')
+        // Get the authenticated user first
+        const supabase = createClient()
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        
+        if (authError || !user) {
+          console.error("Error getting authenticated user:", authError)
+          setIsLoading(false)
+          return
+        }
+
+        // Fetch user profile using the new API format
+        const response = await fetch(`/api/user-profile?userId=${user.id}`)
         
         if (!response.ok) {
           console.error("Error fetching user profile:", response.statusText)
@@ -99,7 +128,11 @@ export function SportsSidebar({ ...props }: React.ComponentProps<typeof Sidebar>
         }
 
         const data = await response.json()
-        setUserData(data)
+        setUserData({
+          name: data.name,
+          email: data.email,
+          avatar: data.avatar,
+        })
       } catch (error) {
         console.error("Error fetching user data:", error)
       } finally {
@@ -128,7 +161,7 @@ export function SportsSidebar({ ...props }: React.ComponentProps<typeof Sidebar>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={navMainData} />
+        {isLoading ? <NavMainSkeleton /> : <NavMain items={navMainData} />}
       </SidebarContent>
       <SidebarFooter>
         {isLoading ? <NavUserSkeleton /> : <NavUser user={userData} />}
