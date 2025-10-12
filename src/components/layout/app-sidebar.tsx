@@ -2,15 +2,15 @@
 
 import * as React from "react"
 import {
-  IconChartBar,
-  IconDashboard,
-  IconHelp,
-  IconSettings,
-  IconTrophy,
-  IconCalendar,
-  IconTarget,
-  IconAward,
-} from "@tabler/icons-react"
+  BarChart3,
+  Home,
+  HelpCircle,
+  Settings,
+  Trophy,
+  Calendar,
+  Target,
+  Award,
+} from "lucide-react"
 
 import { NavMain } from "@/components/navigation/nav-main"
 import { NavSecondary } from "@/components/navigation/nav-secondary"
@@ -36,44 +36,44 @@ const data = {
     {
       title: "Dashboard",
       url: "/dashboard-01",
-      icon: IconDashboard,
+      icon: Home,
     },
     {
       title: "Championships",
       url: "/dashboard-01/create-championship",
-      icon: IconTrophy,
+      icon: Trophy,
     },
     {
       title: "Matches",
       url: "/dashboard/match",
-      icon: IconTarget,
+      icon: Target,
     },
     {
       title: "Schedule",
       url: "/dashboard/schedule",
-      icon: IconCalendar,
+      icon: Calendar,
     },
     {
       title: "Record Results",
       url: "/dashboard/record",
-      icon: IconAward,
+      icon: Award,
     },
   ],
   navSecondary: [
     {
       title: "Analytics",
       url: "/dashboard/analytics",
-      icon: IconChartBar,
+      icon: BarChart3,
     },
     {
       title: "Settings",
       url: "/dashboard/settings",
-      icon: IconSettings,
+      icon: Settings,
     },
     {
       title: "Help",
       url: "/dashboard/help",
-      icon: IconHelp,
+      icon: HelpCircle,
     },
   ],
 }
@@ -89,7 +89,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
               <Link href="/dashboard-01">
-                <IconTrophy className="!size-5" />
+                <Trophy className="!size-5" />
                 <span className="text-base font-semibold">ZLeague</span>
               </Link>
             </SidebarMenuButton>

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Navbar } from "@/components/navigation/Navbar"
-import { Search, History, Loader2 } from "lucide-react"
+import { Search, History, Loader2, CheckCircle, XCircle, ChevronLeft, ChevronRight } from "lucide-react"
 import { useSession } from "@/hooks/useSession"
 import { toast } from "sonner"
 import {
@@ -67,6 +67,8 @@ export default function PredictorsPage() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
   const [userPredictionDetails, setUserPredictionDetails] = useState<UserPredictionDetail[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false)
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const predictorsPerPage = 10
 
   // Fetch scheduled matches and top predictors from API
   useEffect(() => {
@@ -156,7 +158,6 @@ export default function PredictorsPage() {
             avatar: ''
           }))
           .sort((a, b) => b.accuracy - a.accuracy)
-          .slice(0, 5)
 
         setTopPredictors(topPredictorsList)
 
@@ -302,6 +303,21 @@ export default function PredictorsPage() {
     predictor.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  // Pagination logic
+  const totalPages = Math.ceil(filteredPredictors.length / predictorsPerPage)
+  const startIndex = (currentPage - 1) * predictorsPerPage
+  const endIndex = startIndex + predictorsPerPage
+  const currentPredictors = filteredPredictors.slice(startIndex, endIndex)
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  // Reset to first page when search query changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery])
+
   // Filter out matches user has already predicted on
   const availableMatches = upcomingMatches.filter(match => 
     !userPredictions.has(parseInt(match.id))
@@ -335,24 +351,104 @@ export default function PredictorsPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                {filteredPredictors.map((predictor, index) => (
-                  <div key={predictor.id} className="flex items-center gap-3 p-3 rounded border border-gray-100 hover:border-indigo-100 hover:bg-indigo-50/30 transition-colors">
-                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-gray-700">
-                      <span className="text-xs font-semibold">{index + 1}</span>
+                {currentPredictors.map((predictor, index) => {
+                  // Calculate correct and wrong predictions
+                  const correct = Math.round((predictor.accuracy / 100) * predictor.predictions)
+                  const wrong = predictor.predictions - correct
+                  const globalIndex = startIndex + index
+                  
+                  return (
+                    <div key={predictor.id} className="flex items-center gap-3 p-3 rounded border border-gray-100 hover:border-indigo-100 hover:bg-indigo-50/30 transition-colors">
+                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-gray-700">
+                        <span className="text-xs font-semibold">{globalIndex + 1}</span>
+                      </div>
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={predictor.avatar} />
+                        <AvatarFallback className="text-[10px] bg-gray-100 text-gray-600">
+                          {predictor.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-900 truncate">{predictor.name}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <div className="flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3 text-emerald-500" />
+                            <span className="text-xs text-emerald-600 font-medium">{correct}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <XCircle className="w-3 h-3 text-rose-500" />
+                            <span className="text-xs text-rose-500 font-medium">{wrong}</span>
+                          </div>
+                          <span className="text-xs text-gray-400">•</span>
+                          <span className="text-xs text-gray-500">{predictor.predictions} total</span>
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className="text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-100">{predictor.accuracy}%</Badge>
                     </div>
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={predictor.avatar} />
-                      <AvatarFallback className="text-[10px] bg-gray-100 text-gray-600">
-                        {predictor.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-900 truncate">{predictor.name}</p>
-                      <p className="text-xs text-gray-600">{predictor.accuracy}% accuracy • {predictor.predictions}</p>
+                  )
+                })}
+                
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                    <div className="text-xs text-gray-500">
+                      Showing {startIndex + 1}-{Math.min(endIndex, filteredPredictors.length)} of {filteredPredictors.length}
                     </div>
-                    <Badge variant="secondary" className="text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-100">{predictor.accuracy}%</Badge>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="h-7 w-7 p-0"
+                      >
+                        <ChevronLeft className="h-3 w-3" />
+                      </Button>
+                      
+                      {/* Page Numbers */}
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          let pageNum
+                          if (totalPages <= 5) {
+                            pageNum = i + 1
+                          } else if (currentPage <= 3) {
+                            pageNum = i + 1
+                          } else if (currentPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i
+                          } else {
+                            pageNum = currentPage - 2 + i
+                          }
+                          
+                          return (
+                            <Button
+                              key={pageNum}
+                              variant={currentPage === pageNum ? "default" : "ghost"}
+                              size="sm"
+                              onClick={() => handlePageChange(pageNum)}
+                              className={`h-7 w-7 p-0 text-xs ${
+                                currentPage === pageNum 
+                                  ? "bg-indigo-600 text-white" 
+                                  : "text-gray-600 hover:text-gray-900"
+                              }`}
+                            >
+                              {pageNum}
+                            </Button>
+                          )
+                        })}
+                      </div>
+                      
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="h-7 w-7 p-0"
+                      >
+                        <ChevronRight className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
-                ))}
+                )}
               </CardContent>
             </Card>
           </aside>
@@ -566,7 +662,7 @@ export default function PredictorsPage() {
                             htmlFor={`${match.id}-home`} 
                             className={`flex items-center gap-2 rounded-lg border p-3 md:p-4 cursor-pointer transition-all ${
                               predictions[match.id] === "home" 
-                                ? "border-emerald-500 bg-emerald-500 shadow-md" 
+                                ? "border-blueish bg-blueish shadow-md" 
                                 : "border-gray-200 bg-white/70 hover:bg-gray-50/80 hover:border-gray-300"
                             }`}
                           >
@@ -581,7 +677,7 @@ export default function PredictorsPage() {
                             htmlFor={`${match.id}-away`} 
                             className={`flex items-center gap-2 rounded-lg border p-3 md:p-4 cursor-pointer transition-all ${
                               predictions[match.id] === "away" 
-                                ? "border-emerald-500 bg-emerald-500 shadow-md" 
+                                ? "border-blueish bg-blueish shadow-md" 
                                 : "border-gray-200 bg-white/70 hover:bg-gray-50/80 hover:border-gray-300"
                             }`}
                           >
@@ -600,7 +696,7 @@ export default function PredictorsPage() {
                   <div className="flex justify-end pt-4">
                     <Button 
                       onClick={handleSubmitPredictions} 
-                      className="px-7 bg-emerald-600 hover:bg-emerald-700 text-white" 
+                      className="px-7 bg-blueish hover:bg-blueish/80 text-white" 
                       variant="default" 
                       disabled={Object.keys(predictions).length === 0 || isSubmitting}
                     >
