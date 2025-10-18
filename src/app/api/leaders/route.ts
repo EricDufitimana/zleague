@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     let leaderboardData: any[] = [];
 
     if (sport === 'football') {
-      // Build query
+      // Build query - only include scores from ongoing championships
       let query = supabase
         .from('football_scores')
         .select(`
@@ -21,8 +21,12 @@ export async function GET(request: Request) {
           shots_on_target,
           saves,
           player:players(first_name, last_name),
-          team:teams(name, gender)
-        `);
+          team:teams(name, gender),
+          match:matches!match_id(
+            championship:championships(status)
+          )
+        `)
+        .eq('match.championship.status', 'ongoing');
 
       // Apply gender filter if needed
       if (gender !== 'all') {
@@ -67,7 +71,7 @@ export async function GET(request: Request) {
       leaderboardData.sort((a, b) => b.goals - a.goals || b.assists - a.assists);
 
     } else if (sport === 'basketball') {
-      // Build query
+      // Build query - only include scores from ongoing championships
       let query = supabase
         .from('basketball_scores')
         .select(`
@@ -78,8 +82,12 @@ export async function GET(request: Request) {
           three_points_made,
           three_points_attempted,
           player:players(first_name, last_name),
-          team:teams(name, gender)
-        `);
+          team:teams(name, gender),
+          match:matches!match_id(
+            championship:championships(status)
+          )
+        `)
+        .eq('match.championship.status', 'ongoing');
 
       // Apply gender filter if needed
       if (gender !== 'all') {

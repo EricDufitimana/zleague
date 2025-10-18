@@ -26,6 +26,22 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient();
     console.log('✅ Supabase admin client created successfully');
 
+    // First, set all existing championships to 'ended'
+    console.log('🔄 Setting all existing championships to "ended"...');
+    const { error: updateError } = await supabase
+      .from('championships')
+      .update({ status: 'ended' })
+      .neq('id', 0); // This will update all championships
+
+    if (updateError) {
+      console.error('❌ Error setting existing championships to ended:', updateError);
+      return NextResponse.json(
+        { error: 'Failed to update existing championships', details: updateError.message },
+        { status: 500 }
+      );
+    }
+    console.log('✅ All existing championships set to "ended"');
+
     const championshipData = {
       name: name.trim(),
       status: 'ongoing',
@@ -71,18 +87,26 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status');
+    
     const supabase = createAdminClient();
 
-    // Fetch championships with team counts
-    const { data: championships, error } = await supabase
+    let query = supabase
       .from('championships')
       .select(`
         *,
         teams:teams(count)
-      `)
-      .order('created_at', { ascending: false });
+      `);
+
+    // Filter by status if provided
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const { data: championships, error } = await query.order('created_at', { ascending: false });
 
     if (error) {
       return NextResponse.json(
@@ -146,33 +170,22 @@ export async function PUT(request: NextRequest) {
     
     const supabase = createAdminClient();
 
-    // If setting status to 'ongoing', check if another championship is already ongoing
+    // If setting status to 'ongoing', set all other championships to 'ended'
     if (status === 'ongoing') {
-      console.log('🔍 Checking for existing ongoing championships...');
-      const { data: existingOngoing, error: checkError } = await supabase
+      console.log('🔄 Setting all other championships to "ended"...');
+      const { error: updateError } = await supabase
         .from('championships')
-        .select('id, name')
-        .eq('status', 'ongoing')
-        .neq('id', id);
+        .update({ status: 'ended' })
+        .neq('id', id); // Update all championships except the current one
 
-      if (checkError) {
-        console.error('❌ Error checking for ongoing championships:', checkError);
+      if (updateError) {
+        console.error('❌ Error setting other championships to ended:', updateError);
         return NextResponse.json(
-          { error: 'Failed to check existing championships' },
+          { error: 'Failed to update other championships', details: updateError.message },
           { status: 500 }
         );
       }
-
-      if (existingOngoing && existingOngoing.length > 0) {
-        console.log('❌ Another championship is already ongoing:', existingOngoing);
-        return NextResponse.json(
-          { 
-            error: `Cannot set championship to ongoing. Another championship "${existingOngoing[0].name}" is already ongoing. Please end it first.` 
-          },
-          { status: 400 }
-        );
-      }
-      console.log('✅ No ongoing championships found, proceeding with update');
+      console.log('✅ All other championships set to "ended"');
     }
     console.log('✅ Supabase admin client created successfully');
 

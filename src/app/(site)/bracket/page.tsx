@@ -255,7 +255,7 @@ export default function BracketPage() {
       setFetchError(null)
       
       try {
-        const res = await fetch('/api/matches')
+        const res = await fetch('/api/matches?ongoing_only=true')
         
         if (!res.ok) {
           const text = await res.text()
@@ -264,8 +264,8 @@ export default function BracketPage() {
         }
         
         const data = await res.json()
-        console.log('Bracket fetched matches:', data.matches)
-        console.log('🔍 Match data analysis:', {
+        console.log('Bracket fetched matches from ongoing championships:', data.matches)
+        console.log('🔍 Match data analysis from ongoing championships:', {
           totalMatches: data.matches?.length || 0,
           sampleMatch: data.matches?.[0] ? {
             id: data.matches[0].id,
@@ -274,7 +274,8 @@ export default function BracketPage() {
             teamA: data.matches[0].teamA?.name,
             teamB: data.matches[0].teamB?.name,
             teamA_gender: data.matches[0].teamA?.gender,
-            teamB_gender: data.matches[0].teamB?.gender
+            teamB_gender: data.matches[0].teamB?.gender,
+            championship_status: data.matches[0].championship?.status
           } : null,
           allGenders: data.matches?.map((m: any) => m.gender) || [],
           allSports: data.matches?.map((m: any) => m.sport_type) || []

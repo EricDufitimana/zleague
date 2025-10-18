@@ -76,8 +76,8 @@ export default function PredictorsPage() {
       try {
         setIsLoading(true)
         
-        // Fetch scheduled matches
-        const matchesRes = await fetch(`/api/matches?status=scheduled`)
+        // Fetch scheduled matches from ongoing championships only
+        const matchesRes = await fetch(`/api/matches?status=scheduled&ongoing_only=true`)
         const matchesJson = await matchesRes.json()
         const apiMatches: Array<{
           id: number

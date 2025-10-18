@@ -427,6 +427,7 @@ export async function GET(request: NextRequest) {
     const boys_stage_groups = searchParams.get('boys_stage_groups');
     const girls_stage_groups = searchParams.get('girls_stage_groups');
     const validate = searchParams.get('validate') === 'true';
+    const ongoing_only = searchParams.get('ongoing_only') === 'true';
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -460,9 +461,52 @@ export async function GET(request: NextRequest) {
       query = query.eq('girls_stage_groups', girls_stage_groups);
     }
 
+    // Filter by ongoing championships if requested
+    if (ongoing_only) {
+      console.log('🔍 Filtering matches by ongoing championships only');
+      // First get all ongoing championship IDs
+      const { data: ongoingChampionships, error: champError } = await supabase
+        .from('championships')
+        .select('id')
+        .eq('status', 'ongoing');
+
+      if (champError) {
+        console.error('Error fetching ongoing championships:', champError);
+        return NextResponse.json(
+          { error: 'Failed to fetch ongoing championships', details: champError.message },
+          { status: 500 }
+        );
+      }
+
+      if (ongoingChampionships && ongoingChampionships.length > 0) {
+        const ongoingIds = ongoingChampionships.map(c => c.id);
+        console.log('🔍 Found ongoing championship IDs:', ongoingIds);
+        query = query.in('championship_id', ongoingIds);
+      } else {
+        console.log('🔍 No ongoing championships found, returning empty result');
+        // Use a condition that will never match to return empty results
+        query = query.eq('championship_id', -1);
+      }
+    }
+
     query = query.order('created_at', { ascending: false });
 
     const { data: matches, error } = await query;
+
+    // Debug logging for ongoing_only filter
+    if (ongoing_only) {
+      console.log('🔍 Ongoing filter debug:', {
+        ongoing_only,
+        totalMatches: matches?.length || 0,
+        sampleMatches: matches?.slice(0, 3).map(m => ({
+          id: m.id,
+          championship_id: m.championship_id,
+          championship_status: m.championship?.status,
+          teamA: m.teamA?.name,
+          teamB: m.teamB?.name
+        })) || []
+      });
+    }
 
     if (error) {
       console.error('Supabase error fetching matches:', error);

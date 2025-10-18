@@ -43,27 +43,28 @@ export default function ScoresPage() {
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
   const [statsDialogOpen, setStatsDialogOpen] = useState(false)
 
-  // Fetch matches from API
+  // Fetch matches from API (only from ongoing championships)
   useEffect(() => {
     const fetchMatches = async () => {
       setIsLoading(true)
       try {
-        const response = await fetch('/api/matches')
+        const response = await fetch('/api/matches?ongoing_only=true')
         if (response.ok) {
           const data = await response.json()
-          console.log('📊 Fetched matches from API:', data.matches?.length || 0, 'matches')
+          console.log('📊 Fetched matches from ongoing championships:', data.matches?.length || 0, 'matches')
           
           // Debug: Log first match with scores to verify data
           if (data.matches && data.matches.length > 0) {
             const firstMatch = data.matches[0]
-            console.log('🔍 Sample match data:', {
+            console.log('🔍 Sample match data from ongoing championship:', {
               id: firstMatch.id,
               teamA: firstMatch.teamA?.name,
               teamB: firstMatch.teamB?.name,
               team_a_score: firstMatch.team_a_score,
               team_b_score: firstMatch.team_b_score,
               status: firstMatch.status,
-              sport_type: firstMatch.sport_type
+              sport_type: firstMatch.sport_type,
+              championship_status: firstMatch.championship?.status
             })
           }
           
