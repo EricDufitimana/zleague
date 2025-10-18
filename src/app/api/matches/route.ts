@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 
 // Tournament status hierarchy based on your schema
 const TOURNAMENT_STATUSES = {
-  boys: ['preliminary', 'semi-finals', 'finals'],
-  girls: ['preliminary', 'quarter-finals', 'semi-finals', 'finals']
+  male: ['preliminary', 'semi-finals', 'finals'],
+  female: ['preliminary', 'quarter-finals', 'semi-finals', 'finals']
 };
 
 // Helper function to convert between match gender (boys/girls) and team gender (male/female)
@@ -16,7 +16,7 @@ function teamGenderToMatchGender(teamGender: 'male' | 'female'): 'boys' | 'girls
   return teamGender === 'male' ? 'boys' : 'girls';
 }
 
-function getNextStatus(currentStatus: string, gender: 'boys' | 'girls'): string | null {
+function getNextStatus(currentStatus: string, gender: 'male' | 'female'): string | null {
   const statuses = TOURNAMENT_STATUSES[gender];
   const currentIndex = statuses.indexOf(currentStatus);
   return currentIndex !== -1 && currentIndex < statuses.length - 1 
@@ -31,7 +31,7 @@ function isFinalRound(status: string): boolean {
 async function findOrCreateNextMatch(
   championship_id: string,
   sport_type: string,
-  gender: 'boys' | 'girls',
+  gender: 'male' | 'female',
   current_status: string
 ): Promise<string | null> {
   const nextStatus = getNextStatus(current_status, gender);
@@ -49,7 +49,7 @@ async function findOrCreateNextMatch(
     console.log(`Finding/creating next match: ${current_status} → ${nextStatus} for ${gender}`);
     
     // Build the correct stage field name
-    const stageField = gender === 'boys' ? 'boys_stage_groups' : 'girls_stage_groups';
+    const stageField = gender === 'male' ? 'boys_stage_groups' : 'girls_stage_groups';
     
     // Step 1: Get all existing next round matches
     const { data: existingNextMatches, error: searchError } = await supabase
@@ -109,13 +109,14 @@ async function findOrCreateNextMatch(
       const insertData: any = {
         championship_id: parseInt(championship_id),
         sport_type: sport_type,
+        gender: gender, // Add gender field for next matches
         status: 'not_yet_scheduled',
         team_a_id: null,
         team_b_id: null,
         next_match_id: null, // Finals has no next match
       };
 
-      if (gender === 'boys') {
+      if (gender === 'male') {
         insertData.boys_stage_groups = nextStatus;
       } else {
         insertData.girls_stage_groups = nextStatus;
@@ -162,6 +163,7 @@ async function findOrCreateNextMatch(
     const insertData: any = {
       championship_id: parseInt(championship_id),
       sport_type: sport_type,
+      gender: gender, // Add gender field for next matches
       status: 'not_yet_scheduled',
       team_a_id: null,
       team_b_id: null,
@@ -169,7 +171,7 @@ async function findOrCreateNextMatch(
     };
 
     // Set the appropriate stage field
-    if (gender === 'boys') {
+    if (gender === 'male') {
       insertData.boys_stage_groups = nextStatus;
     } else {
       insertData.girls_stage_groups = nextStatus;
@@ -198,10 +200,10 @@ async function validateTournamentIntegrity(
   supabase: any,
   championship_id: string,
   sport_type: string,
-  gender: 'boys' | 'girls'
+  gender: 'male' | 'female'
 ): Promise<{ valid: boolean; issues: string[] }> {
   const issues: string[] = [];
-  const stageField = gender === 'boys' ? 'boys_stage_groups' : 'girls_stage_groups';
+  const stageField = gender === 'male' ? 'boys_stage_groups' : 'girls_stage_groups';
 
   try {
     // Check 1: Ensure only ONE finals match exists
@@ -278,7 +280,7 @@ export async function POST(request: NextRequest) {
       team_b_id, 
       championship_id, 
       sport_type, 
-      gender = 'boys',
+      gender = 'male',
       boys_stage_groups = 'preliminary',
       girls_stage_groups = 'preliminary'
     } = body;
@@ -295,9 +297,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!['boys', 'girls'].includes(gender)) {
+    if (!['male', 'female'].includes(gender)) {
       return NextResponse.json(
-        { error: 'Gender must be either "boys" or "girls"' },
+        { error: 'Gender must be either "male" or "female"' },
         { status: 400 }
       );
     }
@@ -309,10 +311,10 @@ export async function POST(request: NextRequest) {
 
     try {
       // Get the current stage based on gender
-      const currentStage = gender === 'boys' ? boys_stage_groups : girls_stage_groups;
+      const currentStage = gender === 'male' ? boys_stage_groups : girls_stage_groups;
       
       // Validate that the stage is valid for the gender
-      const validStages = TOURNAMENT_STATUSES[gender as 'boys' | 'girls'];
+      const validStages = TOURNAMENT_STATUSES[gender as 'male' | 'female'];
       if (!validStages.includes(currentStage)) {
         return NextResponse.json(
           { error: `Invalid stage "${currentStage}" for ${gender}. Valid stages: ${validStages.join(', ')}` },
@@ -349,13 +351,13 @@ export async function POST(request: NextRequest) {
         team_b_id: parseInt(team_b_id),
         championship_id: parseInt(championship_id),
         sport_type: sport_type,
-        gender: matchGenderToTeamGender(gender), // Convert boys/girls to male/female
+        gender: gender, // Directly use male/female
         status: finalStatus, // Always 'not_yet_scheduled' for new matches
         next_match_id: nextMatchId ? parseInt(nextMatchId) : null,
       };
 
       // Set the appropriate stage field
-      if (gender === 'boys') {
+      if (gender === 'male') {
         insertData.boys_stage_groups = boys_stage_groups;
       } else {
         insertData.girls_stage_groups = girls_stage_groups;
@@ -479,7 +481,7 @@ export async function GET(request: NextRequest) {
           supabase,
           championship_id,
           sport_type,
-          gender as 'boys' | 'girls'
+          gender as 'male' | 'female'
         );
       }
     }

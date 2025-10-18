@@ -1,6 +1,26 @@
 "use client"
 
 import { useEffect, useMemo, useState, useCallback, memo } from "react"
+
+// Wrapper component to suppress React strict mode warnings from third-party library
+const BracketWrapper = ({ children, ...props }: any) => {
+  useEffect(() => {
+    // Suppress the specific warning from @sportsgram/brackets
+    const originalError = console.error;
+    console.error = (...args) => {
+      if (typeof args[0] === 'string' && args[0].includes('UNSAFE_componentWillReceiveProps')) {
+        return; // Suppress this specific warning
+      }
+      originalError.apply(console, args);
+    };
+    
+    return () => {
+      console.error = originalError; // Restore original console.error
+    };
+  }, []);
+  
+  return children;
+};
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -245,6 +265,20 @@ export default function BracketPage() {
         
         const data = await res.json()
         console.log('Bracket fetched matches:', data.matches)
+        console.log('🔍 Match data analysis:', {
+          totalMatches: data.matches?.length || 0,
+          sampleMatch: data.matches?.[0] ? {
+            id: data.matches[0].id,
+            sport_type: data.matches[0].sport_type,
+            gender: data.matches[0].gender,
+            teamA: data.matches[0].teamA?.name,
+            teamB: data.matches[0].teamB?.name,
+            teamA_gender: data.matches[0].teamA?.gender,
+            teamB_gender: data.matches[0].teamB?.gender
+          } : null,
+          allGenders: data.matches?.map((m: any) => m.gender) || [],
+          allSports: data.matches?.map((m: any) => m.sport_type) || []
+        })
         setMatches((data.matches || []) as ApiMatch[])
       } catch (e) {
         console.error('Failed to fetch matches', e)
@@ -259,17 +293,83 @@ export default function BracketPage() {
 
   // Optimized filtering with useMemo
   const filteredMatches = useMemo(() => {
-    return matches.filter(m => 
-      m.sport_type === selectedSport && 
-      m.gender === selectedGender
-    )
+    console.log('🔍 Filtering debug:', {
+      totalMatches: matches.length,
+      selectedSport,
+      selectedGender,
+      matchesWithDetails: matches.map(m => ({
+        id: m.id,
+        sport_type: m.sport_type,
+        gender: m.gender,
+        teamA: m.teamA?.name,
+        teamB: m.teamB?.name
+      }))
+    });
+    
+    const filtered = matches.filter(m => {
+      // Check sport type first
+      if (m.sport_type !== selectedSport) return false;
+      
+      // If match has gender field, use it
+      if (m.gender) {
+        return m.gender === selectedGender;
+      }
+      
+      // If no gender field, determine from teams
+      if (m.teamA?.gender && m.teamB?.gender) {
+        // Both teams must have the same gender as selected
+        return m.teamA.gender === selectedGender && m.teamB.gender === selectedGender;
+      }
+      
+      // If we can't determine gender, exclude the match
+      return false;
+    });
+    
+    console.log('✅ Filtered result:', {
+      filteredCount: filtered.length,
+      filteredMatches: filtered.map(m => ({
+        id: m.id,
+        sport_type: m.sport_type,
+        gender: m.gender,
+        teamA: m.teamA?.name,
+        teamB: m.teamB?.name
+      }))
+    });
+    
+    return filtered;
   }, [matches, selectedSport, selectedGender])
 
   // Build bracket structure once when filtered matches change
-  const bracketData = useMemo(() => 
-    buildBracketStructure(filteredMatches), 
-    [filteredMatches]
-  )
+  const bracketData = useMemo(() => {
+    console.log('🏗️ Building bracket with:', {
+      matchCount: filteredMatches.length,
+      matches: filteredMatches.map(m => ({
+        id: m.id,
+        next_match_id: m.next_match_id,
+        teamA: m.teamA?.name,
+        teamB: m.teamB?.name,
+        status: m.status
+      })),
+      matchConnections: filteredMatches.map(m => ({
+        id: m.id,
+        next_match_id: m.next_match_id,
+        hasNext: !!m.next_match_id
+      }))
+    });
+    
+    const result = buildBracketStructure(filteredMatches);
+    
+    console.log('🏆 Bracket result:', {
+      columns: result.columns.length,
+      columnDetails: result.columns.map((col, idx) => ({
+        round: idx + 1,
+        matchCount: col.length,
+        matches: col.map(m => ({ id: m.id, teamA: m.teamA?.name, teamB: m.teamB?.name }))
+      }))
+    });
+    
+    return result;
+  }, [filteredMatches])
 
   const { columns, matchById, feedersByNextId } = bracketData
 
@@ -368,7 +468,10 @@ export default function BracketPage() {
   const showEmptyState = !isLoading && !fetchError && (
     matches.length === 0 || filteredMatches.length === 0 || columns.length === 0
   )
-
+  console.log("Selected Gender:", selectedGender)
+  console.log("Selected Sport:", selectedSport)
+  console.log("Fitered Matches:", filteredMatches)
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <Navbar />
@@ -536,16 +639,17 @@ export default function BracketPage() {
                 })
               }))
               return (
-                <Bracket 
-                  rounds={rounds}
-                  renderSeedComponent={CustomSeed}
-                  roundTitleComponent={(title) => (
-                    <div className="text-sm font-semibold text-gray-800 text-center mb-4 tracking-wide">
-                      {title}
-                    </div>
-                  )}
-                  mobileBreakpoint={768}
-                />
+                <BracketWrapper>
+                  <Bracket 
+                    rounds={rounds}
+                    renderSeedComponent={CustomSeed}
+                    roundTitleComponent={(title) => (
+                      <div className="text-sm font-semibold text-gray-800 text-center mb-4 tracking-wide">
+                        {title}
+                      </div>
+                    )}
+                  />
+                </BracketWrapper>
                     )
                   })()}
         </div>

@@ -230,15 +230,15 @@ export function MatchStatsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh]">
+      <DialogContent className="max-w-7xl w-[95vw] max-h-[95vh]">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">Match Statistics</DialogTitle>
-          <DialogDescription>
-            Player performance breakdown
+          <DialogTitle className="text-2xl font-semibold text-gray-900 tracking-tight">Match Statistics</DialogTitle>
+          <DialogDescription className="text-gray-600">
+            Player performance breakdown for {homeTeamName} vs {awayTeamName}
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="h-[calc(90vh-120px)] pr-4">
+        <ScrollArea className="h-[calc(95vh-140px)] pr-4">
           {isLoading ? (
             <div className="space-y-6">
               {[1, 2].map((i) => (
@@ -256,24 +256,34 @@ export function MatchStatsDialog({
               <p className="text-sm text-gray-500">Unable to load player statistics</p>
             </div>
           ) : (
-            <div className="space-y-6">
-              {teamAStats && (
-                sport === 'basketball' 
-                  ? renderBasketballStats(teamAStats)
-                  : renderFootballStats(teamAStats)
-              )}
-              
-              {teamBStats && (
-                sport === 'basketball'
-                  ? renderBasketballStats(teamBStats)
-                  : renderFootballStats(teamBStats)
-              )}
-              
-              {!teamAStats && !teamBStats && (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No statistics available for this match yet.</p>
-                </div>
-              )}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {teamAStats && (
+                  <div className="space-y-4 pt-4">
+                    {sport === 'basketball' 
+                      ? renderBasketballStats(teamAStats)
+                      : renderFootballStats(teamAStats)
+                    }
+                  </div>
+                )}
+                
+                {teamBStats && (
+                  <div className="space-y-4 pt-4">
+                    {sport === 'basketball'
+                      ? renderBasketballStats(teamBStats)
+                      : renderFootballStats(teamBStats)
+                    }
+                  </div>
+                )}
+                
+                {!teamAStats && !teamBStats && (
+                  <div className="col-span-2 text-center py-12">
+                    <div className="text-6xl mb-4">📊</div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No statistics available</h3>
+                    <p className="text-gray-600">Statistics for this match will appear here once the game is completed.</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </ScrollArea>

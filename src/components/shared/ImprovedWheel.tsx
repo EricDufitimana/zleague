@@ -16,6 +16,8 @@ interface ImprovedWheelProps {
   isSpinning: boolean;
   onSpinComplete?: () => void;
   size?: number;
+  disabled?: boolean;
+  largeText?: boolean;
 }
 
 export const ImprovedWheel: React.FC<ImprovedWheelProps> = ({
@@ -24,6 +26,8 @@ export const ImprovedWheel: React.FC<ImprovedWheelProps> = ({
   isSpinning,
   onSpinComplete,
   size = 400,
+  disabled = false,
+  largeText = false,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [angle, setAngle] = useState(0);
@@ -86,14 +90,16 @@ export const ImprovedWheel: React.FC<ImprovedWheelProps> = ({
       ctx.rotate(Math.PI / 2);
       ctx.rotate(Math.PI / 2);
 
-      const fontSize = Math.min(18, 200 / Math.max(5, numSlices));
+      const fontSize = largeText 
+        ? Math.min(24, 250 / Math.max(5, numSlices))
+        : Math.min(18, 200 / Math.max(5, numSlices));
       ctx.font = `${fontSize}px Arial, sans-serif`;
       ctx.fillStyle = "white";
       ctx.textAlign = "center";
 
       // Truncate long names
       let displayName = team.name;
-      const maxChars = 17;
+      const maxChars = largeText ? 20 : 17;
       if (team.name.length > maxChars) {
         displayName = team.name.slice(0, maxChars) + "...";
       }
@@ -156,7 +162,7 @@ export const ImprovedWheel: React.FC<ImprovedWheelProps> = ({
   }, [teams, angle]);
 
   const spinWheel = () => {
-    if (isSpinning || teams.length < 2) return;
+    if (isSpinning || teams.length < 2 || disabled) return;
 
     const duration = 5500;
     const segmentSize = (2 * Math.PI) / teams.length;
@@ -220,8 +226,8 @@ export const ImprovedWheel: React.FC<ImprovedWheelProps> = ({
           style={{ 
             width: `${size}px`, 
             height: `${size}px`,
-            cursor: teams.length < 2 ? 'not-allowed' : 'pointer',
-            opacity: teams.length < 2 ? 0.5 : 1
+            cursor: (teams.length < 2 || disabled) ? 'not-allowed' : 'pointer',
+            opacity: (teams.length < 2 || disabled) ? 0.5 : 1
           }}
           onClick={spinWheel}
         />

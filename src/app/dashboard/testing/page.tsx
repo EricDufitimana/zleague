@@ -8,7 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Trophy, Shuffle, Play, RotateCcw, Check, X, Loader2, ArrowLeft, Users, Shield } from 'lucide-react';
 import { ImprovedWheel } from '@/components/shared/ImprovedWheel';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import '@/styles/fireworks.css';
+import { DialogTrigger } from '@radix-ui/react-dialog';
 
 interface Championship {
   id: number;
@@ -53,7 +55,9 @@ export default function MatchPage() {
   const [pendingMatchup, setPendingMatchup] = useState<Matchup | null>(null);
   const [isCreatingMatch, setIsCreatingMatch] = useState(false);
   const [currentPointerTeam, setCurrentPointerTeam] = useState<Team | null>(null);
-  
+  const [showWinnerDialog, setShowWinnerDialog] = useState(false);
+  const [winnerTeam, setWinnerTeam] = useState<Team | null>(null);
+  const [isEnlargedView, setIsEnlargedView] = useState(false);
   // Predefined matchup pairs
   const [predefinedPairs, setPredefinedPairs] = useState<Array<{teamA: Team, teamB: Team}>>([]);
   const [currentPairIndex, setCurrentPairIndex] = useState(0);
@@ -696,7 +700,12 @@ export default function MatchPage() {
           </Select>
         </div>
       </div>
+          <Button
+          onClick={() => setIsEnlargedView(true)}>
+            Enlarge View
+          </Button>
 
+  
       {/* Championship Header */}
       {championship && (
         <div className="mb-6">
@@ -799,7 +808,12 @@ export default function MatchPage() {
                           </div>
                         </div>
                       ) : (
-                        <span className="text-gray-500 text-sm">Click wheel to spin and select a team</span>
+                        <span className="text-gray-500 text-sm">
+                          {selectedGender === 'all' || selectedSportType === 'all' 
+                            ? 'Please select both gender and sport to enable the wheel'
+                            : 'Click wheel to spin and select a team'
+                          }
+                        </span>
                       )}
                     </div>
                     
@@ -807,8 +821,11 @@ export default function MatchPage() {
                     <ImprovedWheel
                       teams={getWheelTeams()}
                       isSpinning={isSpinning}
+                      disabled={selectedGender === 'all' || selectedSportType === 'all'}
                       onSelectWinner={(winner) => {
                         setSelectedTeam(winner);
+                        setWinnerTeam(winner);
+                        setShowWinnerDialog(true);
                         
                         // Check if only 2 teams remain - auto-assign them
                         const currentAvailableTeams = getWheelTeams();
@@ -1026,6 +1043,279 @@ export default function MatchPage() {
 
       {/* Right panel includes matchups table now; removed separate cards below */}
       </div>
-    </div>
+      <Dialog open={isEnlargedView} onOpenChange={setIsEnlargedView}>
+        <DialogContent className="max-w-8xl w-[90vw] max-h-[95vh] p-6">
+          <DialogHeader>
+            <DialogTitle className="flex justify-center gap-4 align-center">
+              <p className="text-xl font-bold text-center">Match Selection - Presentation View</p>
+              <div className="flex justify-center gap-4">
+                <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                  Gender: {selectedGender === 'all' ? 'All' : selectedGender.charAt(0).toUpperCase() + selectedGender.slice(1)}
+                </div> 
+                <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                  Sport: {selectedSportType === 'all' ? 'All' : selectedSportType.charAt(0).toUpperCase() + selectedSportType.slice(1)}
+                </div> 
+              </div> 
+            </DialogTitle>
+        
+          </DialogHeader>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
+            {/* Enlarged Wheel */}
+            <div className="lg:col-span-2 flex flex-col items-center justify-center">
+              {getWheelTeams().length >= 1 ? (
+                <div className="flex flex-col items-center w-full">
+                  {/* Instruction text above the wheel */}
+                  
+                  
+                  {/* Enlarged Wheel Component */}
+                  <ImprovedWheel
+                    teams={getWheelTeams()}
+                    isSpinning={isSpinning}
+                    size={520}
+                    largeText={true}
+                    onSelectWinner={(winner) => {
+                      setSelectedTeam(winner);
+                      setWinnerTeam(winner);
+                      setShowWinnerDialog(true);
+                      
+                      // Check if only 2 teams remain - auto-assign them
+                      const currentAvailableTeams = getWheelTeams();
+                      if (currentAvailableTeams.length === 2) {
+                        // Auto-assign the last two teams
+                        const team1 = winner;
+                        const team2 = currentAvailableTeams.find(t => t.id !== winner.id);
+                        
+                        if (team2) {
+                          setFirstTeam(team1);
+                          setSecondTeam(team2);
+                          // Use selected sport type or default to basketball
+                          const sport_type = (selectedSportType && selectedSportType !== 'all') ? selectedSportType : 'basketball';
+                          setPendingMatchup({ team1, team2, sport_type });
+                          setSpinCount(1); // Mark as completed
+                          
+                          // Clear available teams since we've used them all
+                          setAvailableTeams([]);
+                        }
+                      } else {
+                        // Normal flow - call handleTeamSelection
+                        handleTeamSelection(winner);
+                      }
+                      
+                      // Trigger fireworks
+                      const pyroContainer = document.createElement("div");
+                      pyroContainer.className = "pyro";
+                      const beforeElement = document.createElement("div");
+                      beforeElement.className = "before";
+                      const afterElement = document.createElement("div");
+                      afterElement.className = "after";
+                      pyroContainer.appendChild(beforeElement);
+                      pyroContainer.appendChild(afterElement);
+                      document.body.appendChild(pyroContainer);
+                      setTimeout(() => {
+                        if (document.body.contains(pyroContainer)) {
+                          document.body.removeChild(pyroContainer);
+                        }
+                      }, 4000);
+                    }}
+                    onSpinComplete={() => {
+                      setIsSpinning(false);
+                    }}
+                  />
+                  
+                  {/* Reset button under the wheel */}
+                  <div className="mt-6 flex items-center justify-center gap-3">
+                    <Button onClick={resetWheel} variant="outline" size="sm">
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Reset
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-2xl font-medium text-gray-600 mb-2">No Teams Available</p>
+                  <p className="text-lg text-gray-500">
+                    {teams.length > 0 
+                      ? 'No teams match the current gender filter.'
+                      : 'No teams have been loaded yet.'}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Enlarged Team Selection Cards */}
+            <div className="flex flex-col gap-3">
+              {/* Team Cards */}
+              <div className="space-y-2">
+                <Card className="bg-white border border-gray-200 shadow-sm">
+                  <CardHeader className="pb-1 px-3 pt-3">
+                    <CardTitle className="text-sm font-medium text-gray-700">1st Team</CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-3 pb-3">
+                    {firstTeam ? (
+                      <div className="space-y-1">
+                        <div className="text-lg font-semibold text-gray-900">{firstTeam.name}</div>
+                        <div className="text-md text-gray-600">Grade: {firstTeam.grade ? firstTeam.grade.toUpperCase() : 'Unknown'}</div>
+                      </div>
+                    ) : (
+                      <div className="rounded border border-dashed border-gray-300 py-3 text-center">
+                        <div className="text-md text-gray-500">No team selected yet</div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-white border border-gray-200 shadow-sm">
+                  <CardHeader className="pb-1 px-3 pt-3">
+                    <CardTitle className="text-sm font-medium text-gray-700">2nd Team</CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-3 pb-3">
+                    {secondTeam ? (
+                      <div className="space-y-1">
+                        <div className="text-lg font-semibold text-gray-900">{secondTeam.name}</div>
+                        <div className="text-md text-gray-600">Grade: {secondTeam.grade ? secondTeam.grade.toUpperCase() : 'Unknown'}</div>
+                      </div>
+                    ) : (
+                      <div className="rounded border border-dashed border-gray-300 py-3 text-center">
+                        <div className="text-md text-gray-500">Awaiting selection</div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-2">
+                {pendingMatchup && (
+                  <div className="flex flex-col gap-2">
+                    <Button onClick={confirmMatchup} className="bg-green-600 hover:bg-green-700 text-sm py-2" disabled={isCreatingMatch}>
+                      {isCreatingMatch ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4 mr-2" />
+                          Confirm Match
+                        </>
+                      )}
+                    </Button>
+                    <Button onClick={rejectMatchup} variant="outline" className="border-red-300 text-red-600 hover:bg-red-50 text-sm py-2">
+                      <X className="w-4 h-4 mr-2" />
+                      Reject
+                    </Button>
+                  </div>
+                )}
+                
+                <div className="flex flex-col gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    disabled={!selectedTeam || isSpinning || spinCount !== 0} 
+                    onClick={() => selectedTeam && handleTeamSelection(selectedTeam)}
+                    className="text-sm py-2"
+                  >
+                    Set as 1st Team
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    disabled={!selectedTeam || isSpinning || spinCount !== 1} 
+                    onClick={() => selectedTeam && handleTeamSelection(selectedTeam)}
+                    className="text-sm py-2"
+                  >
+                    Set as 2nd Team
+                  </Button>
+                </div>
+                
+                {/* Auto Assign Match Button - Only show when exactly 2 teams left */}
+                {getWheelTeams().length === 2 && !firstTeam && !secondTeam && (
+                  <div className="mt-3">
+                    <Button 
+                      size="sm" 
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm py-2 w-full"
+                      onClick={() => {
+                        const teams = getWheelTeams();
+                        if (teams.length === 2) {
+                          const team1 = teams[0];
+                          const team2 = teams[1];
+                          
+                          setFirstTeam(team1);
+                          setSecondTeam(team2);
+                          // Use selected sport type or default to basketball
+                          const sport_type = (selectedSportType && selectedSportType !== 'all') ? selectedSportType : 'basketball';
+                          setPendingMatchup({ team1, team2, sport_type });
+                          setSpinCount(1); // Mark as completed
+                          
+                          // Clear available teams since we've used them all
+                          setAvailableTeams([]);
+                          
+                          // Trigger fireworks
+                          const pyroContainer = document.createElement("div");
+                          pyroContainer.className = "pyro";
+                          const beforeElement = document.createElement("div");
+                          beforeElement.className = "before";
+                          const afterElement = document.createElement("div");
+                          afterElement.className = "after";
+                          pyroContainer.appendChild(beforeElement);
+                          pyroContainer.appendChild(afterElement);
+                          document.body.appendChild(pyroContainer);
+                          setTimeout(() => {
+                            if (document.body.contains(pyroContainer)) {
+                              document.body.removeChild(pyroContainer);
+                            }
+                          }, 4000);
+                        }
+                      }}
+                    >
+                      <Shuffle className="w-4 h-4 mr-2" />
+                      Auto Assign Final Match
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Winner Dialog */}
+      <Dialog open={showWinnerDialog} onOpenChange={setShowWinnerDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-2xl font-bold text-green-700">
+              🎉 Team Selected!
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-6">
+            {winnerTeam && (
+              <div className="space-y-4">
+                <div className="bg-green-100 border-2 border-green-400 rounded-xl px-6 py-4">
+                  <div className="text-3xl font-bold text-green-700 mb-2">
+                    {winnerTeam.name}
+                  </div>
+                  <div className="text-lg text-green-600">
+                    Grade: {winnerTeam.grade ? winnerTeam.grade.toUpperCase() : 'Unknown'}
+                  </div>
+                </div>
+                <p className="text-gray-600">
+                  This team has been selected by the wheel!
+                </p>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-center">
+            <Button 
+              onClick={() => setShowWinnerDialog(false)}
+              className="bg-green-600 hover:bg-green-700 text-white px-8 py-2"
+            >
+              Continue
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+ 
+  </div>
   );
 }

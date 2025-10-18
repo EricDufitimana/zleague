@@ -70,12 +70,18 @@ export function AuthDialog({ open, onOpenChange, defaultMode = "login" }: AuthDi
         }))
       }
 
+      // Use the same pattern as the server-side exchange route
+      const isLocalEnv = process.env.NODE_ENV === 'development'
+      const origin = isLocalEnv 
+        ? window.location.origin  // localhost in development
+        : process.env.NEXT_PUBLIC_SITE_URL // your Vercel URL in production
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: mode === "login" 
-            ? `${window.location.origin}/auth/exchange?type=login` 
-            : `${window.location.origin}/auth/exchange?type=register`,
+            ? `${origin}/auth/exchange?type=login` 
+            : `${origin}/auth/exchange?type=register`,
           queryParams: mode === "register" ? {
             access_type: 'offline',
             prompt: 'consent',
