@@ -16,7 +16,7 @@ function normalizeGender(gender: string | undefined | null): string | null {
 function assignGender(familyName: string, grade: string): string {
   const maleTeams: { [key: string]: string[] } = {
     'ey': ['Family 3', 'Family 4'],
-    's4': ['Thomas Edison', 'Lance Solomon Reddick'],
+    's4': ['Thomas Edison', 'Lance Reddick'],
     's5': ['Alfred Nobel', 'Pelé (Edson Arantes Do Nascimento)'],
     's6': ['RUGANZU NDOLI 2', 'Chinua Achebe']
   };

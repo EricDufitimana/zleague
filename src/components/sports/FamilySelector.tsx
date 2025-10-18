@@ -20,7 +20,7 @@ const FAMILIES_BY_GRADE = {
   's4': [
     'Thomas Edison',
     'Rosalie Gicanda',
-    'Lance Solomon Reddick',
+    'Lance Reddick',
     'Niyitegeka Felestin',
     'Irena Sendler',
     'ADA loveloce'

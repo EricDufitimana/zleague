@@ -193,7 +193,7 @@ export default function ChampionshipTeamsPage() {
       const getFamilyGrade = (family: string): string => {
         const familiesByGrade = {
           'ey': ['Family_1', 'Family_2', 'Family_3', 'Family_4', 'Family_5', 'Family_6'],
-          's4': ['Thomas Edison', 'Rosalie Gicanda', 'Lance Solomon Reddick', 'Niyitegeka Felestin', 'Irena Sendler', 'ADA loveloce'],
+          's4': ['Thomas Edison', 'Rosalie Gicanda', 'Lance Reddick', 'Niyitegeka Felestin', 'Irena Sendler', 'ADA loveloce'],
           's5': ['Pelé (Edson Arantes Do Nascimento)', 'Ubald Rugirangoga', 'Alfred Nobel', 'Toni Morrison', 'Ruth Bader Ginsberg', 'Charles Babbage'],
           's6': ['KATHERINE JOHNSON', 'YVAN BURAVAN', 'Chinua Achebe', 'RUGANZU NDOLI 2', 'AOUA KEITA', 'Fannie Lou Hamer']
         };
