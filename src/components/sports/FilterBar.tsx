@@ -99,7 +99,7 @@ export function FilterBar({ selectedSport, onSportChange, selectedDate, onDateCh
               <Button 
                 id="gender-filter"
                 variant="outline" 
-                className="w-full sm:w-auto border-gray-200 shadow-sm hover:bg-gray-50"
+                className="w-full sm:w-auto border-gray-200 shadow-none hover:bg-gray-50"
               >
                 <span className="mr-2">👥</span>
                 {currentGenderLabel}
