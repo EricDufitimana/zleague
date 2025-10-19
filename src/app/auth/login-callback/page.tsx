@@ -17,19 +17,23 @@ export default function LoginCallbackPage() {
         console.log('Login callback page loaded');
         
         const supabase = createClient();
-        const { data: { user }, error: sessionError } = await supabase.auth.getUser();
         
-        if (sessionError) {
-          console.error('Session error:', sessionError);
+        // Handle OAuth callback and exchange code for session
+        const { data, error: authError } = await supabase.auth.getSession();
+        
+        if (authError) {
+          console.error('Auth error:', authError);
           setError('Authentication failed. Please try again.');
           return;
         }
 
-        if (!user) {
-          console.error('No user found after authentication');
+        if (!data.session) {
+          console.error('No session found after authentication');
           setError('Authentication failed. Please try again.');
           return;
         }
+
+        const user = data.session.user;
 
         console.log('User authenticated with ID:', user.id);
 

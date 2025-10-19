@@ -4,14 +4,12 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, AlertCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useUserData } from "@/hooks/useUserData"
 import { createClient } from "@/utils/supabase/client"
 import { toast } from "sonner"
 
 export default function AuthCallbackPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const { userId, isLoading: userLoading, error: userError } = useUserData();
 
   useEffect(() => {
     // Handle callback after OAuth authentication
@@ -29,24 +27,24 @@ export default function AuthCallbackPage() {
           return;
         }
 
-        // Wait for user data to be loaded
-        if (userLoading) {
-          console.log('Still loading user data...');
+        const supabase = createClient();
+        
+        // Handle OAuth callback and exchange code for session
+        const { data, error: authError } = await supabase.auth.getSession();
+        
+        if (authError) {
+          console.error('Auth error:', authError);
+          setError('Authentication failed. Please try again.');
           return;
         }
 
-        if (userError) {
-          console.error('User data error:', userError);
-          setError(userError);
+        if (!data.session) {
+          console.error('No session found after authentication');
+          setError('Authentication failed. Please try again.');
           return;
         }
 
-        if (!userId) {
-          console.error('No user ID found after authentication');
-          setError('Authentication failed. Please try logging in again.');
-          return;
-        }
-
+        const userId = data.session.user.id;
         console.log('User authenticated with ID:', userId);
 
         // First check if user already exists in users table
@@ -124,7 +122,7 @@ export default function AuthCallbackPage() {
     }
 
     handleCallback()
-  }, [userId, userLoading, userError, router])
+  }, [router])
 
   if (error) {
     return (

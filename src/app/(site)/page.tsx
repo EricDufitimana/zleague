@@ -19,6 +19,11 @@ interface Match {
   winner_id?: number
   team_a_score?: number
   team_b_score?: number
+  championship?: {
+    id: number
+    name: string
+    status: string
+  }
   teamA?: {
     id: number
     name: string
@@ -46,34 +51,69 @@ export default function ScoresPage() {
   // Fetch matches from API (only from ongoing championships)
   useEffect(() => {
     const fetchMatches = async () => {
+      console.log('🚀 Starting to fetch matches from server...')
       setIsLoading(true)
       try {
         const response = await fetch('/api/matches?ongoing_only=true')
+        console.log('📡 API Response status:', response.status)
+        console.log('📡 API Response ok:', response.ok)
+        
         if (response.ok) {
           const data = await response.json()
-          console.log('📊 Fetched matches from ongoing championships:', data.matches?.length || 0, 'matches')
+          console.log('📊 Raw API response data:', data)
+          console.log('📊 Total matches fetched:', data.matches?.length || 0, 'matches')
           
-          // Debug: Log first match with scores to verify data
+          // Log all matches with detailed information
           if (data.matches && data.matches.length > 0) {
-            const firstMatch = data.matches[0]
-            console.log('🔍 Sample match data from ongoing championship:', {
-              id: firstMatch.id,
-              teamA: firstMatch.teamA?.name,
-              teamB: firstMatch.teamB?.name,
-              team_a_score: firstMatch.team_a_score,
-              team_b_score: firstMatch.team_b_score,
-              status: firstMatch.status,
-              sport_type: firstMatch.sport_type,
-              championship_status: firstMatch.championship?.status
+            console.log('🏆 All matches from server:')
+            data.matches.forEach((match: Match, index: number) => {
+              console.log(`Match ${index + 1}:`, {
+                id: match.id,
+                teamA: match.teamA?.name || 'Unknown Team A',
+                teamB: match.teamB?.name || 'Unknown Team B',
+                team_a_score: match.team_a_score,
+                team_b_score: match.team_b_score,
+                status: match.status,
+                sport_type: match.sport_type,
+                created_at: match.created_at,
+                championship_id: match.championship_id,
+                championship_status: match.championship?.status || 'Unknown'
+              })
             })
+            
+            // Log status distribution
+            const statusCounts = data.matches.reduce((acc: any, match: Match) => {
+              acc[match.status] = (acc[match.status] || 0) + 1
+              return acc
+            }, {})
+            console.log('📈 Match status distribution:', statusCounts)
+            
+            // Log sport type distribution
+            const sportCounts = data.matches.reduce((acc: any, match: Match) => {
+              acc[match.sport_type] = (acc[match.sport_type] || 0) + 1
+              return acc
+            }, {})
+            console.log('⚽ Sport type distribution:', sportCounts)
+          } else {
+            console.log('⚠️ No matches found in API response')
           }
           
           setMatches(data.matches || [])
+          console.log('✅ Matches set in state successfully')
+        } else {
+          console.error('❌ API request failed with status:', response.status)
+          const errorText = await response.text()
+          console.error('❌ Error response body:', errorText)
         }
       } catch (error) {
-        console.error('Error fetching matches:', error)
+        console.error('💥 Error fetching matches:', error)
+        console.error('💥 Error details:', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : 'No stack trace'
+        })
       } finally {
         setIsLoading(false)
+        console.log('🏁 Finished fetching matches, loading set to false')
       }
     }
 
@@ -94,6 +134,17 @@ export default function ScoresPage() {
 
   // Convert API match to MatchCard format
   const convertToMatchCard = (match: Match) => {
+    console.log('🔄 Converting match to MatchCard format:', {
+      original_id: match.id,
+      original_status: match.status,
+      teamA: match.teamA?.name,
+      teamB: match.teamB?.name,
+      team_a_score: match.team_a_score,
+      team_b_score: match.team_b_score,
+      sport_type: match.sport_type,
+      created_at: match.created_at
+    })
+    
     const converted = {
       id: match.id.toString(),
       homeTeam: { 
@@ -105,10 +156,9 @@ export default function ScoresPage() {
         score: match.status === 'played' ? (match.team_b_score ?? 0) : null
       },
       status: match.status === 'played' ? 'final' as const : 
-              match.status === 'scheduled' ? 'not_played' as const : 
-              match.status === 'not_yet_scheduled' ? 'not_played' as const : 'live' as const,
+              match.status === 'scheduled' ? 'not_played' as const : 'live' as const,
       sport: match.sport_type as "football" | "basketball" | "volleyball",
-      time: (match.status === 'scheduled' || match.status === 'not_yet_scheduled') ? 
+      time: match.status === 'scheduled' ? 
         `${new Date(match.created_at).toLocaleDateString('en-US', { weekday: 'short' })} ${new Date(match.created_at).toLocaleTimeString('en-US', { 
           hour: '2-digit', 
           minute: '2-digit',
@@ -116,6 +166,16 @@ export default function ScoresPage() {
         })}` : undefined,
       date: match.created_at
     }
+    
+    console.log('✅ Converted match result:', {
+      converted_id: converted.id,
+      converted_status: converted.status,
+      homeTeam: converted.homeTeam,
+      awayTeam: converted.awayTeam,
+      sport: converted.sport,
+      time: converted.time,
+      date: converted.date
+    })
     
     // Debug: Log scores for played matches
     if (match.status === 'played' && (match.team_a_score !== undefined || match.team_b_score !== undefined)) {
@@ -134,20 +194,50 @@ export default function ScoresPage() {
   // Filter matches based on selected sport, date, and gender
   const filteredMatches = matches
     .filter(match => {
-      // Only show scheduled, played, or not yet scheduled matches
-      if (!['scheduled', 'played', 'not_yet_scheduled'].includes(match.status)) return false
+      console.log('🔍 Filtering match:', {
+        id: match.id,
+        status: match.status,
+        sport_type: match.sport_type,
+        teamA: match.teamA?.name,
+        teamB: match.teamB?.name,
+        teamA_gender: match.teamA?.gender,
+        teamB_gender: match.teamB?.gender,
+        created_at: match.created_at,
+        selectedSport,
+        selectedGender,
+        selectedDate
+      })
+      
+      // Only show scheduled or played matches (exclude not_yet_scheduled)
+      if (!['scheduled', 'played'].includes(match.status)) {
+        console.log('❌ Filtered out - not scheduled/played status:', match.status)
+        return false
+      }
       
       // Skip matches with null teamA or teamB
-      if (!match.teamA || !match.teamB) return false
+      if (!match.teamA || !match.teamB) {
+        console.log('❌ Filtered out - missing team data:', { teamA: !!match.teamA, teamB: !!match.teamB })
+        return false
+      }
       
       // Filter by sport
-      if (match.sport_type !== selectedSport) return false
+      if (match.sport_type !== selectedSport) {
+        console.log('❌ Filtered out - sport mismatch:', { match_sport: match.sport_type, selected_sport: selectedSport })
+        return false
+      }
       
       // Filter by gender
       if (selectedGender !== "all") {
         const teamAGender = match.teamA.gender
         const teamBGender = match.teamB.gender
-        if (teamAGender !== selectedGender || teamBGender !== selectedGender) return false
+        if (teamAGender !== selectedGender || teamBGender !== selectedGender) {
+          console.log('❌ Filtered out - gender mismatch:', { 
+            teamA_gender: teamAGender, 
+            teamB_gender: teamBGender, 
+            selected_gender: selectedGender 
+          })
+          return false
+        }
       }
       
       // Filter by date range
@@ -155,14 +245,42 @@ export default function ScoresPage() {
       const now = new Date()
       const diffDays = Math.floor((now.getTime() - matchDate.getTime()) / (1000 * 60 * 60 * 24))
       
-      if (selectedDate === "all") return true
-      if (selectedDate === "this-week") return diffDays < 7
-      if (selectedDate === "last-week") return diffDays >= 7 && diffDays < 14
-      if (selectedDate === "2-weeks-ago") return diffDays >= 14 && diffDays < 21
+      let dateMatch = true
+      if (selectedDate === "all") dateMatch = true
+      else if (selectedDate === "this-week") dateMatch = diffDays < 7
+      else if (selectedDate === "last-week") dateMatch = diffDays >= 7 && diffDays < 14
+      else if (selectedDate === "2-weeks-ago") dateMatch = diffDays >= 14 && diffDays < 21
       
+      if (!dateMatch) {
+        console.log('❌ Filtered out - date mismatch:', { 
+          diffDays, 
+          selectedDate, 
+          matchDate: match.created_at 
+        })
+        return false
+      }
+      
+      console.log('✅ Match passed all filters')
       return true
     })
     .map(convertToMatchCard)
+
+  // Log final results
+  console.log('📊 Final filtering results:', {
+    total_matches_from_server: matches.length,
+    filtered_matches_count: filteredMatches.length,
+    selectedSport,
+    selectedGender,
+    selectedDate,
+    filteredMatches: filteredMatches.map(match => ({
+      id: match.id,
+      homeTeam: match.homeTeam.name,
+      awayTeam: match.awayTeam.name,
+      status: match.status,
+      sport: match.sport,
+      time: match.time
+    }))
+  })
 
   // Group matches by week when "all" is selected
   const groupedMatches = selectedDate === "all" ? 

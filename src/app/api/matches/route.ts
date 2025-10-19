@@ -589,9 +589,6 @@ export async function PATCH(request: NextRequest) {
       // Build update object
       const updateData: any = {};
       
-      if (match_time !== undefined) {
-        updateData.match_time = new Date(match_time).toISOString();
-      }
       
       if (status !== undefined) {
         updateData.status = status;
