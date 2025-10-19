@@ -8,6 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Navbar } from "@/components/navigation/Navbar"
 import { Search, History, Loader2, CheckCircle, XCircle, ChevronLeft, ChevronRight } from "lucide-react"
 import { useSession } from "@/hooks/useSession"
@@ -68,16 +69,27 @@ export default function PredictorsPage() {
   const [userPredictionDetails, setUserPredictionDetails] = useState<UserPredictionDetail[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false)
   const [currentPage, setCurrentPage] = useState<number>(1)
+  const [isLoadingMatches, setIsLoadingMatches] = useState<boolean>(false)
+  const [isLoadingPredictors, setIsLoadingPredictors] = useState<boolean>(false)
+  const [isLoadingUserData, setIsLoadingUserData] = useState<boolean>(false)
   const predictorsPerPage = 10
 
-  // Fetch scheduled matches and top predictors from API
+  // Fetch all data together to prevent reloads
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchAllData = async () => {
       try {
-        setIsLoading(true)
+        // Set all loading states to true
+        setIsLoadingMatches(true)
+        setIsLoadingPredictors(true)
+        if (user) setIsLoadingUserData(true)
         
-        // Fetch scheduled matches from ongoing championships only
-        const matchesRes = await fetch(`/api/matches?status=scheduled&ongoing_only=true`)
+        // Fetch all data in parallel
+        const [matchesRes, predictorsRes] = await Promise.all([
+          fetch(`/api/matches?status=scheduled&ongoing_only=true`),
+          fetch('/api/predictions')
+        ])
+        
+        // Process matches
         const matchesJson = await matchesRes.json()
         const apiMatches: Array<{
           id: number
@@ -90,16 +102,7 @@ export default function PredictorsPage() {
           sport_type?: string
         }> = matchesJson?.matches || []
         
-        console.log('Raw API matches data:', apiMatches)
-        
         const mapped: UpcomingMatch[] = apiMatches.map((m) => {
-          console.log('Processing match:', {
-            id: m.id,
-            team_a_id: m.team_a_id,
-            team_b_id: m.team_b_id,
-            teamA: m.teamA,
-            teamB: m.teamB
-          })
           const when = m.match_time ? new Date(m.match_time) : new Date(m.created_at)
           const date = when.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
           const time = when.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
@@ -121,9 +124,9 @@ export default function PredictorsPage() {
           }
         })
         setUpcomingMatches(mapped)
+        setIsLoadingMatches(false)
 
-        // Fetch top predictors
-        const predictorsRes = await fetch('/api/predictions')
+        // Process predictors
         const predictorsJson = await predictorsRes.json()
         const predictions: Array<{
           user_id: number
@@ -131,7 +134,6 @@ export default function PredictorsPage() {
           user?: { username?: string; first_name?: string; last_name?: string }
         }> = predictorsJson?.predictions || []
         
-        // Calculate top predictors based on accuracy
         const userStats = new Map<number, { correct: number; total: number; name: string }>()
         
         predictions.forEach((pred) => {
@@ -160,38 +162,42 @@ export default function PredictorsPage() {
           .sort((a, b) => b.accuracy - a.accuracy)
 
         setTopPredictors(topPredictorsList)
+        setIsLoadingPredictors(false)
 
-        // Fetch user's existing predictions if user is logged in
+        // Fetch user data if logged in
         if (user) {
-          console.log('Fetching user predictions for user:', user.id)
-          const userRes = await fetch(`/api/users?auth_user_id=${user.id}`)
-          const userData = await userRes.json()
-          
-          if (userData.user) {
-            const predictionsRes = await fetch(`/api/predictions?user_id=${userData.user.id}`)
-            const predictionsJson = await predictionsRes.json()
-            const userPreds: UserPredictionDetail[] = predictionsJson?.predictions || []
+          try {
+            const userRes = await fetch(`/api/users?auth_user_id=${user.id}`)
+            const userData = await userRes.json()
             
-            // Get set of match IDs user has already predicted
-            const predictedMatchIds = new Set<number>(userPreds.map((p) => parseInt(String(p.match_id))).filter((id: number) => !isNaN(id)))
-            setUserPredictions(predictedMatchIds)
-            
-            // Store detailed predictions for dialog
-            setUserPredictionDetails(userPreds)
-            
-            console.log('User has already predicted on matches:', Array.from(predictedMatchIds))
+            if (userData.user) {
+              const predictionsRes = await fetch(`/api/predictions?user_id=${userData.user.id}`)
+              const predictionsJson = await predictionsRes.json()
+              const userPreds: UserPredictionDetail[] = predictionsJson?.predictions || []
+              
+              const predictedMatchIds = new Set<number>(userPreds.map((p) => parseInt(String(p.match_id))).filter((id: number) => !isNaN(id)))
+              setUserPredictions(predictedMatchIds)
+              setUserPredictionDetails(userPreds)
+            }
+          } catch (error) {
+            console.error('Error fetching user data:', error)
+          } finally {
+            setIsLoadingUserData(false)
           }
+        } else {
+          setIsLoadingUserData(false)
         }
       } catch (e) {
         console.error('Failed to load data', e)
         setUpcomingMatches([])
         setTopPredictors([])
-      } finally {
-        setIsLoading(false)
+        setIsLoadingMatches(false)
+        setIsLoadingPredictors(false)
+        setIsLoadingUserData(false)
       }
     }
-    fetchData()
-  }, [user]) // Re-run when user changes
+    fetchAllData()
+  }, [user])
 
   const handlePredictionChange = (matchId: string, prediction: string) => {
     setPredictions(prev => ({
@@ -351,7 +357,25 @@ export default function PredictorsPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                {currentPredictors.map((predictor, index) => {
+                {isLoadingPredictors ? (
+                  // Skeleton for predictors
+                  Array.from({ length: 5 }).map((_, index) => (
+                    <div key={index} className="flex items-center gap-3 p-3 rounded border border-gray-100">
+                      <Skeleton className="w-6 h-6 rounded-full" />
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <Skeleton className="h-4 w-24" />
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-3 w-8" />
+                          <Skeleton className="h-3 w-8" />
+                          <Skeleton className="h-3 w-12" />
+                        </div>
+                      </div>
+                      <Skeleton className="h-5 w-8" />
+                    </div>
+                  ))
+                ) : (
+                  currentPredictors.map((predictor, index) => {
                   // Calculate correct and wrong predictions
                   const correct = Math.round((predictor.accuracy / 100) * predictor.predictions)
                   const wrong = predictor.predictions - correct
@@ -386,7 +410,8 @@ export default function PredictorsPage() {
                       <Badge variant="secondary" className="text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-100">{predictor.accuracy}%</Badge>
                     </div>
                   )
-                })}
+                })
+                )}
                 
                 {/* Pagination Controls */}
                 {totalPages > 1 && (
@@ -566,7 +591,22 @@ export default function PredictorsPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {userPredictionDetails.length === 0 ? (
+                  {isLoadingUserData ? (
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="text-center">
+                        <Skeleton className="h-8 w-8 mx-auto mb-2" />
+                        <Skeleton className="h-3 w-8 mx-auto" />
+                      </div>
+                      <div className="text-center border-l border-r border-gray-200">
+                        <Skeleton className="h-8 w-8 mx-auto mb-2" />
+                        <Skeleton className="h-3 w-12 mx-auto" />
+                      </div>
+                      <div className="text-center">
+                        <Skeleton className="h-8 w-8 mx-auto mb-2" />
+                        <Skeleton className="h-3 w-12 mx-auto" />
+                      </div>
+                    </div>
+                  ) : userPredictionDetails.length === 0 ? (
                     <div className="text-sm text-gray-500 text-center py-8">
                       No predictions yet. Start by selecting matches below.
                     </div>
@@ -600,11 +640,32 @@ export default function PredictorsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {isLoading ? (
-                    <div className="flex items-center justify-center gap-2 text-sm text-gray-500 p-6">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Loading scheduled matches…</span>
-                    </div>
+                  {isLoadingMatches ? (
+                    // Skeleton for matches
+                    Array.from({ length: 3 }).map((_, index) => (
+                      <div key={index} className="group rounded-xl border border-gray-200 bg-white/80">
+                        <div className="p-5">
+                          <div className="flex items-center justify-between gap-4 mb-4">
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-2">
+                                <Skeleton className="h-8 w-8 rounded-full" />
+                                <Skeleton className="h-4 w-20" />
+                              </div>
+                              <Skeleton className="h-6 w-8 rounded-full" />
+                              <div className="flex items-center gap-2">
+                                <Skeleton className="h-8 w-8 rounded-full" />
+                                <Skeleton className="h-4 w-20" />
+                              </div>
+                            </div>
+                            <Skeleton className="h-6 w-20 rounded-full" />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <Skeleton className="h-12 rounded-lg" />
+                            <Skeleton className="h-12 rounded-lg" />
+                          </div>
+                        </div>
+                      </div>
+                    ))
                   ) : availableMatches.length === 0 ? (
                     <div className="text-sm text-gray-500 p-6">
                       {upcomingMatches.length === 0 
