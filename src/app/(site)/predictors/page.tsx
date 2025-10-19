@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -374,6 +375,10 @@ export default function PredictorsPage() {
                       <Skeleton className="h-5 w-8" />
                     </div>
                   ))
+                ) : currentPredictors.length === 0 ? (
+                  <div className="text-sm text-gray-500 text-center py-8">
+                    No one has predicted yet.
+                  </div>
                 ) : (
                   currentPredictors.map((predictor, index) => {
                   // Calculate correct and wrong predictions
@@ -669,7 +674,13 @@ export default function PredictorsPage() {
                   ) : availableMatches.length === 0 ? (
                     <div className="text-sm text-gray-500 p-6">
                       {upcomingMatches.length === 0 
-                        ? "No scheduled matches available." 
+                        ?
+                        <> 
+                          <div className="flex flex-col items-center justify-center"> 
+                           <Image src="/no-scheduled.png" alt="No matches" width={300} height={300} />
+                           <h2 className="text-gray-500 text-center">No scheduled matches available.</h2>
+                          </div>
+                        </> 
                         : "You have already made predictions on all available matches."}
                     </div>
                   ) : (
