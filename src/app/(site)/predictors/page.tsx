@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Navbar } from "@/components/navigation/Navbar"
 import { Search, History, Loader2, CheckCircle, XCircle, ChevronLeft, ChevronRight } from "lucide-react"
 import { useSession } from "@/hooks/useSession"
 import { toast } from "sonner"
@@ -332,8 +331,6 @@ export default function PredictorsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
-
       <main className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-12">
         {/* Header */}
         <div className="mb-12">

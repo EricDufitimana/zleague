@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Navbar } from "@/components/navigation/Navbar"
 import { FilterBar } from "@/components/sports/FilterBar"
 import { MatchCard } from "@/components/sports/MatchCard"
 import { MatchStatsDialog } from "@/components/sports/MatchStatsDialog"
@@ -305,8 +304,7 @@ export default function ScoresPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      
+       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
         <div className="mb-8">

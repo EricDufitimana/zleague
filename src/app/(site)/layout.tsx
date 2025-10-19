@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation"
 import Head from "../head"
+import { Navbar } from "@/components/navigation/Navbar"
 
 export default function SiteLayout({
   children,
@@ -21,6 +22,7 @@ export default function SiteLayout({
 
   return <>
     {Head(getTitle())}
+    <Navbar />
     {children}
   </>
 }
