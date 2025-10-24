@@ -10,7 +10,7 @@ interface Team {
   created_at: string;
 }
 
-interface ImprovedWheelProps {
+interface NoTimeoutWheelProps {
   teams: Team[];
   onSelectWinner?: (winner: Team) => void;
   isSpinning: boolean;
@@ -18,10 +18,9 @@ interface ImprovedWheelProps {
   size?: number;
   disabled?: boolean;
   largeText?: boolean;
-  soundEnabled?: boolean;
 }
 
-export const ImprovedWheel: React.FC<ImprovedWheelProps> = ({
+export const NoTimeoutWheel: React.FC<NoTimeoutWheelProps> = ({
   teams,
   onSelectWinner,
   isSpinning,
@@ -29,59 +28,11 @@ export const ImprovedWheel: React.FC<ImprovedWheelProps> = ({
   size = 400,
   disabled = false,
   largeText = false,
-  soundEnabled = true,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [angle, setAngle] = useState(0);
   const animationRef = useRef<number | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const lastClickTimeRef = useRef<number>(0);
-
-  // Create mechanical spinning sound effect
-  const createSpinningSound = () => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    
-    const audioContext = audioContextRef.current;
-    
-    // Create multiple oscillators for a more complex mechanical sound
-    const oscillator1 = audioContext.createOscillator();
-    const oscillator2 = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    const filterNode = audioContext.createBiquadFilter();
-    
-    // Connect the audio graph
-    oscillator1.connect(filterNode);
-    oscillator2.connect(filterNode);
-    filterNode.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    // Configure the filter for mechanical sound
-    filterNode.type = 'lowpass';
-    filterNode.frequency.setValueAtTime(200, audioContext.currentTime);
-    filterNode.Q.setValueAtTime(1, audioContext.currentTime);
-    
-    // Primary frequency - lower mechanical sound
-    oscillator1.type = 'sawtooth';
-    oscillator1.frequency.setValueAtTime(120, audioContext.currentTime);
-    oscillator1.frequency.exponentialRampToValueAtTime(80, audioContext.currentTime + 0.08);
-    
-    // Secondary frequency - adds mechanical roughness
-    oscillator2.type = 'square';
-    oscillator2.frequency.setValueAtTime(240, audioContext.currentTime);
-    oscillator2.frequency.exponentialRampToValueAtTime(160, audioContext.currentTime + 0.08);
-    
-    // Envelope for mechanical click
-    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-    gainNode.gain.linearRampToValueAtTime(0.15, audioContext.currentTime + 0.01);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.08);
-    
-    oscillator1.start(audioContext.currentTime);
-    oscillator2.start(audioContext.currentTime);
-    oscillator1.stop(audioContext.currentTime + 0.08);
-    oscillator2.stop(audioContext.currentTime + 0.08);
-  };
+  const [isAnimating, setIsAnimating] = useState(false);
 
   const drawWheel = (ctx: CanvasRenderingContext2D, size: number) => {
     const numSlices = teams.length;
@@ -212,17 +163,20 @@ export const ImprovedWheel: React.FC<ImprovedWheelProps> = ({
   }, [teams, angle]);
 
   const spinWheel = () => {
-    if (isSpinning || teams.length < 2 || disabled) return;
+    if (isAnimating || teams.length < 2 || disabled) return;
 
-    const duration = 5500;
+    setIsAnimating(true);
     const segmentSize = (2 * Math.PI) / teams.length;
 
     // Randomize the starting angle for true randomness
     const startingAngle = Math.random() * 2 * Math.PI;
+    // Add multiple full rotations for dramatic effect
+    const rotations = 8 + Math.random() * 4; // 8-12 rotations
     const randomOffset = Math.random() * segmentSize;
-    const finalAngle = startingAngle + 12 * Math.PI + randomOffset;
+    const finalAngle = startingAngle + (rotations * 2 * Math.PI) + randomOffset;
 
     const start = performance.now();
+    const duration = 3000 + Math.random() * 2000; // 3-5 seconds
 
     const animate = (now: number) => {
       const elapsed = now - start;
@@ -231,18 +185,6 @@ export const ImprovedWheel: React.FC<ImprovedWheelProps> = ({
       // Use cubic easing for smoother animation
       const easedProgress = 1 - Math.pow(1 - progress, 3);
       const newAngle = startingAngle + (finalAngle - startingAngle) * easedProgress;
-
-      // Play click sound when passing segment boundaries
-      const currentSegment = Math.floor((newAngle % (2 * Math.PI)) / segmentSize);
-      const previousSegment = Math.floor((angle % (2 * Math.PI)) / segmentSize);
-      
-      if (currentSegment !== previousSegment && progress > 0.1 && progress < 0.9 && soundEnabled) {
-        const currentTime = now;
-        if (currentTime - lastClickTimeRef.current > 50) { // Throttle clicks to max 20 per second
-          createSpinningSound();
-          lastClickTimeRef.current = currentTime;
-        }
-      }
 
       setAngle(newAngle);
 
@@ -264,20 +206,19 @@ export const ImprovedWheel: React.FC<ImprovedWheelProps> = ({
         if (onSpinComplete) {
           onSpinComplete();
         }
+
+        setIsAnimating(false);
       }
     };
 
     animationRef.current = requestAnimationFrame(animate);
   };
 
-  // Cleanup animation and audio on unmount
+  // Cleanup animation on unmount
   useEffect(() => {
     return () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
       }
     };
   }, []);
@@ -291,11 +232,18 @@ export const ImprovedWheel: React.FC<ImprovedWheelProps> = ({
           style={{ 
             width: `${size}px`, 
             height: `${size}px`,
-            cursor: (teams.length < 2 || disabled) ? 'not-allowed' : 'pointer',
+            cursor: (teams.length < 2 || disabled || isAnimating) ? 'not-allowed' : 'pointer',
             opacity: (teams.length < 2 || disabled) ? 0.5 : 1
           }}
           onClick={spinWheel}
         />
+        {isAnimating && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="bg-white/90 rounded-full p-2">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

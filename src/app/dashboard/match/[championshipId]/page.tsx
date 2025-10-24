@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Trophy, Shuffle, Play, RotateCcw, Check, X, Loader2, ArrowLeft, Users, Shield, Trash2, Maximize2 } from 'lucide-react';
+import { Trophy, Shuffle, Play, RotateCcw, Check, X, Loader2, ArrowLeft, Users, Shield, Trash2, Maximize2, Volume2, VolumeX } from 'lucide-react';
 import { ImprovedWheel } from '@/components/shared/ImprovedWheel';
 import '@/styles/fireworks.css';
 
@@ -62,6 +62,7 @@ export default function MatchPage() {
   // Predefined matchup pairs
   const [predefinedPairs, setPredefinedPairs] = useState<Array<{teamA: Team, teamB: Team}>>([]);
   const [currentPairIndex, setCurrentPairIndex] = useState(0);
+  const [soundEnabled, setSoundEnabled] = useState(true);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -859,6 +860,7 @@ export default function MatchPage() {
                       teams={getWheelTeams()}
                       isSpinning={isSpinning}
                       disabled={selectedGender === 'all' || selectedSportType === 'all'}
+                      soundEnabled={soundEnabled}
                       onSelectWinner={(winner) => {
                         // Just set the selected team - let user manually choose to set 1st or 2nd team
                         setSelectedTeam(winner);
@@ -1071,7 +1073,19 @@ export default function MatchPage() {
                 </div> 
                 <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
                   Sport: {selectedSportType === 'all' ? 'All' : selectedSportType.charAt(0).toUpperCase() + selectedSportType.slice(1)}
-                </div> 
+                </div>
+                <button
+                  onClick={() => setSoundEnabled(!soundEnabled)}
+                  className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm font-medium transition-colors"
+                  title={soundEnabled ? "Turn off sound" : "Turn on sound"}
+                >
+                  {soundEnabled ? (
+                    <Volume2 className="h-4 w-4" />
+                  ) : (
+                    <VolumeX className="h-4 w-4" />
+                  )}
+                  
+                </button>
               </div> 
             </DialogTitle>
         
@@ -1091,6 +1105,7 @@ export default function MatchPage() {
                     isSpinning={isSpinning}
                     size={520}
                     largeText={true}
+                    soundEnabled={soundEnabled}
                     onSelectWinner={(winner) => {
                       setSelectedTeam(winner);
                       setWinnerTeam(winner);

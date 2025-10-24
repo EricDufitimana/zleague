@@ -12,10 +12,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Shield } from "lucide-react";
+import { Loader, LogOut, Shield } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { AuthDialog } from "@/components/auth/AuthDialog";
+import { Loader2 } from "lucide-react";
   
 export function UserAvatar() {
   const { user, isAdmin, isLoading, refreshSession } = useSession();
@@ -23,6 +24,8 @@ export function UserAvatar() {
   const [isOpen, setIsOpen] = useState(false);
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
+  const supabase = createClient();
+  const [isLoadingLogout, setIsLoadingLogout] = useState(false);
 
   if (isLoading) {
     return (
@@ -67,18 +70,27 @@ export function UserAvatar() {
       </>
     );
   }
-
-  const handleSignOut = async () => {
+  
+  const handleLogout = async (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent default menu item behavior
+    setIsLoadingLogout(true);
     try {
-      const supabase = createClient();
-      await supabase.auth.signOut();
-      refreshSession();
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Logout error:", error);
+        throw error;
+      }
+      // Close dropdown and navigate
       setIsOpen(false);
-      router.push("/");
+      // Refresh session first to clear user state
+      await refreshSession();
+      // Then navigate and force a full page refresh
+      window.location.href = "/";
     } catch (error) {
-      console.error("Error signing out:", error);
+      console.error("Error logging out:", error);
+      setIsLoadingLogout(false);
     }
-  };
+  }
 
   const getInitials = (name: string) => {
     return name
@@ -95,7 +107,12 @@ export function UserAvatar() {
                      'User';
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+    <DropdownMenu open={isOpen} onOpenChange={(open) => {
+      // Prevent closing if logout is in progress
+      if (!isLoadingLogout) {
+        setIsOpen(open);
+      }
+    }}>
       <DropdownMenuTrigger asChild>
         <button className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
           <Avatar className="h-8 w-8">
@@ -135,8 +152,17 @@ export function UserAvatar() {
         )}
 
         
-        <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
-          <LogOut className="mr-2 h-4 w-4" />
+        <DropdownMenuItem 
+          onSelect={(e) => e.preventDefault()} // Prevent automatic dropdown close
+          onClick={handleLogout}
+          disabled={isLoadingLogout}
+          className="text-red-600 cursor-pointer"
+        >
+          {isLoadingLogout ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <LogOut className="mr-2 h-4 w-4" />
+          )}
           Sign Out
         </DropdownMenuItem>
       </DropdownMenuContent>

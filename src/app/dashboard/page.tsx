@@ -4,6 +4,7 @@ import { SportsStats } from "@/components/sports/sports-stats"
 import { useState, useEffect } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 
 type MatchItem = {
   id: number
@@ -23,6 +24,7 @@ type ChampionshipItem = {
 }
 
 export default function DashboardPage() {
+  const [isLoading, setIsLoading] = useState(true)
   const [stats, setStats] = useState({
     playedGames: 0,
     unscheduledMatches: 0,
@@ -78,6 +80,8 @@ export default function DashboardPage() {
         setChamps(championships.slice(0, 6))
       } catch (error) {
         console.error('Error loading dashboard data:', error)
+      } finally {
+        setIsLoading(false)
       }
     }
 
@@ -88,6 +92,105 @@ export default function DashboardPage() {
     if (!iso) return 'TBD'
     const d = new Date(iso)
     return `${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} • ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        {/* Top KPIs Skeleton */}
+        <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="@container/card bg-gradient-to-t from-gray-50/80 to-white shadow-xs border-gray-100">
+              <CardHeader>
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-8 w-16" />
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-5 rounded-full" />
+                  <Skeleton className="h-5 w-16" />
+                </div>
+              </CardHeader>
+              <div className="px-6 pb-6 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-4 w-4" />
+                </div>
+                <Skeleton className="h-3 w-40" />
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        {/* Secondary content skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full px-4 lg:px-6">
+          {/* Upcoming Matches Skeleton */}
+          <Card className="lg:col-span-2 w-full overflow-hidden border border-gray-200/60 shadow-none bg-gradient-to-t from-indigo-50/80 to-white">
+            <CardHeader className="px-4">
+              <Skeleton className="h-5 w-32" />
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="py-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-5 w-8 rounded-full" />
+                      <Skeleton className="h-4 w-20" />
+                    </div>
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Active Championships Skeleton */}
+          <Card className="w-full overflow-hidden border border-gray-200/60 shadow-none bg-gradient-to-t from-emerald-50/40 to-white">
+            <CardHeader className="px-4 py-3 pb-2">
+              <Skeleton className="h-5 w-36" />
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <Skeleton className="h-4 w-24 mb-1" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Recent results skeleton */}
+        <div className="px-4 lg:px-6">
+          <Card className="w-full overflow-hidden border border-gray-200/60 shadow-none bg-gradient-to-t from-amber-50/40 to-white">
+            <CardHeader className="px-4 py-3 pb-2">
+              <Skeleton className="h-5 w-28" />
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-5 w-12 rounded-full" />
+                        <Skeleton className="h-4 w-20" />
+                      </div>
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                    <Skeleton className="h-3 w-16 mt-1" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
   }
 
   return (

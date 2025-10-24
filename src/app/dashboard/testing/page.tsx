@@ -6,8 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Trophy, Shuffle, Play, RotateCcw, Check, X, Loader2, ArrowLeft, Users, Shield } from 'lucide-react';
+import { Trophy, Shuffle, Play, RotateCcw, Check, X, Loader2, ArrowLeft, Users, Shield, Volume2, VolumeX } from 'lucide-react';
 import { ImprovedWheel } from '@/components/shared/ImprovedWheel';
+import { NoTimeoutWheel } from '@/components/shared/NoTimeoutWheel';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import '@/styles/fireworks.css';
 import { DialogTrigger } from '@radix-ui/react-dialog';
@@ -61,6 +62,8 @@ export default function MatchPage() {
   // Predefined matchup pairs
   const [predefinedPairs, setPredefinedPairs] = useState<Array<{teamA: Team, teamB: Team}>>([]);
   const [currentPairIndex, setCurrentPairIndex] = useState(0);
+  const [useNoTimeoutWheel, setUseNoTimeoutWheel] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -779,6 +782,19 @@ export default function MatchPage() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="wheelType" className="text-xs font-medium text-gray-600">Wheel Type</Label>
+                  <Select value={useNoTimeoutWheel ? "no-timeout" : "timeout"} onValueChange={(value) => setUseNoTimeoutWheel(value === "no-timeout")}>
+                    <SelectTrigger className="bg-white h-4 w-32">
+                      <SelectValue placeholder="Wheel Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="timeout">With Timeout</SelectItem>
+                      <SelectItem value="no-timeout">No Timeout</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             )}
           </div>
@@ -817,59 +833,115 @@ export default function MatchPage() {
                       )}
                     </div>
                     
-                    {/* Improved Wheel Component */}
-                    <ImprovedWheel
-                      teams={getWheelTeams()}
-                      isSpinning={isSpinning}
-                      disabled={selectedGender === 'all' || selectedSportType === 'all'}
-                      onSelectWinner={(winner) => {
-                        setSelectedTeam(winner);
-                        setWinnerTeam(winner);
-                        setShowWinnerDialog(true);
-                        
-                        // Check if only 2 teams remain - auto-assign them
-                        const currentAvailableTeams = getWheelTeams();
-                        if (currentAvailableTeams.length === 2) {
-                          // Auto-assign the last two teams
-                          const team1 = winner;
-                          const team2 = currentAvailableTeams.find(t => t.id !== winner.id);
+                    {/* Wheel Component */}
+                    {useNoTimeoutWheel ? (
+                      <NoTimeoutWheel
+                        teams={getWheelTeams()}
+                        isSpinning={isSpinning}
+                        disabled={selectedGender === 'all' || selectedSportType === 'all'}
+                        onSelectWinner={(winner) => {
+                          setSelectedTeam(winner);
+                          setWinnerTeam(winner);
+                          setShowWinnerDialog(true);
                           
-                          if (team2) {
-                            setFirstTeam(team1);
-                            setSecondTeam(team2);
-                            // Use selected sport type or default to basketball
-                            const sport_type = (selectedSportType && selectedSportType !== 'all') ? selectedSportType : 'basketball';
-                            setPendingMatchup({ team1, team2, sport_type });
-                            setSpinCount(1); // Mark as completed
+                          // Check if only 2 teams remain - auto-assign them
+                          const currentAvailableTeams = getWheelTeams();
+                          if (currentAvailableTeams.length === 2) {
+                            // Auto-assign the last two teams
+                            const team1 = winner;
+                            const team2 = currentAvailableTeams.find(t => t.id !== winner.id);
                             
-                            // Clear available teams since we've used them all
-                            setAvailableTeams([]);
+                            if (team2) {
+                              setFirstTeam(team1);
+                              setSecondTeam(team2);
+                              // Use selected sport type or default to basketball
+                              const sport_type = (selectedSportType && selectedSportType !== 'all') ? selectedSportType : 'basketball';
+                              setPendingMatchup({ team1, team2, sport_type });
+                              setSpinCount(1); // Mark as completed
+                              
+                              // Clear available teams since we've used them all
+                              setAvailableTeams([]);
+                            }
+                          } else {
+                            // Normal flow - call handleTeamSelection
+                            handleTeamSelection(winner);
                           }
-                        } else {
-                          // Normal flow - call handleTeamSelection
-                          handleTeamSelection(winner);
-                        }
-                        
-                        // Trigger fireworks
-                        const pyroContainer = document.createElement("div");
-                        pyroContainer.className = "pyro";
-                        const beforeElement = document.createElement("div");
-                        beforeElement.className = "before";
-                        const afterElement = document.createElement("div");
-                        afterElement.className = "after";
-                        pyroContainer.appendChild(beforeElement);
-                        pyroContainer.appendChild(afterElement);
-                        document.body.appendChild(pyroContainer);
-                        setTimeout(() => {
-                          if (document.body.contains(pyroContainer)) {
-                            document.body.removeChild(pyroContainer);
+                          
+                          // Trigger fireworks
+                          const pyroContainer = document.createElement("div");
+                          pyroContainer.className = "pyro";
+                          const beforeElement = document.createElement("div");
+                          beforeElement.className = "before";
+                          const afterElement = document.createElement("div");
+                          afterElement.className = "after";
+                          pyroContainer.appendChild(beforeElement);
+                          pyroContainer.appendChild(afterElement);
+                          document.body.appendChild(pyroContainer);
+                          setTimeout(() => {
+                            if (document.body.contains(pyroContainer)) {
+                              document.body.removeChild(pyroContainer);
+                            }
+                          }, 4000);
+                        }}
+                        onSpinComplete={() => {
+                          setIsSpinning(false);
+                        }}
+                      />
+                    ) : (
+                      <ImprovedWheel
+                        teams={getWheelTeams()}
+                        isSpinning={isSpinning}
+                        disabled={selectedGender === 'all' || selectedSportType === 'all'}
+                        soundEnabled={soundEnabled}
+                        onSelectWinner={(winner) => {
+                          setSelectedTeam(winner);
+                          setWinnerTeam(winner);
+                          setShowWinnerDialog(true);
+                          
+                          // Check if only 2 teams remain - auto-assign them
+                          const currentAvailableTeams = getWheelTeams();
+                          if (currentAvailableTeams.length === 2) {
+                            // Auto-assign the last two teams
+                            const team1 = winner;
+                            const team2 = currentAvailableTeams.find(t => t.id !== winner.id);
+                            
+                            if (team2) {
+                              setFirstTeam(team1);
+                              setSecondTeam(team2);
+                              // Use selected sport type or default to basketball
+                              const sport_type = (selectedSportType && selectedSportType !== 'all') ? selectedSportType : 'basketball';
+                              setPendingMatchup({ team1, team2, sport_type });
+                              setSpinCount(1); // Mark as completed
+                              
+                              // Clear available teams since we've used them all
+                              setAvailableTeams([]);
+                            }
+                          } else {
+                            // Normal flow - call handleTeamSelection
+                            handleTeamSelection(winner);
                           }
-                        }, 4000);
-                      }}
-                      onSpinComplete={() => {
-                        setIsSpinning(false);
-                      }}
-                    />
+                          
+                          // Trigger fireworks
+                          const pyroContainer = document.createElement("div");
+                          pyroContainer.className = "pyro";
+                          const beforeElement = document.createElement("div");
+                          beforeElement.className = "before";
+                          const afterElement = document.createElement("div");
+                          afterElement.className = "after";
+                          pyroContainer.appendChild(beforeElement);
+                          pyroContainer.appendChild(afterElement);
+                          document.body.appendChild(pyroContainer);
+                          setTimeout(() => {
+                            if (document.body.contains(pyroContainer)) {
+                              document.body.removeChild(pyroContainer);
+                            }
+                          }, 4000);
+                        }}
+                        onSpinComplete={() => {
+                          setIsSpinning(false);
+                        }}
+                      />
+                    )}
                     
                     {/* Spin / Reset under the wheel */}
                     <div className="mt-4 flex items-center justify-center gap-3">
@@ -1054,7 +1126,19 @@ export default function MatchPage() {
                 </div> 
                 <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
                   Sport: {selectedSportType === 'all' ? 'All' : selectedSportType.charAt(0).toUpperCase() + selectedSportType.slice(1)}
-                </div> 
+                </div>
+                <button
+                  onClick={() => setSoundEnabled(!soundEnabled)}
+                  className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm font-medium transition-colors"
+                  title={soundEnabled ? "Turn off sound" : "Turn on sound"}
+                >
+                  {soundEnabled ? (
+                    <Volume2 className="h-4 w-4" />
+                  ) : (
+                    <VolumeX className="h-4 w-4" />
+                  )}
+                  Sound
+                </button>
               </div> 
             </DialogTitle>
         
@@ -1069,59 +1153,116 @@ export default function MatchPage() {
                   
                   
                   {/* Enlarged Wheel Component */}
-                  <ImprovedWheel
-                    teams={getWheelTeams()}
-                    isSpinning={isSpinning}
-                    size={520}
-                    largeText={true}
-                    onSelectWinner={(winner) => {
-                      setSelectedTeam(winner);
-                      setWinnerTeam(winner);
-                      setShowWinnerDialog(true);
-                      
-                      // Check if only 2 teams remain - auto-assign them
-                      const currentAvailableTeams = getWheelTeams();
-                      if (currentAvailableTeams.length === 2) {
-                        // Auto-assign the last two teams
-                        const team1 = winner;
-                        const team2 = currentAvailableTeams.find(t => t.id !== winner.id);
+                  {useNoTimeoutWheel ? (
+                    <NoTimeoutWheel
+                      teams={getWheelTeams()}
+                      isSpinning={isSpinning}
+                      size={520}
+                      largeText={true}
+                      onSelectWinner={(winner) => {
+                        setSelectedTeam(winner);
+                        setWinnerTeam(winner);
+                        setShowWinnerDialog(true);
                         
-                        if (team2) {
-                          setFirstTeam(team1);
-                          setSecondTeam(team2);
-                          // Use selected sport type or default to basketball
-                          const sport_type = (selectedSportType && selectedSportType !== 'all') ? selectedSportType : 'basketball';
-                          setPendingMatchup({ team1, team2, sport_type });
-                          setSpinCount(1); // Mark as completed
+                        // Check if only 2 teams remain - auto-assign them
+                        const currentAvailableTeams = getWheelTeams();
+                        if (currentAvailableTeams.length === 2) {
+                          // Auto-assign the last two teams
+                          const team1 = winner;
+                          const team2 = currentAvailableTeams.find(t => t.id !== winner.id);
                           
-                          // Clear available teams since we've used them all
-                          setAvailableTeams([]);
+                          if (team2) {
+                            setFirstTeam(team1);
+                            setSecondTeam(team2);
+                            // Use selected sport type or default to basketball
+                            const sport_type = (selectedSportType && selectedSportType !== 'all') ? selectedSportType : 'basketball';
+                            setPendingMatchup({ team1, team2, sport_type });
+                            setSpinCount(1); // Mark as completed
+                            
+                            // Clear available teams since we've used them all
+                            setAvailableTeams([]);
+                          }
+                        } else {
+                          // Normal flow - call handleTeamSelection
+                          handleTeamSelection(winner);
                         }
-                      } else {
-                        // Normal flow - call handleTeamSelection
-                        handleTeamSelection(winner);
-                      }
-                      
-                      // Trigger fireworks
-                      const pyroContainer = document.createElement("div");
-                      pyroContainer.className = "pyro";
-                      const beforeElement = document.createElement("div");
-                      beforeElement.className = "before";
-                      const afterElement = document.createElement("div");
-                      afterElement.className = "after";
-                      pyroContainer.appendChild(beforeElement);
-                      pyroContainer.appendChild(afterElement);
-                      document.body.appendChild(pyroContainer);
-                      setTimeout(() => {
-                        if (document.body.contains(pyroContainer)) {
-                          document.body.removeChild(pyroContainer);
+                        
+                        // Trigger fireworks
+                        const pyroContainer = document.createElement("div");
+                        pyroContainer.className = "pyro";
+                        const beforeElement = document.createElement("div");
+                        beforeElement.className = "before";
+                        const afterElement = document.createElement("div");
+                        afterElement.className = "after";
+                        pyroContainer.appendChild(beforeElement);
+                        pyroContainer.appendChild(afterElement);
+                        document.body.appendChild(pyroContainer);
+                        setTimeout(() => {
+                          if (document.body.contains(pyroContainer)) {
+                            document.body.removeChild(pyroContainer);
+                          }
+                        }, 4000);
+                      }}
+                      onSpinComplete={() => {
+                        setIsSpinning(false);
+                      }}
+                    />
+                  ) : (
+                    <ImprovedWheel
+                      teams={getWheelTeams()}
+                      isSpinning={isSpinning}
+                      size={520}
+                      largeText={true}
+                      soundEnabled={soundEnabled}
+                      onSelectWinner={(winner) => {
+                        setSelectedTeam(winner);
+                        setWinnerTeam(winner);
+                        setShowWinnerDialog(true);
+                        
+                        // Check if only 2 teams remain - auto-assign them
+                        const currentAvailableTeams = getWheelTeams();
+                        if (currentAvailableTeams.length === 2) {
+                          // Auto-assign the last two teams
+                          const team1 = winner;
+                          const team2 = currentAvailableTeams.find(t => t.id !== winner.id);
+                          
+                          if (team2) {
+                            setFirstTeam(team1);
+                            setSecondTeam(team2);
+                            // Use selected sport type or default to basketball
+                            const sport_type = (selectedSportType && selectedSportType !== 'all') ? selectedSportType : 'basketball';
+                            setPendingMatchup({ team1, team2, sport_type });
+                            setSpinCount(1); // Mark as completed
+                            
+                            // Clear available teams since we've used them all
+                            setAvailableTeams([]);
+                          }
+                        } else {
+                          // Normal flow - call handleTeamSelection
+                          handleTeamSelection(winner);
                         }
-                      }, 4000);
-                    }}
-                    onSpinComplete={() => {
-                      setIsSpinning(false);
-                    }}
-                  />
+                        
+                        // Trigger fireworks
+                        const pyroContainer = document.createElement("div");
+                        pyroContainer.className = "pyro";
+                        const beforeElement = document.createElement("div");
+                        beforeElement.className = "before";
+                        const afterElement = document.createElement("div");
+                        afterElement.className = "after";
+                        pyroContainer.appendChild(beforeElement);
+                        pyroContainer.appendChild(afterElement);
+                        document.body.appendChild(pyroContainer);
+                        setTimeout(() => {
+                          if (document.body.contains(pyroContainer)) {
+                            document.body.removeChild(pyroContainer);
+                          }
+                        }, 4000);
+                      }}
+                      onSpinComplete={() => {
+                        setIsSpinning(false);
+                      }}
+                    />
+                  )}
                   
                   {/* Reset button under the wheel */}
                   <div className="mt-6 flex items-center justify-center gap-3">

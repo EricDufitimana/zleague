@@ -95,7 +95,7 @@ export function FilterBar({ selectedSport, onSportChange, selectedDate, onDateCh
             Gender
           </Label>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          <DropdownMenuTrigger asChild>
               <Button 
                 id="gender-filter"
                 variant="outline" 
