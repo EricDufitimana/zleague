@@ -975,8 +975,8 @@ export default function RecordPage() {
                   Match
                 </Label>
                 <div className="flex gap-2">
-                  <Select value={selectedMatch} onValueChange={setSelectedMatch} className="flex-1">
-                    <SelectTrigger id="match-select">
+                  <Select value={selectedMatch} onValueChange={setSelectedMatch}>
+                    <SelectTrigger id="match-select" className="flex-1">
                       <SelectValue placeholder="Select a match" />
                     </SelectTrigger>
                     <SelectContent>
