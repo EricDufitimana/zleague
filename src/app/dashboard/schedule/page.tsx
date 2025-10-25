@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Trophy, Loader2, Target, Settings, CalendarDays } from "lucide-react";
+import { Calendar, Trophy, Loader2, Target, Settings, CalendarDays, Play } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "react-hot-toast";
@@ -476,8 +476,19 @@ export default function RecordPage() {
                                           {match.championship?.name || 'Unknown championship'}
                                         </div>
                                       </div>
-                                      <div className="text-right text-xs font-semibold text-black">
-                                        {match.match_time && new Date(match.match_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                                      <div className="flex items-center gap-2">
+                                        <div className="text-right text-xs font-semibold text-black">
+                                          {match.match_time && new Date(match.match_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                                        </div>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => window.open(`/dashboard/live-score/${match.id}`, '_blank')}
+                                          className="h-8 px-3 text-xs"
+                                        >
+                                          <Play className="w-3 h-3 mr-1" />
+                                          Live Score
+                                        </Button>
                                       </div>
                                     </div>
                                   </div>

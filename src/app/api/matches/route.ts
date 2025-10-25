@@ -422,6 +422,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const championship_id = searchParams.get('championship_id');
+    const match_id = searchParams.get('match_id');
     const status = searchParams.get('status');
     const gender = searchParams.get('gender');
     const boys_stage_groups = searchParams.get('boys_stage_groups');
@@ -440,6 +441,29 @@ export async function GET(request: NextRequest) {
       teamB:teams!team_b_id(id, name, grade, gender),
       championship:championships(id, name, status)
     `);
+
+    // Handle single match fetch by ID
+    if (match_id) {
+      query = query.eq('id', match_id);
+      const { data: match, error } = await query.single();
+      
+      if (error) {
+        console.error('Supabase error fetching match:', error);
+        return NextResponse.json(
+          { error: 'Failed to fetch match', details: error.message },
+          { status: 500 }
+        );
+      }
+      
+      if (!match) {
+        return NextResponse.json(
+          { error: 'Match not found' },
+          { status: 404 }
+        );
+      }
+      
+      return NextResponse.json({ match });
+    }
 
     if (championship_id) {
       query = query.eq('championship_id', championship_id);

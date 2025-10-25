@@ -175,6 +175,8 @@ model matches {
   team_a_id          BigInt? // First team in the match (actual column name)
   team_b_id          BigInt? // Second team in the match (actual column name)
   championship_id    BigInt // Championship this match belongs to
+  team_a_score       Int?
+  team_b_score       Int?
   sport_type         SportType // Sport type for the match
   gender             Gender? // Gender for the match (male/female)
   match_time         DateTime? // Scheduled date and time for the match (nullable)
@@ -220,6 +222,8 @@ model basketball_scores {
 
   @@map("basketball_scores")
   @@schema("public")
+  @@unique([match_id, team_id, player_id])
+
 }
 
 model football_scores {

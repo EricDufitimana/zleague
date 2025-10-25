@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Trophy, Calendar, Users, Target, CheckCircle, AlertCircle, Clock, BarChart3, Loader2 } from "lucide-react";
+import { Trophy, Calendar, Users, Target, CheckCircle, AlertCircle, Clock, BarChart3, Loader2, Play } from "lucide-react";
 
 interface Championship {
   id: number;
@@ -146,27 +146,37 @@ export default function RecordPage() {
     teamBAssistsFootball: false
   });
 
+  const [isFetchingMatches, setIsFetchingMatches] = useState(false);
+  const [isFetchingChampionships, setIsFetchingChampionships] = useState(false);
   // Fetch championships on component mount
   useEffect(() => {
     // Only fetch on client side
     if (typeof window !== 'undefined') {
+      setIsFetchingChampionships(true);
       fetchChampionships();
+      setIsFetchingChampionships(false);
     }
   }, []);
 
   // Fetch matches when championship changes
   useEffect(() => {
-    console.log('🔄 Championship selection changed:', selectedChampionship);
+    const fetchMatchesForChampionship = async () => {
+      console.log('🔄 Championship selection changed:', selectedChampionship);
     
     if (selectedChampionship) {
       console.log('🚀 Triggering match fetch for championship:', selectedChampionship);
-      fetchMatches(selectedChampionship);
+      setIsFetchingMatches(true);
+      await fetchMatches(selectedChampionship);
+      setIsFetchingMatches(false);
     } else {
       console.log('🧹 Clearing matches data (no championship selected)');
       setMatches([]);
       setSelectedMatch("");
       setSelectedMatchData(null);
     }
+    };
+    
+    fetchMatchesForChampionship();
   }, [selectedChampionship]);
 
   // Update selected match data when match selection changes
@@ -269,13 +279,19 @@ export default function RecordPage() {
           });
         }
         
-        // Show all matches with status indicators
+        // Filter out matches with null team IDs
+        const validMatches = data.filter((match: Match) => 
+          match.team_a_id !== null && match.team_b_id !== null
+        );
+        
         console.log('✅ All matches loaded:', data);
         console.log('✅ Total matches:', data.length);
+        console.log('✅ Valid matches (with teams):', validMatches.length);
+        console.log('🚫 Filtered out matches with null team IDs:', data.length - validMatches.length);
         
-        setMatches(data);
+        setMatches(validMatches);
         // Fetch scores for all matches
-        await fetchAllMatchScores(data);
+        await fetchAllMatchScores(validMatches);
       } else {
         console.error('❌ API request failed with status:', response.status);
         const errorText = await response.text();
@@ -305,7 +321,8 @@ export default function RecordPage() {
             if (match.sport_type === 'basketball') {
               const response = await fetch(`/api/basketball-scores?match_id=${match.id}`);
               if (response.ok) {
-                const scores = await response.json();
+                const responseData = await response.json();
+                const scores = responseData.scores || [];
                 // Filter team scores (not player scores) and sum points
                 const teamScores = scores.filter((s: any) => !s.player_id);
                 const teamAScore = teamScores.find((s: any) => s.team_id === match.team_a_id);
@@ -316,7 +333,8 @@ export default function RecordPage() {
             } else if (match.sport_type === 'football') {
               const response = await fetch(`/api/football-scores?match_id=${match.id}`);
               if (response.ok) {
-                const scores = await response.json();
+                const responseData = await response.json();
+                const scores = responseData.scores || [];
                 // Filter team scores (not player scores) and sum goals
                 const teamScores = scores.filter((s: any) => !s.player_id);
                 const teamAScore = teamScores.find((s: any) => s.team_id === match.team_a_id);
@@ -920,19 +938,7 @@ export default function RecordPage() {
       </div>
 
       {/* Selection Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">Select Match</CardTitle>
-              <CardDescription>Choose a championship and match to record results</CardDescription>
-            </div>
-      
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Championship Selection */}
+    <div className="flex gap-4">
             <div className="space-y-2">
               <Label htmlFor="championship-select" className="text-sm font-medium">
                 Championship
@@ -942,11 +948,22 @@ export default function RecordPage() {
                   <SelectValue placeholder="Select a championship" />
                 </SelectTrigger>
                 <SelectContent>
-                  {championships.map((championship) => (
+                  {championships.length == 0 && !isFetchingChampionships ?
+                  <SelectItem value="loading" disabled>
+                    <Loader2 className="size-4 animate-spin" />
+                  </SelectItem>
+                  :
+                  isFetchingChampionships ?
+                  <SelectItem value="loading" disabled>
+                    <Loader2 className="size-4 animate-spin" />
+                  </SelectItem>
+                  :
+                  championships.map((championship) => (
                     <SelectItem key={championship.id} value={championship.id.toString()}>
                       {championship.name} - {championship.status}
-                    </SelectItem>
-                  ))}
+                      </SelectItem>
+                    ))
+                  }
                 </SelectContent>
               </Select>
             </div>
@@ -957,83 +974,105 @@ export default function RecordPage() {
                 <Label htmlFor="match-select" className="text-sm font-medium">
                   Match
                 </Label>
-                <Select value={selectedMatch} onValueChange={setSelectedMatch}>
-                  <SelectTrigger id="match-select">
-                    <SelectValue placeholder="Select a match" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {matches.map((match) => (
-                      <SelectItem key={match.id} value={match.id.toString()}>
-                        <div className="flex items-center gap-2">
-                          <span>{match.teamA?.name || 'Unknown Team'} vs {match.teamB?.name || 'Unknown Team'}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {getSportIcon(match.sport_type)} {match.sport_type}
-                          </Badge>
-                          {getStatusBadge(match.status)}
-                          {match.status === 'played' && (
-                            <Badge variant="secondary" className="text-xs">Editable</Badge>
-                          )}
-                        </div>
+                <div className="flex gap-2">
+                  <Select value={selectedMatch} onValueChange={setSelectedMatch} className="flex-1">
+                    <SelectTrigger id="match-select">
+                      <SelectValue placeholder="Select a match" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {matches.length == 0 && !isFetchingMatches ?
+                      <SelectItem value="loading" disabled>
+                          No matches available
+                        </SelectItem>
+                      : isFetchingMatches ?
+                      <SelectItem value="loading" disabled>
+                        <Loader2 className="size-4 animate-spin" />
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      :
+                      matches.map((match) => (
+                        <SelectItem key={match.id} value={match.id.toString()}>
+                          <div className="flex items-center gap-2">
+                            <span>{match.teamA?.name || 'Unknown Team'} vs {match.teamB?.name || 'Unknown Team'}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {getSportIcon(match.sport_type)} {match.sport_type}
+                            </Badge>
+                            {getStatusBadge(match.status)}
+                            {match.status === 'played' && (
+                              <Badge variant="secondary" className="text-xs">Editable</Badge>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  {selectedMatch && (
+                    <Button
+                      variant="outline"
+                      onClick={() => window.open(`/live-score/${selectedMatch}`, '_blank')}
+                      className="flex items-center gap-2 px-4"
+                    >
+                      <Play className="w-4 h-4" />
+                      Live Score
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
-
       {/* Match Details and Recording Form */}
       {selectedMatchData && selectedMatchData.teamA && selectedMatchData.teamB && (
-        <div className="grid gap-4">
-          {/* Recording Form */}
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  {selectedMatchData?.status === 'played' ? 'Edit Match Results' : 'Record Match Results'}
-                </CardTitle>
-                <CardDescription>
-                  {selectedMatchData?.status === 'played' 
-                    ? 'Edit the winning team and match statistics for this completed match'
-                    : 'Record the winning team and match statistics'
-                  }
-                </CardDescription>
-                {selectedMatchData?.status === 'played' && (
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      This match has already been recorded. You can edit the results below.
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </CardHeader>
-              <CardContent className="space-y-6">
+        <div className="space-y-6">
                 {/* Winner Selection */}
-                <section className="rounded-lg border bg-gradient-to-b from-emerald-50/60 to-white p-4">
-                  <div className="mb-3">
-                    <h3 className="text-sm font-semibold text-emerald-900">Winner Selection</h3>
-                    <p className="text-xs text-emerald-700/80">Select the winning team for this match</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="winning-team" className="text-sm font-medium">
+                <section className="rounded-lg border  to-white p-4">
+                
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">
                       Winning Team *
                     </Label>
-                    <Select value={winningTeam} onValueChange={setWinningTeam}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select the winning team" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={selectedMatchData.teamA.id.toString()}>
-                          {selectedMatchData.teamA?.name || 'Unknown Team'} ({selectedMatchData.teamA?.grade || 'Unknown'})
-                        </SelectItem>
-                        <SelectItem value={selectedMatchData.teamB.id.toString()}>
-                          {selectedMatchData.teamB?.name || 'Unknown Team'} ({selectedMatchData.teamB?.grade || 'Unknown'})
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <Button
+                        type="button"
+                        variant={winningTeam === selectedMatchData.teamA.id.toString() ? "default" : "outline"}
+                        onClick={() => setWinningTeam(selectedMatchData.teamA.id.toString())}
+                        className={`h-auto p-4 flex flex-col items-center gap-2 ${
+                          winningTeam === selectedMatchData.teamA.id.toString() 
+                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white' 
+                            : 'hover:bg-emerald-50 border-emerald-200'
+                        }`}
+                      >
+                        <div className="text-lg font-semibold">
+                          {selectedMatchData.teamA?.name || 'Unknown Team'}
+                        </div>
+                        <div className="text-sm opacity-80">
+                          {selectedMatchData.teamA?.grade || 'Unknown'}
+                        </div>
+                        {winningTeam === selectedMatchData.teamA.id.toString() && (
+                          <div className="text-xs font-medium">✓ Selected</div>
+                        )}
+                      </Button>
+                      
+                      <Button
+                        type="button"
+                        variant={winningTeam === selectedMatchData.teamB.id.toString() ? "default" : "outline"}
+                        onClick={() => setWinningTeam(selectedMatchData.teamB.id.toString())}
+                        className={`h-auto p-4 flex flex-col items-center gap-2 ${
+                          winningTeam === selectedMatchData.teamB.id.toString() 
+                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white' 
+                            : 'hover:bg-emerald-50 border-emerald-200'
+                        }`}
+                      >
+                        <div className="text-lg font-semibold">
+                          {selectedMatchData.teamB?.name || 'Unknown Team'}
+                        </div>
+                        <div className="text-sm opacity-80">
+                          {selectedMatchData.teamB?.grade || 'Unknown'}
+                        </div>
+                        {winningTeam === selectedMatchData.teamB.id.toString() && (
+                          <div className="text-xs font-medium">✓ Selected</div>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </section>
 
@@ -1208,7 +1247,7 @@ export default function RecordPage() {
                       
                       {isLoadingPlayers ? (
                         <div className="text-center py-4 text-gray-500">
-                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                          <Loader2 className="size-4 animate-spin" />
                           Loading players...
                         </div>
                       ) : players.length === 0 ? (
@@ -2053,9 +2092,6 @@ export default function RecordPage() {
                     )}
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
         </div>
       )}
 

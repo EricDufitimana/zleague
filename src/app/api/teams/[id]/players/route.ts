@@ -1,45 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const params = await context.params;
     const teamId = params.id;
-    const supabase = await createClient();
     
-    // Get team information
-    const { data: team, error: teamError } = await supabase
-      .from('teams')
-      .select('*')
-      .eq('id', teamId)
-      .single();
-
-    if (teamError || !team) {
-      return NextResponse.json({ error: 'Team not found' }, { status: 404 });
+    if (!teamId) {
+      return NextResponse.json(
+        { error: 'Team ID is required' },
+        { status: 400 }
+      );
     }
 
-    // Get players for this team's family
-    const { data: players, error: playersError } = await supabase
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { data: players, error } = await supabase
       .from('players')
-      .select('id, first_name, last_name, grade, family')
-      .eq('family', team.name)
-      .order('last_name', { ascending: true })
-      .order('first_name', { ascending: true });
+      .select('*')
+      .eq('team_id', teamId)
+      .order('created_at', { ascending: false });
 
-    if (playersError) {
-      console.error('Error fetching players:', playersError);
-      return NextResponse.json({ error: 'Failed to fetch players' }, { status: 500 });
+    if (error) {
+      console.error('Supabase error fetching players:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch players', details: error.message },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({
-      team,
-      players: players || []
-    });
+    return NextResponse.json(players);
   } catch (error) {
-    console.error('Error in team players API:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Error fetching players:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch players', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
   }
 }
