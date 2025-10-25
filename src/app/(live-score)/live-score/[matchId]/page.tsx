@@ -436,7 +436,7 @@ export default function LiveScorePage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Match Not Found</h1>
-          <p className="text-gray-600 mb-6">The match you're looking for doesn't exist.</p>
+          <p className="text-gray-600 mb-6">The match you&apos;re looking for doesn&apos;t exist.</p>
           <Button onClick={() => router.push('/dashboard/schedule')}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Schedule
@@ -852,7 +852,7 @@ export default function LiveScorePage() {
             <CardHeader>
               <CardTitle className="text-red-600">End Match</CardTitle>
               <CardDescription>
-                Are you sure you want to end this match? This will change the status to "played" and redirect you to the schedule page.
+                Are you sure you want to end this match? 
               </CardDescription>
             </CardHeader>
             <CardContent>
