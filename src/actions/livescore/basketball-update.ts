@@ -83,13 +83,11 @@ export async function updateBasketballScore(
       threePointsAttempted
     });
 
-    const currentScore = await prisma.basketball_scores.findUnique({
+    const currentScore = await prisma.basketball_scores.findFirst({
       where: {
-        match_id_team_id_player_id: {
-          match_id: BigInt(matchId),
-          team_id: BigInt(teamId),
-          player_id: BigInt(playerId),
-        },
+        match_id: BigInt(matchId),
+        team_id: BigInt(teamId),
+        player_id: BigInt(playerId),
       },
     });
 
@@ -118,13 +116,11 @@ export async function updateBasketballScore(
       new: { newPoints, newRebounds, newAssists, newThreePointsMade, newThreePointsAttempted }
     });
 
-    const score = await prisma.basketball_scores.update({
+    const updateResult = await prisma.basketball_scores.updateMany({
       where: {
-        match_id_team_id_player_id: {
-          match_id: BigInt(matchId),
-          team_id: BigInt(teamId),
-          player_id: BigInt(playerId),
-        },
+        match_id: BigInt(matchId),
+        team_id: BigInt(teamId),
+        player_id: BigInt(playerId),
       },
       data: {
         points: newPoints,
@@ -132,6 +128,15 @@ export async function updateBasketballScore(
         assists: newAssists,
         three_points_made: newThreePointsMade,
         three_points_attempted: newThreePointsAttempted,
+      },
+    });
+
+    // Get the updated score for response
+    const score = await prisma.basketball_scores.findFirst({
+      where: {
+        match_id: BigInt(matchId),
+        team_id: BigInt(teamId),
+        player_id: BigInt(playerId),
       },
     });
 
