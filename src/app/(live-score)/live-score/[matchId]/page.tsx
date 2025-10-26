@@ -64,7 +64,7 @@ export default function LiveScorePage() {
   const [showEndMatchDialog, setShowEndMatchDialog] = useState(false);
   
   // Use realtime hook for live updates
-  const { scores: realtimeScores, matchScores: realtimeMatchScores } = useRealtimeBasketballScores(matchId);
+  const { scores: realtimeScores, matchScores: realtimeMatchScores, teamAId, teamBId, setScores, setMatchScores } = useRealtimeBasketballScores(matchId);
   const [selectedPlayers, setSelectedPlayers] = useState<{
     teamA: number[];
     teamB: number[];
@@ -262,20 +262,30 @@ export default function LiveScorePage() {
         three_points_made: 0,
         three_points_attempted: 0
       };
-      
-      // Update the basketball score entry (this will add to existing values)
-      await updateBasketballScore(
-        matchId,
-        teamId,
-        playerId,
-        incrementStats.points,
-        incrementStats.rebounds,
-        incrementStats.assists,
-        incrementStats.three_points_made,
-        incrementStats.three_points_attempted
+
+      // 1. OPTIMISTIC UPDATE - Update realtime scores immediately
+      setScores((prevScores: any[]) =>
+        prevScores.map((score: any) =>
+          score.player_id.toString() === playerId && score.team_id.toString() === teamId
+            ? {
+                ...score,
+                points: Number(score.points) + incrementStats.points,
+                rebounds: Number(score.rebounds) + incrementStats.rebounds,
+                assists: Number(score.assists) + incrementStats.assists,
+                three_points_made: Number(score.three_points_made) + incrementStats.three_points_made,
+                three_points_attempted: Number(score.three_points_attempted) + incrementStats.three_points_attempted,
+              }
+            : score
+        )
       );
-      
-      // Update local player stats by adding the increment
+
+      // 2. OPTIMISTIC UPDATE - Update match scores immediately
+      setMatchScores((prev: any) => ({
+        teamA: prev.teamA + (teamId === teamAId ? incrementStats.points : 0),
+        teamB: prev.teamB + (teamId === teamBId ? incrementStats.points : 0),
+      }));
+
+      // 3. Update local player stats optimistically
       setPlayerStats(prev => {
         const existingStat = prev.find(stat => stat.player_id === parseInt(playerId));
         if (existingStat) {
@@ -304,8 +314,32 @@ export default function LiveScorePage() {
           return [...prev, newStat];
         }
       });
+      
+      // 4. Call API in background
+      const result = await updateBasketballScore(
+        matchId,
+        teamId,
+        playerId,
+        incrementStats.points,
+        incrementStats.rebounds,
+        incrementStats.assists,
+        incrementStats.three_points_made,
+        incrementStats.three_points_attempted
+      );
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      console.log('✅ Update successful, real-time will sync');
     } catch (error) {
-      console.error('Error updating player stats:', error);
+      console.error('❌ Error updating stats:', error);
+      
+      // ROLLBACK optimistic update on error
+      alert('Failed to update stats. Refreshing data...');
+      
+      // Re-fetch data from database to get correct values
+      window.location.reload();
     }
   };
 

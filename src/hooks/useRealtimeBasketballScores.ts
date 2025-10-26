@@ -9,6 +9,8 @@ const supabase = createClient(
 export function useRealtimeBasketballScores(matchId: string) {
   const [scores, setScores] = useState<any[]>([]);
   const [matchScores, setMatchScores] = useState({teamA :0, teamB:0});
+  const [teamAId, setTeamAId] = useState<string>('');
+  const [teamBId, setTeamBId] = useState<string>('');
 
   useEffect(() => {
     const fetchScores =  async () => {
@@ -18,10 +20,27 @@ export function useRealtimeBasketballScores(matchId: string) {
       .eq('match_id', matchId);
 
       if (data) setScores(data);
-
     };
 
-    fetchScores()
+    const fetchMatchScores = async () => {
+      const {data} = await supabase
+        .from('matches')
+        .select('team_a_score, team_b_score, team_a_id, team_b_id')
+        .eq('id', matchId)
+        .single();
+      
+      if (data) {
+        setMatchScores({
+          teamA: data.team_a_score || 0,
+          teamB: data.team_b_score || 0,
+        });
+        setTeamAId(data.team_a_id?.toString() || '');
+        setTeamBId(data.team_b_id?.toString() || '');
+      }
+    };
+
+    fetchScores();
+    fetchMatchScores();
 
     const scoresChannel = supabase 
       .channel(`basketball_scores:${matchId}`)
@@ -91,5 +110,5 @@ export function useRealtimeBasketballScores(matchId: string) {
 
   }, [matchId])
 
-  return {scores, matchScores}
+  return {scores, matchScores, teamAId, teamBId, setScores, setMatchScores}
 }
