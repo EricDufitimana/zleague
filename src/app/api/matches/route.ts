@@ -570,14 +570,20 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
+    console.log('🔧 PATCH /api/matches - Request body:', body);
+    
     const { match_id, match_time, status, winner_id, team_a_score, team_b_score } = body;
 
     if (!match_id) {
+      console.log('❌ PATCH /api/matches - Missing match_id');
       return NextResponse.json(
         { error: 'Match ID is required' },
         { status: 400 }
       );
     }
+    
+    console.log('📋 PATCH /api/matches - Processing update for match:', match_id);
+    console.log('📋 PATCH /api/matches - Update fields:', { match_time, status, winner_id, team_a_score, team_b_score });
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -586,6 +592,7 @@ export async function PATCH(request: NextRequest) {
 
     try {
       // Get current match details
+      console.log('🔍 PATCH /api/matches - Fetching current match details...');
       const { data: currentMatch, error: fetchError } = await supabase
         .from('matches')
         .select('*')
@@ -593,11 +600,19 @@ export async function PATCH(request: NextRequest) {
         .single();
 
       if (fetchError || !currentMatch) {
+        console.log('❌ PATCH /api/matches - Match not found:', fetchError);
         return NextResponse.json(
           { error: 'Match not found' },
           { status: 404 }
         );
       }
+      
+      console.log('✅ PATCH /api/matches - Current match found:', {
+        id: currentMatch.id,
+        status: currentMatch.status,
+        team_a_id: currentMatch.team_a_id,
+        team_b_id: currentMatch.team_b_id
+      });
 
       // Validate winner is one of the teams in the match
       if (winner_id !== undefined) {
@@ -613,9 +628,13 @@ export async function PATCH(request: NextRequest) {
       // Build update object
       const updateData: any = {};
       
+      if (match_time !== undefined) {
+        updateData.match_time = match_time;
+      }
       
       if (status !== undefined) {
         updateData.status = status;
+        console.log('🔄 PATCH /api/matches - Updating status to:', status);
       }
       
       if (winner_id !== undefined) {
@@ -630,7 +649,10 @@ export async function PATCH(request: NextRequest) {
         updateData.team_b_score = parseInt(team_b_score);
       }
 
+      console.log('📝 PATCH /api/matches - Update data:', updateData);
+
       if (Object.keys(updateData).length === 0) {
+        console.log('❌ PATCH /api/matches - No fields to update');
         return NextResponse.json(
           { error: 'At least one field to update is required' },
           { status: 400 }
@@ -638,6 +660,7 @@ export async function PATCH(request: NextRequest) {
       }
 
       // Update the current match
+      console.log('💾 PATCH /api/matches - Updating match in database...');
       const { data: updatedMatch, error: updateError } = await supabase
         .from('matches')
         .update(updateData)
@@ -646,12 +669,19 @@ export async function PATCH(request: NextRequest) {
         .single();
 
       if (updateError) {
-        console.error('Supabase error updating match:', updateError);
+        console.error('❌ PATCH /api/matches - Database update error:', updateError);
         return NextResponse.json(
           { error: 'Failed to update match', details: updateError.message },
           { status: 500 }
         );
       }
+      
+      console.log('✅ PATCH /api/matches - Match updated successfully:', {
+        id: updatedMatch.id,
+        status: updatedMatch.status,
+        team_a_id: updatedMatch.team_a_id,
+        team_b_id: updatedMatch.team_b_id
+      });
 
       // If winner is set, update prediction scores
       if (winner_id !== undefined) {
@@ -733,6 +763,7 @@ export async function PATCH(request: NextRequest) {
         }
       }
 
+      console.log('🎉 PATCH /api/matches - Returning success response');
       return NextResponse.json(
         { 
           message: 'Match updated successfully',

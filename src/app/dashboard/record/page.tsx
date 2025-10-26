@@ -1009,7 +1009,49 @@ export default function RecordPage() {
                   {selectedMatch && (
                     <Button
                       variant="outline"
-                      onClick={() => window.open(`/live-score/${selectedMatch}`, '_blank')}
+                      onClick={async () => {
+                        console.log('🎯 Record Page - Live Score button clicked for match:', selectedMatch);
+                        console.log('📊 Record Page - Selected match data:', {
+                          id: selectedMatch,
+                          teamA: selectedMatchData?.teamA?.name,
+                          teamB: selectedMatchData?.teamB?.name
+                        });
+                        
+                        // Update match status to live
+                        try {
+                          console.log('🚀 Record Page - Sending PATCH request to update match status to live...');
+                          const requestBody = {
+                            match_id: selectedMatch,
+                            status: 'live',
+                          };
+                          console.log('📤 Record Page - Request body:', requestBody);
+                          
+                          const response = await fetch('/api/matches', {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(requestBody),
+                          });
+                          
+                          console.log('📥 Record Page - Response status:', response.status);
+                          console.log('📥 Record Page - Response ok:', response.ok);
+                          
+                          if (response.ok) {
+                            const responseData = await response.json();
+                            console.log('✅ Record Page - Success response:', responseData);
+                            
+                            // Open live score page
+                            console.log('🔗 Record Page - Opening live score page:', `/live-score/${selectedMatch}`);
+                            window.open(`/live-score/${selectedMatch}`, '_blank');
+                          } else {
+                            const errorData = await response.json();
+                            console.error('❌ Record Page - API Error:', errorData);
+                            alert('Failed to start live scoring');
+                          }
+                        } catch (error) {
+                          console.error('💥 Record Page - Error starting live score:', error);
+                          alert('Failed to start live scoring');
+                        }
+                      }}
                       className="flex items-center gap-2 px-4"
                     >
                       <Play className="w-4 h-4" />

@@ -483,7 +483,54 @@ export default function RecordPage() {
                                         <Button
                                           size="sm"
                                           variant="outline"
-                                          onClick={() => window.open(`/dashboard/live-score/${match.id}`, '_blank')}
+                                          onClick={async () => {
+                                            console.log('🎯 Live Score button clicked for match:', match.id);
+                                            console.log('📊 Current match data:', {
+                                              id: match.id,
+                                              status: match.status,
+                                              teamA: match.teamA?.name,
+                                              teamB: match.teamB?.name
+                                            });
+                                            
+                                            // Update match status to live
+                                            try {
+                                              console.log('🚀 Sending PATCH request to update match status to live...');
+                                              const requestBody = {
+                                                match_id: match.id,
+                                                status: 'live',
+                                              };
+                                              console.log('📤 Request body:', requestBody);
+                                              
+                                              const response = await fetch('/api/matches', {
+                                                method: 'PATCH',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify(requestBody),
+                                              });
+                                              
+                                              console.log('📥 Response status:', response.status);
+                                              console.log('📥 Response ok:', response.ok);
+                                              
+                                              if (response.ok) {
+                                                const responseData = await response.json();
+                                                console.log('✅ Success response:', responseData);
+                                                
+                                                // Open live score page
+                                                console.log('🔗 Opening live score page:', `/live-score/${match.id}`);
+                                                window.open(`/live-score/${match.id}`, '_blank');
+                                                
+                                                // Refresh the data to show updated status
+                                                console.log('🔄 Refreshing dashboard data...');
+                                                fetchInitialData();
+                                              } else {
+                                                const errorData = await response.json();
+                                                console.error('❌ API Error:', errorData);
+                                                toast.error('Failed to start live scoring');
+                                              }
+                                            } catch (error) {
+                                              console.error('💥 Error starting live score:', error);
+                                              toast.error('Failed to start live scoring');
+                                            }
+                                          }}
                                           className="h-8 px-3 text-xs"
                                         >
                                           <Play className="w-3 h-3 mr-1" />

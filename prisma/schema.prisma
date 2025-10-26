@@ -80,6 +80,7 @@ enum Gender {
 enum MatchStatus {
   not_yet_scheduled
   scheduled
+  live
   played
 
   @@map("match_status")

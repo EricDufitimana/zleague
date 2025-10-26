@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Trophy, Users, Clock, Target, CheckCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Trophy, Users, Clock, Target, CheckCircle, Loader2, RotateCcw } from 'lucide-react';
 import { updateBasketballScore, createMultipleBasketballScores } from '@/actions/livescore/basketball-update';
 import { useRealtimeBasketballScores } from '@/hooks/useRealtimeBasketballScores';
 
@@ -63,6 +63,23 @@ export default function LiveScorePage() {
   const [isEndingMatch, setIsEndingMatch] = useState(false);
   const [showEndMatchDialog, setShowEndMatchDialog] = useState(false);
   
+  // History tracking for undo
+  const [updateHistory, setUpdateHistory] = useState<Array<{
+    id: string;
+    playerId: string;
+    teamId: string;
+    statType: 'points' | 'rebounds' | 'assists';
+    value: number;
+    timestamp: number;
+    playerName?: string;
+  }>>([]);
+  const [isUndoing, setIsUndoing] = useState(false);
+  
+  // Track pending updates to prevent conflicts
+  const pendingUpdates = useRef<Set<string>>(new Set());
+  const updateQueue = useRef<Array<() => Promise<void>>>([]);
+  const isProcessingQueue = useRef(false);
+  
   // Use realtime hook for live updates
   const { scores: realtimeScores, matchScores: realtimeMatchScores, teamAId, teamBId, setScores, setMatchScores } = useRealtimeBasketballScores(matchId);
   const [selectedPlayers, setSelectedPlayers] = useState<{
@@ -73,7 +90,7 @@ export default function LiveScorePage() {
     teamB: []
   });
 
-  // Sync realtime data with local state
+  // Sync realtime data with local state (but skip if we have pending updates)
   useEffect(() => {
     if (realtimeScores && realtimeScores.length > 0) {
       console.log('🔄 Syncing realtime scores:', realtimeScores);
@@ -90,7 +107,19 @@ export default function LiveScorePage() {
         three_points_attempted: score.three_points_attempted || 0
       }));
       
-      setPlayerStats(transformedStats);
+      // Only update if there are no pending updates for these players
+      setPlayerStats(prev => {
+        const hasPendingUpdates = transformedStats.some(stat => 
+          pendingUpdates.current.has(`${stat.player_id}`)
+        );
+        
+        // If there are pending updates, keep the optimistic values
+        if (hasPendingUpdates) {
+          return prev;
+        }
+        
+        return transformedStats;
+      });
       
       // Update selected players based on realtime data
       if (match) {
@@ -109,6 +138,28 @@ export default function LiveScorePage() {
       }
     }
   }, [realtimeScores, match]);
+  
+  // Queue processor
+  const processQueue = async () => {
+    if (isProcessingQueue.current || updateQueue.current.length === 0) {
+      return;
+    }
+
+    isProcessingQueue.current = true;
+
+    while (updateQueue.current.length > 0) {
+      const updateFn = updateQueue.current.shift();
+      if (updateFn) {
+        try {
+          await updateFn();
+        } catch (error) {
+          console.error('Error processing queued update:', error);
+        }
+      }
+    }
+
+    isProcessingQueue.current = false;
+  };
   
   // Use realtime match scores if available, otherwise calculate from player stats
   const teamAScore = realtimeMatchScores.teamA || playerStats
@@ -252,9 +303,25 @@ export default function LiveScorePage() {
     }
   }, [matchId, match]);
 
-  const updatePlayerStats = async (playerId: string, teamId: string, statType: 'points' | 'rebounds' | 'assists', value: number) => {
+  const updatePlayerStats = async (
+    playerId: string, 
+    teamId: string, 
+    statType: 'points' | 'rebounds' | 'assists', 
+    value: number
+  ) => {
+    const updateKey = `${playerId}-${statType}`;
+    
+    // Prevent duplicate updates
+    if (pendingUpdates.current.has(updateKey)) {
+      console.log('⏳ Update already pending for:', updateKey);
+      return;
+    }
+
+    // Add to pending updates
+    pendingUpdates.current.add(updateKey);
+
     try {
-      // Prepare increment values (only the stat being updated gets the value, others get 0)
+      // Prepare increment values
       const incrementStats = {
         points: statType === 'points' ? value : 0,
         rebounds: statType === 'rebounds' ? value : 0,
@@ -263,7 +330,25 @@ export default function LiveScorePage() {
         three_points_attempted: 0
       };
 
-      // 1. OPTIMISTIC UPDATE - Update realtime scores immediately
+      // Generate unique ID for this update
+      const updateId = `${Date.now()}-${playerId}-${statType}`;
+      
+      // Find player name for better history display
+      const player = players.find(p => p.id === parseInt(playerId));
+      const playerName = player ? `${player.first_name} ${player.last_name}` : `Player ${playerId}`;
+
+      // Add to history BEFORE making changes
+      setUpdateHistory(prev => [...prev, {
+        id: updateId,
+        playerId,
+        teamId,
+        statType,
+        value,
+        timestamp: Date.now(),
+        playerName
+      }]);
+
+      // 1. OPTIMISTIC UPDATE - Update UI immediately
       setScores((prevScores: any[]) =>
         prevScores.map((score: any) =>
           score.player_id.toString() === playerId && score.team_id.toString() === teamId
@@ -272,8 +357,6 @@ export default function LiveScorePage() {
                 points: Number(score.points) + incrementStats.points,
                 rebounds: Number(score.rebounds) + incrementStats.rebounds,
                 assists: Number(score.assists) + incrementStats.assists,
-                three_points_made: Number(score.three_points_made) + incrementStats.three_points_made,
-                three_points_attempted: Number(score.three_points_attempted) + incrementStats.three_points_attempted,
               }
             : score
         )
@@ -296,13 +379,10 @@ export default function LiveScorePage() {
                   points: stat.points + incrementStats.points,
                   rebounds: stat.rebounds + incrementStats.rebounds,
                   assists: stat.assists + incrementStats.assists,
-                  three_points_made: (stat.three_points_made || 0) + incrementStats.three_points_made,
-                  three_points_attempted: (stat.three_points_attempted || 0) + incrementStats.three_points_attempted
                 }
               : stat
           );
         } else {
-          // Create new stat entry with the increment values
           const newStat = {
             player_id: parseInt(playerId),
             points: incrementStats.points,
@@ -315,11 +395,126 @@ export default function LiveScorePage() {
         }
       });
       
-      // 4. Call API in background
+      // 4. Queue the API call
+      const apiCall = async () => {
+        try {
+          const result = await updateBasketballScore(
+            matchId,
+            teamId,
+            playerId,
+            incrementStats.points,
+            incrementStats.rebounds,
+            incrementStats.assists,
+            incrementStats.three_points_made,
+            incrementStats.three_points_attempted
+          );
+
+          if (!result.success) {
+            throw new Error(result.error);
+          }
+
+          console.log('✅ Update successful');
+          
+          // Wait a bit before removing from pending to let real-time catch up
+          setTimeout(() => {
+            pendingUpdates.current.delete(updateKey);
+          }, 1000);
+        } catch (error) {
+          console.error('❌ Error updating stats:', error);
+          pendingUpdates.current.delete(updateKey);
+          
+          // Remove from history if API fails
+          setUpdateHistory(prev => prev.filter(item => item.id !== updateId));
+          throw error;
+        }
+      };
+
+      // Add to queue and process
+      updateQueue.current.push(apiCall);
+      processQueue();
+
+    } catch (error) {
+      console.error('❌ Error in optimistic update:', error);
+      pendingUpdates.current.delete(updateKey);
+      
+      // ROLLBACK on error
+      alert('Failed to update stats. Refreshing data...');
+      window.location.reload();
+    }
+  };
+
+  const undoLastUpdate = async () => {
+    if (updateHistory.length === 0) {
+      alert('Nothing to undo!');
+      return;
+    }
+
+    if (isUndoing) {
+      console.log('⏳ Already undoing...');
+      return;
+    }
+
+    setIsUndoing(true);
+
+    try {
+      // Get the last update from history
+      const lastUpdate = updateHistory[updateHistory.length - 1];
+      console.log('🔙 Undoing update:', lastUpdate);
+
+      const updateKey = `${lastUpdate.playerId}-${lastUpdate.statType}`;
+      
+      // Mark as pending to prevent conflicts
+      pendingUpdates.current.add(updateKey);
+
+      // Prepare NEGATIVE increment values (to subtract)
+      const incrementStats = {
+        points: lastUpdate.statType === 'points' ? -lastUpdate.value : 0,
+        rebounds: lastUpdate.statType === 'rebounds' ? -lastUpdate.value : 0,
+        assists: lastUpdate.statType === 'assists' ? -lastUpdate.value : 0,
+        three_points_made: 0,
+        three_points_attempted: 0
+      };
+
+      // 1. OPTIMISTIC UPDATE - Update UI immediately (subtract)
+      setScores((prevScores: any[]) =>
+        prevScores.map((score: any) =>
+          score.player_id.toString() === lastUpdate.playerId && 
+          score.team_id.toString() === lastUpdate.teamId
+            ? {
+                ...score,
+                points: Number(score.points) + incrementStats.points,
+                rebounds: Number(score.rebounds) + incrementStats.rebounds,
+                assists: Number(score.assists) + incrementStats.assists,
+              }
+            : score
+        )
+      );
+
+      // 2. OPTIMISTIC UPDATE - Update match scores immediately (subtract)
+      setMatchScores((prev: any) => ({
+        teamA: prev.teamA + (lastUpdate.teamId === teamAId ? incrementStats.points : 0),
+        teamB: prev.teamB + (lastUpdate.teamId === teamBId ? incrementStats.points : 0),
+      }));
+
+      // 3. Update local player stats optimistically (subtract)
+      setPlayerStats(prev => {
+        return prev.map(stat => 
+          stat.player_id === parseInt(lastUpdate.playerId) 
+            ? { 
+                ...stat, 
+                points: Math.max(0, stat.points + incrementStats.points),
+                rebounds: Math.max(0, stat.rebounds + incrementStats.rebounds),
+                assists: Math.max(0, stat.assists + incrementStats.assists),
+              }
+            : stat
+        );
+      });
+
+      // 4. Send undo to database
       const result = await updateBasketballScore(
         matchId,
-        teamId,
-        playerId,
+        lastUpdate.teamId,
+        lastUpdate.playerId,
         incrementStats.points,
         incrementStats.rebounds,
         incrementStats.assists,
@@ -331,19 +526,24 @@ export default function LiveScorePage() {
         throw new Error(result.error);
       }
 
-      console.log('✅ Update successful, real-time will sync');
+      // 5. Remove from history
+      setUpdateHistory(prev => prev.slice(0, -1));
+      
+      console.log('✅ Undo successful');
+      
+      // Wait before removing from pending
+      setTimeout(() => {
+        pendingUpdates.current.delete(updateKey);
+        setIsUndoing(false);
+      }, 1000);
+
     } catch (error) {
-      console.error('❌ Error updating stats:', error);
-      
-      // ROLLBACK optimistic update on error
-      alert('Failed to update stats. Refreshing data...');
-      
-      // Re-fetch data from database to get correct values
+      console.error('❌ Error undoing update:', error);
+      setIsUndoing(false);
+      alert('Failed to undo. Refreshing data...');
       window.location.reload();
     }
   };
-
-
 
   const getTeamPlayers = (teamId: number) => {
     return players.filter(player => player.team_id === teamId);
@@ -353,13 +553,20 @@ export default function LiveScorePage() {
     try {
       setIsEndingMatch(true);
       
-      // Update match status to 'played'
+      // Determine winner based on scores
+      const winnerId = teamAScore > teamBScore ? match?.team_a_id : 
+                      teamBScore > teamAScore ? match?.team_b_id : null;
+      
+      // Update match status to 'played' and set winner
       const response = await fetch('/api/matches', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           match_id: parseInt(matchId),
-          status: 'played'
+          status: 'played',
+          winner_id: winnerId,
+          team_a_score: teamAScore,
+          team_b_score: teamBScore
         })
       });
 
@@ -504,6 +711,28 @@ export default function LiveScorePage() {
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="capitalize">{match.sport_type}</Badge>
               <Badge variant="secondary" className="capitalize">{match.gender}</Badge>
+              
+              {/* Undo Button */}
+              <Button
+                onClick={undoLastUpdate}
+                disabled={isUndoing || updateHistory.length === 0}
+                variant="outline"
+                size="sm"
+                className="ml-4"
+              >
+                {isUndoing ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Undoing...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <RotateCcw className="w-4 h-4" />
+                    Undo Last ({updateHistory.length})
+                  </div>
+                )}
+              </Button>
+              
               <Button
                 onClick={() => setShowEndMatchDialog(true)}
                 disabled={isEndingMatch}
@@ -552,6 +781,137 @@ export default function LiveScorePage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Action Buttons Section */}
+        {!isLoadingPlayers && players.length > 0 && selectedPlayers.teamA.length + selectedPlayers.teamB.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Add Points & Stats</CardTitle>
+              <CardDescription>Click buttons to add points, rebounds, or assists for each player</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Team A Action Buttons */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    {match.teamA?.name || `Team ${match.team_a_id}`}
+                  </h3>
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <div className="grid grid-cols-2 gap-2">
+                      {getFilteredTeamPlayers(match.team_a_id).map((player) => (
+                        <div key={player.id} className="space-y-2">
+                          <div className="text-sm font-medium text-gray-700">{player.first_name} {player.last_name}</div>
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'points', 1)}
+                              className="h-8 w-12 text-xs"
+                            >
+                              +1
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'points', 2)}
+                              className="h-8 w-12 text-xs"
+                            >
+                              +2
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'points', 3)}
+                              className="h-8 w-12 text-xs"
+                            >
+                              +3
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'rebounds', 1)}
+                              className="h-8 w-12 text-xs"
+                            >
+                              R+1
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'assists', 1)}
+                              className="h-8 w-12 text-xs"
+                            >
+                              A+1
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Team B Action Buttons */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    {match.teamB?.name || `Team ${match.team_b_id}`}
+                  </h3>
+                  <div className="p-4 bg-green-50 rounded-lg">
+                    <div className="grid grid-cols-2 gap-2">
+                      {getFilteredTeamPlayers(match.team_b_id).map((player) => (
+                        <div key={player.id} className="space-y-2">
+                          <div className="text-sm font-medium text-gray-700">{player.first_name} {player.last_name}</div>
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'points', 1)}
+                              className="h-8 w-12 text-xs"
+                            >
+                              +1
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'points', 2)}
+                              className="h-8 w-12 text-xs"
+                            >
+                              +2
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'points', 3)}
+                              className="h-8 w-12 text-xs"
+                            >
+                              +3
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'rebounds', 1)}
+                              className="h-8 w-12 text-xs"
+                            >
+                              R+1
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'assists', 1)}
+                              className="h-8 w-12 text-xs"
+                            >
+                              A+1
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Player Statistics */}
         <Card>
@@ -624,61 +984,6 @@ export default function LiveScorePage() {
                       );
                     })
                   )}
-                  
-                  {/* Action buttons for Team A */}
-                  {!isLoadingPlayers && players.length > 0 && (
-                    <div className="p-4 bg-blue-50">
-                      <div className="grid grid-cols-2 gap-2">
-                        {getFilteredTeamPlayers(match.team_a_id).map((player) => (
-                        <div key={player.id} className="space-y-2">
-                          <div className="text-sm font-medium text-gray-700">{player.first_name} {player.last_name}</div>
-                          <div className="flex gap-1">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'points', 1)}
-                              className="h-8 w-12 text-xs"
-                            >
-                              +1
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'points', 2)}
-                              className="h-8 w-12 text-xs"
-                            >
-                              +2
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'points', 3)}
-                              className="h-8 w-12 text-xs"
-                            >
-                              +3
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'rebounds', 1)}
-                              className="h-8 w-12 text-xs"
-                            >
-                              R+1
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'assists', 1)}
-                              className="h-8 w-12 text-xs"
-                            >
-                              A+1
-                            </Button>
-                          </div>
-                        </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -719,61 +1024,6 @@ export default function LiveScorePage() {
                         </div>
                       );
                     })
-                  )}
-                  
-                  {/* Action buttons for Team B */}
-                  {!isLoadingPlayers && players.length > 0 && (
-                    <div className="p-4 bg-green-50">
-                      <div className="grid grid-cols-2 gap-2">
-                        {getFilteredTeamPlayers(match.team_b_id).map((player) => (
-                        <div key={player.id} className="space-y-2">
-                          <div className="text-sm font-medium text-gray-700">{player.first_name} {player.last_name}</div>
-                          <div className="flex gap-1">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'points', 1)}
-                              className="h-8 w-12 text-xs"
-                            >
-                              +1
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'points', 2)}
-                              className="h-8 w-12 text-xs"
-                            >
-                              +2
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'points', 3)}
-                              className="h-8 w-12 text-xs"
-                            >
-                              +3
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'rebounds', 1)}
-                              className="h-8 w-12 text-xs"
-                            >
-                              R+1
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'assists', 1)}
-                              className="h-8 w-12 text-xs"
-                            >
-                              A+1
-                            </Button>
-                          </div>
-                        </div>
-                        ))}
-                      </div>
-                    </div>
                   )}
                 </div>
               </div>

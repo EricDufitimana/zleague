@@ -46,6 +46,8 @@ export default function ScoresPage() {
   const [matches, setMatches] = useState<Match[]>([])
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
   const [statsDialogOpen, setStatsDialogOpen] = useState(false)
+  const [liveMatches, setLiveMatches] = useState<Match[]>([])
+  const [isUpdatingLiveMatches, setIsUpdatingLiveMatches] = useState(false)
 
   // Fetch matches from API (only from ongoing championships)
   useEffect(() => {
@@ -53,6 +55,7 @@ export default function ScoresPage() {
       console.log('🚀 Starting to fetch matches from server...')
       setIsLoading(true)
       try {
+        // Fetch all matches from ongoing championships
         const response = await fetch('/api/matches?ongoing_only=true')
         console.log('📡 API Response status:', response.status)
         console.log('📡 API Response ok:', response.ok)
@@ -119,6 +122,74 @@ export default function ScoresPage() {
     fetchMatches()
   }, [])
 
+  // Fetch live matches with real-time updates
+  useEffect(() => {
+    const fetchLiveMatches = async () => {
+      try {
+        setIsUpdatingLiveMatches(true)
+        console.log('🔄 Fetching live matches...')
+        const response = await fetch('/api/matches?status=live&ongoing_only=true')
+        if (response.ok) {
+          const data = await response.json()
+          const liveMatchesData = data.matches || []
+          console.log('📊 Found live matches:', liveMatchesData.length)
+          
+          // Fetch scores for each live match
+          const matchesWithScores = await Promise.all(
+            liveMatchesData.map(async (match: Match) => {
+              try {
+                // Fetch basketball scores for live matches
+                const scoresResponse = await fetch(`/api/basketball-scores?match_id=${match.id}`)
+                if (scoresResponse.ok) {
+                  const scoresData = await scoresResponse.json()
+                  const scores = scoresData.scores || []
+                  
+                  // Calculate team scores
+                  const teamAScore = scores
+                    .filter((score: any) => score.team_id === match.team_a_id)
+                    .reduce((total: number, score: any) => total + (score.points || 0), 0)
+                  
+                  const teamBScore = scores
+                    .filter((score: any) => score.team_id === match.team_b_id)
+                    .reduce((total: number, score: any) => total + (score.points || 0), 0)
+                  
+                  console.log(`📈 Match ${match.id} scores: Team A: ${teamAScore}, Team B: ${teamBScore}`)
+                  
+                  return {
+                    ...match,
+                    team_a_score: teamAScore,
+                    team_b_score: teamBScore
+                  }
+                }
+              } catch (error) {
+                console.error('Error fetching scores for match', match.id, error)
+              }
+              
+              return match
+            })
+          )
+          
+          console.log('✅ Updated live matches with scores:', matchesWithScores.length)
+          setLiveMatches(matchesWithScores)
+        } else {
+          console.error('❌ Failed to fetch live matches:', response.status)
+        }
+      } catch (error) {
+        console.error('❌ Error fetching live matches:', error)
+      } finally {
+        setIsUpdatingLiveMatches(false)
+      }
+    }
+
+    // Fetch live matches immediately
+    fetchLiveMatches()
+
+    // Set up polling for live matches every 3 seconds for more responsive updates
+    const interval = setInterval(fetchLiveMatches, 3000)
+
+    return () => clearInterval(interval)
+  }, [])
+
   // Helper function to get week label for a match
   const getWeekLabel = (matchDate: string) => {
     const now = new Date()
@@ -148,14 +219,17 @@ export default function ScoresPage() {
       id: match.id.toString(),
       homeTeam: { 
         name: match.teamA?.name || 'Unknown Team', 
-        score: match.status === 'played' ? (match.team_a_score ?? 0) : null
+        score: match.status === 'played' ? (match.team_a_score ?? 0) : 
+               match.status === 'live' ? (match.team_a_score ?? 0) : null
       },
       awayTeam: { 
         name: match.teamB?.name || 'Unknown Team', 
-        score: match.status === 'played' ? (match.team_b_score ?? 0) : null
+        score: match.status === 'played' ? (match.team_b_score ?? 0) : 
+               match.status === 'live' ? (match.team_b_score ?? 0) : null
       },
       status: match.status === 'played' ? 'final' as const : 
-              match.status === 'scheduled' ? 'not_played' as const : 'live' as const,
+              match.status === 'live' ? 'live' as const :
+              match.status === 'scheduled' ? 'not_played' as const : 'not_played' as const,
       sport: match.sport_type as "football" | "basketball" | "volleyball",
       time: match.status === 'scheduled' ? 
         `${new Date(match.created_at).toLocaleDateString('en-US', { weekday: 'short' })} ${new Date(match.created_at).toLocaleTimeString('en-US', { 
@@ -190,6 +264,34 @@ export default function ScoresPage() {
     return converted
   }
 
+  // Filter live matches based on selected criteria
+  const filteredLiveMatches = liveMatches.filter(match => {
+    // Sport filter
+    if (selectedSport !== "all" && match.sport_type !== selectedSport) {
+      return false
+    }
+    
+    // Gender filter
+    if (selectedGender !== "all") {
+      const teamAGender = match.teamA?.gender
+      const teamBGender = match.teamB?.gender
+      if (teamAGender !== selectedGender || teamBGender !== selectedGender) {
+        return false
+      }
+    }
+    
+    // Date filter
+    if (selectedDate !== "all") {
+      const matchDate = match.created_at
+      const matchDateStr = new Date(matchDate).toISOString().split('T')[0]
+      if (selectedDate !== matchDateStr) {
+        return false
+      }
+    }
+    
+    return true
+  })
+
   // Filter matches based on selected sport, date, and gender
   const filteredMatches = matches
     .filter(match => {
@@ -207,9 +309,9 @@ export default function ScoresPage() {
         selectedDate
       })
       
-      // Only show scheduled or played matches (exclude not_yet_scheduled)
-      if (!['scheduled', 'played'].includes(match.status)) {
-        console.log('❌ Filtered out - not scheduled/played status:', match.status)
+      // Only show scheduled, live, or played matches (exclude not_yet_scheduled)
+      if (!['scheduled', 'live', 'played'].includes(match.status)) {
+        console.log('❌ Filtered out - not scheduled/live/played status:', match.status)
         return false
       }
       
@@ -358,7 +460,38 @@ export default function ScoresPage() {
                 </Card>
               ))}
             </div>
-          ) : filteredMatches.length > 0 ? (
+          ) : (
+            <>
+              {/* Live Matches Section */}
+              {filteredLiveMatches.length > 0 && (
+                <section className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-[1px] w-6 bg-red-500/30" />
+                    <h2 className="text-sm font-medium uppercase tracking-wider text-red-500/80 flex items-center gap-2">
+                      🔴 LIVE NOW
+                      {isUpdatingLiveMatches && (
+                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                      )}
+                    </h2>
+                    <div className="flex-1 h-[1px] bg-gray-200" />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredLiveMatches.map((match: Match) => {
+                      const convertedMatch = convertToMatchCard(match)
+                      return (
+                        <MatchCard 
+                          key={`live-${match.id}`} 
+                          match={convertedMatch}
+                          onClick={() => handleMatchClick(match.id.toString())}
+                        />
+                      )
+                    })}
+                  </div>
+                </section>
+              )}
+
+              {/* Regular Matches Section */}
+              {filteredMatches.length > 0 ? (
             selectedDate === "all" && groupedMatches ? (
               // Grouped matches by week
               <div className="space-y-6">
@@ -397,13 +530,15 @@ export default function ScoresPage() {
             )
           ) : (
             // No matches found
-            <Card className="border border-gray-200 bg-white shadow-sm text-center py-12">
-              <CardContent>
-                <div className="text-6xl mb-4">🏆</div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">No matches found</h3>
-                <p className="text-gray-600">Try selecting a different sport or date</p>
-              </CardContent>
-            </Card>
+                <Card className="border border-gray-200 bg-white shadow-sm text-center py-12">
+                  <CardContent>
+                    <div className="text-6xl mb-4">🏆</div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No matches found</h3>
+                    <p className="text-gray-600">Try selecting a different sport or date</p>
+                  </CardContent>
+                </Card>
+              )}
+            </>
           )}
         </div>
       </main>
