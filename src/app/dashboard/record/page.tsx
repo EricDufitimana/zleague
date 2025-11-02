@@ -1006,13 +1006,14 @@ export default function RecordPage() {
                     </SelectContent>
                   </Select>
                   
-                  {selectedMatch && (
+                  {selectedMatch && selectedMatchData?.sport_type !== 'volleyball' && (
                     <Button
                       variant="outline"
                       onClick={async () => {
                         console.log('🎯 Record Page - Live Score button clicked for match:', selectedMatch);
                         console.log('📊 Record Page - Selected match data:', {
                           id: selectedMatch,
+                          sport_type: selectedMatchData?.sport_type,
                           teamA: selectedMatchData?.teamA?.name,
                           teamB: selectedMatchData?.teamB?.name
                         });
@@ -1039,9 +1040,13 @@ export default function RecordPage() {
                             const responseData = await response.json();
                             console.log('✅ Record Page - Success response:', responseData);
                             
-                            // Open live score page
-                            console.log('🔗 Record Page - Opening live score page:', `/live-score/${selectedMatch}`);
-                            window.open(`/live-score/${selectedMatch}`, '_blank');
+                            // Route to the correct livescore page based on sport type
+                            const liveScorePath = selectedMatchData?.sport_type === 'football' 
+                              ? `/live-score/football/${selectedMatch}`
+                              : `/live-score/${selectedMatch}`;
+                            
+                            console.log('🔗 Record Page - Opening live score page:', liveScorePath);
+                            window.open(liveScorePath, '_blank');
                           } else {
                             const errorData = await response.json();
                             console.error('❌ Record Page - API Error:', errorData);

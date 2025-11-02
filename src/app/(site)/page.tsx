@@ -138,22 +138,40 @@ export default function ScoresPage() {
           const matchesWithScores = await Promise.all(
             liveMatchesData.map(async (match: Match) => {
               try {
-                // Fetch basketball scores for live matches
-                const scoresResponse = await fetch(`/api/basketball-scores?match_id=${match.id}`)
+                // Fetch scores based on sport type
+                const scoresResponse = match.sport_type === 'football'
+                  ? await fetch(`/api/football-scores?match_id=${match.id}`)
+                  : await fetch(`/api/basketball-scores?match_id=${match.id}`)
+                
                 if (scoresResponse.ok) {
                   const scoresData = await scoresResponse.json()
                   const scores = scoresData.scores || []
                   
-                  // Calculate team scores
-                  const teamAScore = scores
-                    .filter((score: any) => score.team_id === match.team_a_id)
-                    .reduce((total: number, score: any) => total + (score.points || 0), 0)
+                  // Calculate team scores based on sport type
+                  let teamAScore = 0
+                  let teamBScore = 0
                   
-                  const teamBScore = scores
-                    .filter((score: any) => score.team_id === match.team_b_id)
-                    .reduce((total: number, score: any) => total + (score.points || 0), 0)
+                  if (match.sport_type === 'football') {
+                    // For football, sum goals
+                    teamAScore = scores
+                      .filter((score: any) => score.team_id === match.team_a_id)
+                      .reduce((total: number, score: any) => total + (score.goals || 0), 0)
+                    
+                    teamBScore = scores
+                      .filter((score: any) => score.team_id === match.team_b_id)
+                      .reduce((total: number, score: any) => total + (score.goals || 0), 0)
+                  } else {
+                    // For basketball, sum points
+                    teamAScore = scores
+                      .filter((score: any) => score.team_id === match.team_a_id)
+                      .reduce((total: number, score: any) => total + (score.points || 0), 0)
+                    
+                    teamBScore = scores
+                      .filter((score: any) => score.team_id === match.team_b_id)
+                      .reduce((total: number, score: any) => total + (score.points || 0), 0)
+                  }
                   
-                  console.log(`📈 Match ${match.id} scores: Team A: ${teamAScore}, Team B: ${teamBScore}`)
+                  console.log(`📈 Match ${match.id} (${match.sport_type}) scores: Team A: ${teamAScore}, Team B: ${teamBScore}`)
                   
                   return {
                     ...match,

@@ -6,9 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Trophy, Users, Clock, Target, CheckCircle, Loader2, RotateCcw } from 'lucide-react';
-import { createMultipleBasketballScores } from '@/actions/livescore/basketball-update';
-import { useRealtimeBasketballScores } from '@/hooks/useRealtimeBasketballScores';
-import { useUpdateBasketballScore } from '@/hooks/useUpdateBasketballScore';
+import { createMultipleFootballScores } from '@/actions/livescore/football-update';
+import { useRealtimeFootballScores } from '@/hooks/useRealtimeFootballScores';
+import { useUpdateFootballScore } from '@/hooks/useUpdateFootballScore';
 
 interface Team {
   id: number;
@@ -42,14 +42,13 @@ interface Player {
 
 interface PlayerStats {
   player_id: number;
-  points: number;
-  rebounds: number;
+  goals: number;
   assists: number;
-  three_points_made?: number;
-  three_points_attempted?: number;
+  shots_on_target?: number;
+  saves?: number;
 }
 
-export default function LiveScorePage() {
+export default function FootballLiveScorePage() {
   const params = useParams();
   const router = useRouter();
   const matchId = params.matchId as string;
@@ -69,7 +68,7 @@ export default function LiveScorePage() {
     id: string;
     playerId: string;
     teamId: string;
-    statType: 'points' | 'rebounds' | 'assists';
+    statType: 'goals' | 'assists' | 'shots_on_target' | 'saves';
     value: number;
     timestamp: number;
     playerName?: string;
@@ -77,10 +76,10 @@ export default function LiveScorePage() {
   const [isUndoing, setIsUndoing] = useState(false);
   
   // Use realtime hook for live updates (now uses React Query cache)
-  const { scores: realtimeScores, matchScores: realtimeMatchScores, teamAId, teamBId } = useRealtimeBasketballScores(matchId);
+  const { scores: realtimeScores, matchScores: realtimeMatchScores, teamAId, teamBId } = useRealtimeFootballScores(matchId);
   
   // Use React Query mutation hook for score updates (simplified - only needs matchId)
-  const updateScoreMutation = useUpdateBasketballScore(matchId);
+  const updateScoreMutation = useUpdateFootballScore(matchId);
   const [selectedPlayers, setSelectedPlayers] = useState<{
     teamA: number[];
     teamB: number[];
@@ -89,7 +88,7 @@ export default function LiveScorePage() {
     teamB: []
   });
 
-  // Sync realtime data with local state (but skip if we have pending updates)
+  // Sync realtime data with local state
   useEffect(() => {
     if (realtimeScores && realtimeScores.length > 0) {
       console.log('🔄 Syncing realtime scores:', realtimeScores);
@@ -99,11 +98,10 @@ export default function LiveScorePage() {
       const playerStatsData = realtimeScores.filter((score: any) => score.player_id);
       const transformedStats = playerStatsData.map((score: any) => ({
         player_id: score.player_id,
-        points: score.points || 0,
-        rebounds: score.rebounds || 0,
+        goals: score.goals || 0,
         assists: score.assists || 0,
-        three_points_made: score.three_points_made || 0,
-        three_points_attempted: score.three_points_attempted || 0
+        shots_on_target: score.shots_on_target || 0,
+        saves: score.saves || 0
       }));
       
       // Update player stats (React Query will handle conflicts)
@@ -130,11 +128,11 @@ export default function LiveScorePage() {
   // Use realtime match scores if available, otherwise calculate from player stats
   const teamAScore = realtimeMatchScores.teamA || playerStats
     .filter(stat => stat.player_id && players.find(p => p.id === stat.player_id)?.team_id === match?.team_a_id)
-    .reduce((total, stat) => total + stat.points, 0);
+    .reduce((total, stat) => total + stat.goals, 0);
 
   const teamBScore = realtimeMatchScores.teamB || playerStats
     .filter(stat => stat.player_id && players.find(p => p.id === stat.player_id)?.team_id === match?.team_b_id)
-    .reduce((total, stat) => total + stat.points, 0);
+    .reduce((total, stat) => total + stat.goals, 0);
 
   const fetchMatchData = useCallback(async () => {
     try {
@@ -173,7 +171,7 @@ export default function LiveScorePage() {
                 teamB: []
               });
               
-              // Fetch player statistics from scores tables - this will populate selectedPlayers
+              // Fetch player statistics from scores tables
               await fetchPlayerStats(matchData.match.sport_type, matchData.match);
             } else {
               console.error('❌ Players API request failed with status:', response.status);
@@ -183,10 +181,6 @@ export default function LiveScorePage() {
             }
           } catch (playerError) {
             console.error('💥 Error fetching players:', playerError);
-            console.error('💥 Players error details:', {
-              message: playerError instanceof Error ? playerError.message : 'Unknown error',
-              stack: playerError instanceof Error ? playerError.stack : 'No stack trace'
-            });
             setPlayers([]);
           } finally {
             setIsLoadingPlayers(false);
@@ -209,15 +203,13 @@ export default function LiveScorePage() {
   const fetchPlayerStats = useCallback(async (sportType: string, matchData?: any) => {
     try {
       let statsResponse;
-      if (sportType === 'basketball') {
-        statsResponse = await fetch(`/api/basketball-scores?match_id=${matchId}`);
-      } else if (sportType === 'football') {
+      if (sportType === 'football') {
         statsResponse = await fetch(`/api/football-scores?match_id=${matchId}`);
       }
       
       if (statsResponse && statsResponse.ok) {
         const statsData = await statsResponse.json();
-        console.log('📊 Raw basketball scores data:', statsData);
+        console.log('📊 Raw football scores data:', statsData);
         
         // Ensure we have a scores array
         const scores = Array.isArray(statsData.scores) ? statsData.scores : (Array.isArray(statsData) ? statsData : []);
@@ -230,11 +222,10 @@ export default function LiveScorePage() {
         // Transform to our PlayerStats format
         const transformedStats = playerStatsData.map((score: any) => ({
           player_id: score.player_id,
-          points: score.points || 0,
-          rebounds: score.rebounds || 0,
+          goals: score.goals || 0,
           assists: score.assists || 0,
-          three_points_made: score.three_points_made || 0,
-          three_points_attempted: score.three_points_attempted || 0
+          shots_on_target: score.shots_on_target || 0,
+          saves: score.saves || 0
         }));
         
         setPlayerStats(transformedStats);
@@ -272,16 +263,15 @@ export default function LiveScorePage() {
   const updatePlayerStats = async (
     playerId: string, 
     teamId: string, 
-    statType: 'points' | 'rebounds' | 'assists', 
+    statType: 'goals' | 'assists' | 'shots_on_target' | 'saves', 
     value: number
   ) => {
     // Prepare increment values
     const incrementStats = {
-      points: statType === 'points' ? value : 0,
-      rebounds: statType === 'rebounds' ? value : 0,
+      goals: statType === 'goals' ? value : 0,
       assists: statType === 'assists' ? value : 0,
-      three_points_made: 0,
-      three_points_attempted: 0
+      shotsOnTarget: statType === 'shots_on_target' ? value : 0,
+      saves: statType === 'saves' ? value : 0
     };
 
     // Generate unique ID for this update
@@ -307,11 +297,10 @@ export default function LiveScorePage() {
       matchId,
       teamId,
       playerId,
-      points: incrementStats.points,
-      rebounds: incrementStats.rebounds,
+      goals: incrementStats.goals,
       assists: incrementStats.assists,
-      threePointsMade: incrementStats.three_points_made,
-      threePointsAttempted: incrementStats.three_points_attempted
+      shotsOnTarget: incrementStats.shotsOnTarget,
+      saves: incrementStats.saves
     }, {
       onError: (error) => {
         console.error('❌ Error updating stats:', error);
@@ -341,11 +330,10 @@ export default function LiveScorePage() {
 
       // Prepare NEGATIVE increment values (to subtract)
       const incrementStats = {
-        points: lastUpdate.statType === 'points' ? -lastUpdate.value : 0,
-        rebounds: lastUpdate.statType === 'rebounds' ? -lastUpdate.value : 0,
+        goals: lastUpdate.statType === 'goals' ? -lastUpdate.value : 0,
         assists: lastUpdate.statType === 'assists' ? -lastUpdate.value : 0,
-        three_points_made: 0,
-        three_points_attempted: 0
+        shotsOnTarget: lastUpdate.statType === 'shots_on_target' ? -lastUpdate.value : 0,
+        saves: lastUpdate.statType === 'saves' ? -lastUpdate.value : 0
       };
 
       // Use React Query mutation for undo - it handles queuing and optimistic updates
@@ -353,11 +341,10 @@ export default function LiveScorePage() {
         matchId,
         teamId: lastUpdate.teamId,
         playerId: lastUpdate.playerId,
-        points: incrementStats.points,
-        rebounds: incrementStats.rebounds,
+        goals: incrementStats.goals,
         assists: incrementStats.assists,
-        threePointsMade: incrementStats.three_points_made,
-        threePointsAttempted: incrementStats.three_points_attempted
+        shotsOnTarget: incrementStats.shotsOnTarget,
+        saves: incrementStats.saves
       }, {
         onSuccess: () => {
           // Remove from history on success
@@ -418,11 +405,10 @@ export default function LiveScorePage() {
   const getPlayerStats = (playerId: number) => {
     return playerStats.find(stat => stat.player_id === playerId) || {
       player_id: playerId,
-      points: 0,
-      rebounds: 0,
+      goals: 0,
       assists: 0,
-      three_points_made: 0,
-      three_points_attempted: 0
+      shots_on_target: 0,
+      saves: 0
     };
   };
 
@@ -441,8 +427,8 @@ export default function LiveScorePage() {
       }).filter(p => p.teamId); // Filter out any invalid entries
       
       if (playersToCreate.length > 0) {
-        // Create all basketball score entries at once
-        await createMultipleBasketballScores(matchId, playersToCreate);
+        // Create all football score entries at once
+        await createMultipleFootballScores(matchId, playersToCreate);
         
         // Refresh player stats after creating entries
         if (match?.sport_type) {
@@ -536,7 +522,7 @@ export default function LiveScorePage() {
               </Button>
               <div className="h-6 w-px bg-gray-300" />
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">Live Score Update</h1>
+                <h1 className="text-lg font-semibold text-gray-900">Live Score Update - Football</h1>
                 <p className="text-sm text-gray-600">{match.championship?.name || 'Championship'}</p>
               </div>
             </div>
@@ -555,7 +541,7 @@ export default function LiveScorePage() {
                 {isUndoing || updateScoreMutation.isPending ? (
                   <div className="flex items-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    
+                    Undoing...
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
@@ -601,7 +587,6 @@ export default function LiveScorePage() {
               
               <div className="mx-8 text-center">
                 <div className="text-2xl font-bold text-gray-500 mb-2">VS</div>
-              
               </div>
               
               <div className="text-center">
@@ -618,8 +603,8 @@ export default function LiveScorePage() {
         {!isLoadingPlayers && players.length > 0 && selectedPlayers.teamA.length + selectedPlayers.teamB.length > 0 && (
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Add Points & Stats</CardTitle>
-              <CardDescription>Click buttons to add points, rebounds, or assists for each player</CardDescription>
+              <CardTitle className="text-lg font-semibold">Add Goals & Stats</CardTitle>
+              <CardDescription>Click buttons to add goals, assists, shots on target, or saves for each player</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -634,38 +619,14 @@ export default function LiveScorePage() {
                       {getFilteredTeamPlayers(match.team_a_id).map((player) => (
                         <div key={player.id} className="space-y-2">
                           <div className="text-sm font-medium text-gray-700">{player.first_name} {player.last_name}</div>
-                          <div className="flex gap-1">
+                          <div className="flex flex-wrap gap-1">
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'points', 1)}
+                              onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'goals', 1)}
                               className="h-8 w-12 text-xs"
                             >
-                              +1
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'points', 2)}
-                              className="h-8 w-12 text-xs"
-                            >
-                              +2
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'points', 3)}
-                              className="h-8 w-12 text-xs"
-                            >
-                              +3
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'rebounds', 1)}
-                              className="h-8 w-12 text-xs"
-                            >
-                              R+1
+                              G+1
                             </Button>
                             <Button
                               size="sm"
@@ -674,6 +635,22 @@ export default function LiveScorePage() {
                               className="h-8 w-12 text-xs"
                             >
                               A+1
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'shots_on_target', 1)}
+                              className="h-8 w-12 text-xs"
+                            >
+                              SOT+1
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'saves', 1)}
+                              className="h-8 w-12 text-xs"
+                            >
+                              SV+1
                             </Button>
                           </div>
                         </div>
@@ -693,38 +670,14 @@ export default function LiveScorePage() {
                       {getFilteredTeamPlayers(match.team_b_id).map((player) => (
                         <div key={player.id} className="space-y-2">
                           <div className="text-sm font-medium text-gray-700">{player.first_name} {player.last_name}</div>
-                          <div className="flex gap-1">
+                          <div className="flex flex-wrap gap-1">
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'points', 1)}
+                              onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'goals', 1)}
                               className="h-8 w-12 text-xs"
                             >
-                              +1
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'points', 2)}
-                              className="h-8 w-12 text-xs"
-                            >
-                              +2
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'points', 3)}
-                              className="h-8 w-12 text-xs"
-                            >
-                              +3
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'rebounds', 1)}
-                              className="h-8 w-12 text-xs"
-                            >
-                              R+1
+                              G+1
                             </Button>
                             <Button
                               size="sm"
@@ -733,6 +686,22 @@ export default function LiveScorePage() {
                               className="h-8 w-12 text-xs"
                             >
                               A+1
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'shots_on_target', 1)}
+                              className="h-8 w-12 text-xs"
+                            >
+                              SOT+1
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'saves', 1)}
+                              className="h-8 w-12 text-xs"
+                            >
+                              SV+1
                             </Button>
                           </div>
                         </div>
@@ -774,7 +743,6 @@ export default function LiveScorePage() {
                 <Users className="w-16 h-16 mx-auto text-gray-300 mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No Players Selected</h3>
                 <p className="text-gray-600 mb-6">Choose which players are participating in this match to start tracking statistics.</p>
-          
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -785,11 +753,12 @@ export default function LiveScorePage() {
                   {match.teamA?.name || `Team ${match.team_a_id}`}
                 </h3>
                 <div className="bg-white border rounded-lg overflow-hidden">
-                  <div className="grid grid-cols-4 gap-4 p-4 bg-blue-50 border-b">
+                  <div className="grid grid-cols-5 gap-4 p-4 bg-blue-50 border-b">
                     <div className="font-semibold text-gray-700">PLAYER</div>
-                    <div className="font-semibold text-gray-700 text-center">PTS</div>
-                    <div className="font-semibold text-gray-700 text-center">REB</div>
-                    <div className="font-semibold text-gray-700 text-center">AST</div>
+                    <div className="font-semibold text-gray-700 text-center">G</div>
+                    <div className="font-semibold text-gray-700 text-center">A</div>
+                    <div className="font-semibold text-gray-700 text-center">SOT</div>
+                    <div className="font-semibold text-gray-700 text-center">SV</div>
                   </div>
                   {isLoadingPlayers ? (
                     <div className="text-center py-4 text-gray-500">
@@ -804,14 +773,15 @@ export default function LiveScorePage() {
                     getFilteredTeamPlayers(match.team_a_id).map((player, index) => {
                       const stats = getPlayerStats(player.id);
                       return (
-                        <div key={player.id} className="grid grid-cols-4 gap-4 p-4 border-b last:border-b-0">
+                        <div key={player.id} className="grid grid-cols-5 gap-4 p-4 border-b last:border-b-0">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-gray-500">{index + 1}</span>
                             <span className="font-medium text-gray-900">{player.first_name} {player.last_name}</span>
                           </div>
-                          <div className="text-center font-semibold text-gray-900">{stats.points}</div>
-                          <div className="text-center font-semibold text-gray-900">{stats.rebounds}</div>
+                          <div className="text-center font-semibold text-gray-900">{stats.goals}</div>
                           <div className="text-center font-semibold text-gray-900">{stats.assists}</div>
+                          <div className="text-center font-semibold text-gray-900">{stats.shots_on_target || 0}</div>
+                          <div className="text-center font-semibold text-gray-900">{stats.saves || 0}</div>
                         </div>
                       );
                     })
@@ -826,11 +796,12 @@ export default function LiveScorePage() {
                   {match.teamB?.name || `Team ${match.team_b_id}`}
                 </h3>
                 <div className="bg-white border rounded-lg overflow-hidden">
-                  <div className="grid grid-cols-4 gap-4 p-4 bg-green-50 border-b">
+                  <div className="grid grid-cols-5 gap-4 p-4 bg-green-50 border-b">
                     <div className="font-semibold text-gray-700">PLAYER</div>
-                    <div className="font-semibold text-gray-700 text-center">PTS</div>
-                    <div className="font-semibold text-gray-700 text-center">REB</div>
-                    <div className="font-semibold text-gray-700 text-center">AST</div>
+                    <div className="font-semibold text-gray-700 text-center">G</div>
+                    <div className="font-semibold text-gray-700 text-center">A</div>
+                    <div className="font-semibold text-gray-700 text-center">SOT</div>
+                    <div className="font-semibold text-gray-700 text-center">SV</div>
                   </div>
                   {isLoadingPlayers ? (
                     <div className="text-center py-4 text-gray-500">
@@ -845,14 +816,15 @@ export default function LiveScorePage() {
                     getFilteredTeamPlayers(match.team_b_id).map((player, index) => {
                       const stats = getPlayerStats(player.id);
                       return (
-                        <div key={player.id} className="grid grid-cols-4 gap-4 p-4 border-b last:border-b-0">
+                        <div key={player.id} className="grid grid-cols-5 gap-4 p-4 border-b last:border-b-0">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-gray-500">{index + 1}</span>
                             <span className="font-medium text-gray-900">{player.first_name} {player.last_name}</span>
                           </div>
-                          <div className="text-center font-semibold text-gray-900">{stats.points}</div>
-                          <div className="text-center font-semibold text-gray-900">{stats.rebounds}</div>
+                          <div className="text-center font-semibold text-gray-900">{stats.goals}</div>
                           <div className="text-center font-semibold text-gray-900">{stats.assists}</div>
+                          <div className="text-center font-semibold text-gray-900">{stats.shots_on_target || 0}</div>
+                          <div className="text-center font-semibold text-gray-900">{stats.saves || 0}</div>
                         </div>
                       );
                     })
@@ -1002,3 +974,4 @@ export default function LiveScorePage() {
     </div>
   );
 }
+

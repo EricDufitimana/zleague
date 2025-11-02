@@ -16,15 +16,15 @@ interface MatchScores {
   teamBId: string;
 }
 
-export function useRealtimeBasketballScores(matchId: string) {
+export function useRealtimeFootballScores(matchId: string) {
   const queryClient = useQueryClient();
 
   // 1️⃣ Fetch initial scores data using React Query
   const { data: scores = [], isLoading: isLoadingScores } = useQuery({
-    queryKey: ["basketball-scores", matchId],
+    queryKey: ["football-scores", matchId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("basketball_scores")
+        .from("football_scores")
         .select('*')
         .eq('match_id', matchId);
       
@@ -57,20 +57,20 @@ export function useRealtimeBasketballScores(matchId: string) {
   // 3️⃣ Subscribe to realtime changes and sync to React Query cache
   useEffect(() => {
     const scoresChannel = supabase 
-      .channel(`basketball_scores:${matchId}`)
+      .channel(`football_scores:${matchId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'basketball_scores',
+          table: 'football_scores',
           filter: `match_id=eq.${matchId}`,
         },
         (payload) => {
           console.log("Realtime update received", payload);
 
           // Sync realtime updates to React Query cache
-          queryClient.setQueryData(["basketball-scores", matchId], (old: any[] = []) => {
+          queryClient.setQueryData(["football-scores", matchId], (old: any[] = []) => {
             if (payload.eventType === 'INSERT') {
               return [...old, payload.new];
             }
@@ -127,9 +127,9 @@ export function useRealtimeBasketballScores(matchId: string) {
 
   // Helper functions for backward compatibility (now just read from cache)
   const setScores = (updater: any) => {
-    const current = queryClient.getQueryData<any[]>(["basketball-scores", matchId]) || [];
+    const current = queryClient.getQueryData<any[]>(["football-scores", matchId]) || [];
     const newValue = typeof updater === 'function' ? updater(current) : updater;
-    queryClient.setQueryData(["basketball-scores", matchId], newValue);
+    queryClient.setQueryData(["football-scores", matchId], newValue);
   };
 
   const setMatchScores = (updater: any) => {

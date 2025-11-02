@@ -206,23 +206,23 @@ export default function DashboardPage() {
       {/* Secondary content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full px-4 lg:px-6">
         {/* Upcoming Matches */}
-        <Card className="lg:col-span-2 w-full overflow-hidden border border-gray-200/60 shadow-none bg-gradient-to-t from-indigo-50/80 to-white">
-          <CardHeader className="px-4 ">
-            <CardTitle className="text-sm font-semibold text-gray-800 tracking-wide">Upcoming Matches</CardTitle>
+        <Card className="lg:col-span-2 w-full overflow-hidden border border-slate-200 shadow-sm bg-white">
+          <CardHeader className="px-4 py-3">
+            <CardTitle className="text-sm font-semibold text-slate-800 tracking-wide">Upcoming Matches</CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4">
             {upcoming.length === 0 ? (
-              <p className="text-base text-gray-500">No upcoming matches scheduled.</p>
+              <p className="text-base text-slate-500">No upcoming matches scheduled.</p>
             ) : (
               <div className="divide-y">
                 {upcoming.map((m) => (
                   <div key={m.id} className="py-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-                      <span className="text-sm font-medium text-gray-900 truncate">{m.teamA?.name || 'Team A'}</span>
-                      <Badge variant="outline" className="h-5 px-2 text-xs rounded-full border-gray-300 text-gray-600 shrink-0">vs</Badge>
-                      <span className="text-sm font-medium text-gray-900 truncate">{m.teamB?.name || 'Team B'}</span>
+                      <span className="text-sm font-medium text-slate-900 truncate">{m.teamA?.name || 'Team A'}</span>
+                      <Badge variant="outline" className="h-5 px-2 text-xs rounded-full border-slate-200 text-slate-600 shrink-0">vs</Badge>
+                      <span className="text-sm font-medium text-slate-900 truncate">{m.teamB?.name || 'Team B'}</span>
                     </div>
-                    <div className="text-sm text-gray-500 shrink-0">
+                    <div className="text-sm text-slate-500 shrink-0">
                       {formatDate(m.match_time)}
                     </div>
                   </div>
@@ -233,22 +233,22 @@ export default function DashboardPage() {
         </Card>
 
         {/* Active Championships */}
-        <Card className="w-full overflow-hidden border border-gray-200/60 shadow-none bg-gradient-to-t from-emerald-50/40 to-white">
+        <Card className="w-full overflow-hidden border border-slate-200 shadow-sm bg-white">
           <CardHeader className="px-4 py-3 pb-2">
-            <CardTitle className="text-sm font-semibold text-gray-800 tracking-wide">Active Championships</CardTitle>
+            <CardTitle className="text-sm font-semibold text-slate-800 tracking-wide">Active Championships</CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4">
             {champs.length === 0 ? (
-              <p className="text-base text-gray-500">No championships found.</p>
+              <p className="text-base text-slate-500">No championships found.</p>
             ) : (
               <div className="space-y-3">
                 {champs.map((c) => (
                   <div key={c.id} className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{c.name}</p>
-                      <p className="text-sm text-gray-500">{c.status === 'ongoing' ? 'Ongoing' : 'Ended'}</p>
+                      <p className="text-sm font-medium text-slate-900 truncate">{c.name}</p>
+                      <p className="text-sm text-slate-500">{c.status === 'ongoing' ? 'Ongoing' : 'Ended'}</p>
                     </div>
-                    <Badge variant="outline" className="h-5 px-2 text-xs rounded-full border-gray-300 text-gray-600">
+                    <Badge variant="outline" className="h-5 px-2 text-xs rounded-full border-slate-200 text-slate-700">
                       {(c.team_count || 0)} teams
                     </Badge>
                   </div>
@@ -261,32 +261,32 @@ export default function DashboardPage() {
 
       {/* Recent results */}
       <div className="px-4 lg:px-6">
-      <Card className="w-full overflow-hidden border border-gray-200/60 shadow-none bg-gradient-to-t from-amber-50/40 to-white">
+      <Card className="w-full overflow-hidden border border-slate-200 shadow-sm bg-white">
         <CardHeader className="px-4 py-3 pb-2">
-          <CardTitle className="text-sm font-semibold text-gray-800 tracking-wide">Recent Results</CardTitle>
+          <CardTitle className="text-sm font-semibold text-slate-800 tracking-wide">Recent Results</CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-4">
           {recent.length === 0 ? (
-            <p className="text-base text-gray-500">No results yet.</p>
+            <p className="text-base text-slate-500">No results yet.</p>
           ) : (
             <div className="divide-y">
               {recent.map((m) => (
                 <div key={m.id} className="py-3">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-                      <span className="text-sm font-medium text-gray-900 truncate">{m.teamA?.name || 'Team A'}</span>
+                      <span className="text-sm font-medium text-slate-900 truncate">{m.teamA?.name || 'Team A'}</span>
                       {m.team_a_score !== undefined && m.team_b_score !== undefined ? (
-                        <Badge variant="outline" className="h-5 px-2 text-xs rounded-full border-gray-300 text-gray-900 font-semibold shrink-0">
+                        <Badge variant="outline" className="h-5 px-2 text-xs rounded-full border-slate-200 text-slate-900 font-semibold shrink-0">
                           {m.team_a_score} - {m.team_b_score}
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="h-5 px-2 text-xs rounded-full border-gray-300 text-gray-600 shrink-0">vs</Badge>
+                        <Badge variant="outline" className="h-5 px-2 text-xs rounded-full border-slate-200 text-slate-600 shrink-0">vs</Badge>
                       )}
-                      <span className="text-sm font-medium text-gray-900 truncate">{m.teamB?.name || 'Team B'}</span>
+                      <span className="text-sm font-medium text-slate-900 truncate">{m.teamB?.name || 'Team B'}</span>
                     </div>
-                    <span className="text-sm text-gray-500 shrink-0">{formatDate(m.match_time)}</span>
+                    <span className="text-sm text-slate-500 shrink-0">{formatDate(m.match_time)}</span>
                   </div>
-                  <div className="mt-1 text-sm text-gray-500">Status: Played</div>
+                  <div className="mt-1 text-sm text-slate-500">Status: Played</div>
                 </div>
               ))}
             </div>
