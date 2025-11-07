@@ -21,6 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 type TopPredictor = {
   id: number
@@ -499,99 +500,101 @@ export default function PredictorsPage() {
                             View All
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                        <DialogContent className="max-w-3xl max-h-[80vh]">
                           <DialogHeader>
                             <DialogTitle>Prediction History</DialogTitle>
                             <DialogDescription>
                               All your predictions and their current status
                             </DialogDescription>
                           </DialogHeader>
-                          <div className="space-y-3 mt-4">
-                            {userPredictionDetails.length === 0 ? (
-                              <div className="text-sm text-gray-500 text-center py-8">
-                                No predictions yet.
-                              </div>
-                            ) : (
-                              userPredictionDetails.map((pred) => {
-                                const predictedTeam = pred.predicted_winner_id === pred.match.team_a_id 
-                                  ? pred.match.teamA.name 
-                                  : pred.match.teamB.name
-                                
-                                let statusBadge
-                                let statusColor
-                                
-                                if (pred.is_correct === null) {
-                                  statusBadge = "Pending"
-                                  statusColor = "bg-amber-50 text-amber-700 border-amber-200"
-                                } else if (pred.is_correct) {
-                                  statusBadge = "Correct"
-                                  statusColor = "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                } else {
-                                  statusBadge = "Incorrect"
-                                  statusColor = "bg-rose-50 text-rose-700 border-rose-200"
-                                }
-                                
-                                return (
-                                  <div key={pred.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50/50 transition-colors">
-                                    <div className="flex items-start justify-between mb-2">
-                                      <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1.5">
-                                          <span className="font-medium text-gray-900 text-sm">
-                                            {pred.match.teamA.name.replace(/_/g, ' ')}
-                                          </span>
-                                          <span className="text-xs text-gray-400">vs</span>
-                                          <span className="font-medium text-gray-900 text-sm">
-                                            {pred.match.teamB.name.replace(/_/g, ' ')}
-                                          </span>
-                                        </div>
-                                        <div className="text-sm text-gray-600">
-                                          Predicted: <span className="font-medium text-gray-900">{predictedTeam.replace(/_/g, ' ')}</span>
-                                        </div>
-                                        {pred.match.winner_id && (
-                                          <div className="text-sm text-gray-600 mt-1">
-                                            Winner: <span className="font-medium text-gray-900">
-                                              {pred.match.winner_id === pred.match.team_a_id 
-                                                ? pred.match.teamA.name.replace(/_/g, ' ')
-                                                : pred.match.teamB.name.replace(/_/g, ' ')}
+                          <ScrollArea className="h-[calc(80vh-120px)] pr-4">
+                            <div className="space-y-3 mt-4">
+                              {userPredictionDetails.length === 0 ? (
+                                <div className="text-sm text-gray-500 text-center py-8">
+                                  No predictions yet.
+                                </div>
+                              ) : (
+                                userPredictionDetails.map((pred) => {
+                                  const predictedTeam = pred.predicted_winner_id === pred.match.team_a_id 
+                                    ? pred.match.teamA.name 
+                                    : pred.match.teamB.name
+                                  
+                                  let statusBadge
+                                  let statusColor
+                                  
+                                  if (pred.is_correct === null) {
+                                    statusBadge = "Pending"
+                                    statusColor = "bg-amber-50 text-amber-700 border-amber-200"
+                                  } else if (pred.is_correct) {
+                                    statusBadge = "Correct"
+                                    statusColor = "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  } else {
+                                    statusBadge = "Incorrect"
+                                    statusColor = "bg-rose-50 text-rose-700 border-rose-200"
+                                  }
+                                  
+                                  return (
+                                    <div key={pred.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50/50 transition-colors">
+                                      <div className="flex items-start justify-between mb-2">
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2 mb-1.5">
+                                            <span className="font-medium text-gray-900 text-sm">
+                                              {pred.match.teamA.name.replace(/_/g, ' ')}
+                                            </span>
+                                            <span className="text-xs text-gray-400">vs</span>
+                                            <span className="font-medium text-gray-900 text-sm">
+                                              {pred.match.teamB.name.replace(/_/g, ' ')}
                                             </span>
                                           </div>
-                                        )}
+                                          <div className="text-sm text-gray-600">
+                                            Predicted: <span className="font-medium text-gray-900">{predictedTeam.replace(/_/g, ' ')}</span>
+                                          </div>
+                                          {pred.match.winner_id && (
+                                            <div className="text-sm text-gray-600 mt-1">
+                                              Winner: <span className="font-medium text-gray-900">
+                                                {pred.match.winner_id === pred.match.team_a_id 
+                                                  ? pred.match.teamA.name.replace(/_/g, ' ')
+                                                  : pred.match.teamB.name.replace(/_/g, ' ')}
+                                              </span>
+                                            </div>
+                                          )}
+                                        </div>
+                                        <Badge variant="outline" className={`${statusColor} text-xs`}>
+                                          {statusBadge}
+                                        </Badge>
                                       </div>
-                                      <Badge variant="outline" className={`${statusColor} text-xs`}>
-                                        {statusBadge}
-                                      </Badge>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3 text-xs text-gray-500 pt-2 border-t border-gray-100">
-                                      <div>
-                                        <span className="text-gray-400">Predicted:</span>
-                                        <div className="font-medium text-gray-600 mt-0.5">
-                                          {new Date(pred.created_at).toLocaleDateString('en-US', { 
-                                            month: 'short', 
-                                            day: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                          })}
+                                      <div className="grid grid-cols-2 gap-3 text-xs text-gray-500 pt-2 border-t border-gray-100">
+                                        <div>
+                                          <span className="text-gray-400">Predicted:</span>
+                                          <div className="font-medium text-gray-600 mt-0.5">
+                                            {new Date(pred.created_at).toLocaleDateString('en-US', { 
+                                              month: 'short', 
+                                              day: 'numeric',
+                                              hour: '2-digit',
+                                              minute: '2-digit'
+                                            })}
+                                          </div>
+                                        </div>
+                                        <div>
+                                          <span className="text-gray-400">Match Time:</span>
+                                          <div className="font-medium text-gray-600 mt-0.5">
+                                            {pred.match.match_time 
+                                              ? new Date(pred.match.match_time).toLocaleDateString('en-US', { 
+                                                  month: 'short', 
+                                                  day: 'numeric',
+                                                  hour: '2-digit',
+                                                  minute: '2-digit'
+                                                })
+                                              : 'TBA'}
+                                          </div>
                                         </div>
                                       </div>
-                                      <div>
-                                        <span className="text-gray-400">Match Time:</span>
-                                        <div className="font-medium text-gray-600 mt-0.5">
-                                          {pred.match.match_time 
-                                            ? new Date(pred.match.match_time).toLocaleDateString('en-US', { 
-                                                month: 'short', 
-                                                day: 'numeric',
-                                                hour: '2-digit',
-                                                minute: '2-digit'
-                                              })
-                                            : 'TBA'}
-                                        </div>
-                                      </div>
                                     </div>
-                                  </div>
-                                )
-                              })
-                            )}
-                          </div>
+                                  )
+                                })
+                              )}
+                            </div>
+                          </ScrollArea>
                         </DialogContent>
                       </Dialog>
                     )}
