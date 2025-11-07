@@ -58,7 +58,7 @@ type UserPredictionDetail = {
 }
 
 export default function PredictorsPage() {
-  const { user } = useSession()
+  const { user, isLoading: isSessionLoading } = useSession()
   const [searchQuery, setSearchQuery] = useState("")
   const [predictions, setPredictions] = useState<Record<string, string>>({})
   const [upcomingMatches, setUpcomingMatches] = useState<UpcomingMatch[]>([])
@@ -76,14 +76,41 @@ export default function PredictorsPage() {
 
   // Fetch all data together to prevent reloads
   useEffect(() => {
+    // Wait for session check to complete first
+    if (isSessionLoading) return
+
     const fetchAllData = async () => {
       try {
         // Set all loading states to true
         setIsLoadingMatches(true)
         setIsLoadingPredictors(true)
-        if (user) setIsLoadingUserData(true)
         
-        // Fetch all data in parallel
+        // First, fetch user data if logged in (before fetching matches)
+        if (user) {
+          setIsLoadingUserData(true)
+          try {
+            const userRes = await fetch(`/api/users?auth_user_id=${user.id}`)
+            const userData = await userRes.json()
+            
+            if (userData.user) {
+              const predictionsRes = await fetch(`/api/predictions?user_id=${userData.user.id}`)
+              const predictionsJson = await predictionsRes.json()
+              const userPreds: UserPredictionDetail[] = predictionsJson?.predictions || []
+              
+              const predictedMatchIds = new Set<number>(userPreds.map((p) => parseInt(String(p.match_id))).filter((id: number) => !isNaN(id)))
+              setUserPredictions(predictedMatchIds)
+              setUserPredictionDetails(userPreds)
+            }
+          } catch (error) {
+            console.error('Error fetching user data:', error)
+          } finally {
+            setIsLoadingUserData(false)
+          }
+        } else {
+          setIsLoadingUserData(false)
+        }
+        
+        // Then fetch matches and predictors in parallel
         const [matchesRes, predictorsRes] = await Promise.all([
           fetch(`/api/matches?status=scheduled&ongoing_only=true`),
           fetch('/api/predictions')
@@ -163,30 +190,6 @@ export default function PredictorsPage() {
 
         setTopPredictors(topPredictorsList)
         setIsLoadingPredictors(false)
-
-        // Fetch user data if logged in
-        if (user) {
-          try {
-            const userRes = await fetch(`/api/users?auth_user_id=${user.id}`)
-            const userData = await userRes.json()
-            
-            if (userData.user) {
-              const predictionsRes = await fetch(`/api/predictions?user_id=${userData.user.id}`)
-              const predictionsJson = await predictionsRes.json()
-              const userPreds: UserPredictionDetail[] = predictionsJson?.predictions || []
-              
-              const predictedMatchIds = new Set<number>(userPreds.map((p) => parseInt(String(p.match_id))).filter((id: number) => !isNaN(id)))
-              setUserPredictions(predictedMatchIds)
-              setUserPredictionDetails(userPreds)
-            }
-          } catch (error) {
-            console.error('Error fetching user data:', error)
-          } finally {
-            setIsLoadingUserData(false)
-          }
-        } else {
-          setIsLoadingUserData(false)
-        }
       } catch (e) {
         console.error('Failed to load data', e)
         setUpcomingMatches([])
@@ -197,7 +200,7 @@ export default function PredictorsPage() {
       }
     }
     fetchAllData()
-  }, [user])
+  }, [user, isSessionLoading])
 
   const handlePredictionChange = (matchId: string, prediction: string) => {
     setPredictions(prev => ({
@@ -355,7 +358,7 @@ export default function PredictorsPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                {isLoadingPredictors ? (
+                {(isLoadingPredictors || isSessionLoading || isLoadingUserData) ? (
                   // Skeleton for predictors
                   Array.from({ length: 5 }).map((_, index) => (
                     <div key={index} className="flex items-center gap-3 p-3 rounded border border-gray-100">
@@ -483,117 +486,119 @@ export default function PredictorsPage() {
           {/* Right: Predictions */}
           <section className="lg:col-span-2 space-y-6">
             {/* Your Predictions Section */}
-            {user && (
+            {(user || isSessionLoading || isLoadingUserData) && (
               <Card className="border border-gray-200 bg-white">
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base font-medium text-gray-900">Your Predictions</CardTitle>
-                    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button variant="ghost" size="sm" className="gap-2 text-gray-600 hover:text-gray-900">
-                          <History className="h-4 w-4" />
-                          View All
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>Prediction History</DialogTitle>
-                          <DialogDescription>
-                            All your predictions and their current status
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-3 mt-4">
-                          {userPredictionDetails.length === 0 ? (
-                            <div className="text-sm text-gray-500 text-center py-8">
-                              No predictions yet.
-                            </div>
-                          ) : (
-                            userPredictionDetails.map((pred) => {
-                              const predictedTeam = pred.predicted_winner_id === pred.match.team_a_id 
-                                ? pred.match.teamA.name 
-                                : pred.match.teamB.name
-                              
-                              let statusBadge
-                              let statusColor
-                              
-                              if (pred.is_correct === null) {
-                                statusBadge = "Pending"
-                                statusColor = "bg-amber-50 text-amber-700 border-amber-200"
-                              } else if (pred.is_correct) {
-                                statusBadge = "Correct"
-                                statusColor = "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              } else {
-                                statusBadge = "Incorrect"
-                                statusColor = "bg-rose-50 text-rose-700 border-rose-200"
-                              }
-                              
-                              return (
-                                <div key={pred.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50/50 transition-colors">
-                                  <div className="flex items-start justify-between mb-2">
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2 mb-1.5">
-                                        <span className="font-medium text-gray-900 text-sm">
-                                          {pred.match.teamA.name.replace(/_/g, ' ')}
-                                        </span>
-                                        <span className="text-xs text-gray-400">vs</span>
-                                        <span className="font-medium text-gray-900 text-sm">
-                                          {pred.match.teamB.name.replace(/_/g, ' ')}
-                                        </span>
-                                      </div>
-                                      <div className="text-sm text-gray-600">
-                                        Predicted: <span className="font-medium text-gray-900">{predictedTeam.replace(/_/g, ' ')}</span>
-                                      </div>
-                                      {pred.match.winner_id && (
-                                        <div className="text-sm text-gray-600 mt-1">
-                                          Winner: <span className="font-medium text-gray-900">
-                                            {pred.match.winner_id === pred.match.team_a_id 
-                                              ? pred.match.teamA.name.replace(/_/g, ' ')
-                                              : pred.match.teamB.name.replace(/_/g, ' ')}
+                    {user && !isSessionLoading && !isLoadingUserData && (
+                      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="sm" className="gap-2 text-gray-600 hover:text-gray-900">
+                            <History className="h-4 w-4" />
+                            View All
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>Prediction History</DialogTitle>
+                            <DialogDescription>
+                              All your predictions and their current status
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-3 mt-4">
+                            {userPredictionDetails.length === 0 ? (
+                              <div className="text-sm text-gray-500 text-center py-8">
+                                No predictions yet.
+                              </div>
+                            ) : (
+                              userPredictionDetails.map((pred) => {
+                                const predictedTeam = pred.predicted_winner_id === pred.match.team_a_id 
+                                  ? pred.match.teamA.name 
+                                  : pred.match.teamB.name
+                                
+                                let statusBadge
+                                let statusColor
+                                
+                                if (pred.is_correct === null) {
+                                  statusBadge = "Pending"
+                                  statusColor = "bg-amber-50 text-amber-700 border-amber-200"
+                                } else if (pred.is_correct) {
+                                  statusBadge = "Correct"
+                                  statusColor = "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                } else {
+                                  statusBadge = "Incorrect"
+                                  statusColor = "bg-rose-50 text-rose-700 border-rose-200"
+                                }
+                                
+                                return (
+                                  <div key={pred.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50/50 transition-colors">
+                                    <div className="flex items-start justify-between mb-2">
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1.5">
+                                          <span className="font-medium text-gray-900 text-sm">
+                                            {pred.match.teamA.name.replace(/_/g, ' ')}
+                                          </span>
+                                          <span className="text-xs text-gray-400">vs</span>
+                                          <span className="font-medium text-gray-900 text-sm">
+                                            {pred.match.teamB.name.replace(/_/g, ' ')}
                                           </span>
                                         </div>
-                                      )}
+                                        <div className="text-sm text-gray-600">
+                                          Predicted: <span className="font-medium text-gray-900">{predictedTeam.replace(/_/g, ' ')}</span>
+                                        </div>
+                                        {pred.match.winner_id && (
+                                          <div className="text-sm text-gray-600 mt-1">
+                                            Winner: <span className="font-medium text-gray-900">
+                                              {pred.match.winner_id === pred.match.team_a_id 
+                                                ? pred.match.teamA.name.replace(/_/g, ' ')
+                                                : pred.match.teamB.name.replace(/_/g, ' ')}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                      <Badge variant="outline" className={`${statusColor} text-xs`}>
+                                        {statusBadge}
+                                      </Badge>
                                     </div>
-                                    <Badge variant="outline" className={`${statusColor} text-xs`}>
-                                      {statusBadge}
-                                    </Badge>
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-3 text-xs text-gray-500 pt-2 border-t border-gray-100">
-                                    <div>
-                                      <span className="text-gray-400">Predicted:</span>
-                                      <div className="font-medium text-gray-600 mt-0.5">
-                                        {new Date(pred.created_at).toLocaleDateString('en-US', { 
-                                          month: 'short', 
-                                          day: 'numeric',
-                                          hour: '2-digit',
-                                          minute: '2-digit'
-                                        })}
+                                    <div className="grid grid-cols-2 gap-3 text-xs text-gray-500 pt-2 border-t border-gray-100">
+                                      <div>
+                                        <span className="text-gray-400">Predicted:</span>
+                                        <div className="font-medium text-gray-600 mt-0.5">
+                                          {new Date(pred.created_at).toLocaleDateString('en-US', { 
+                                            month: 'short', 
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                          })}
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-400">Match Time:</span>
+                                        <div className="font-medium text-gray-600 mt-0.5">
+                                          {pred.match.match_time 
+                                            ? new Date(pred.match.match_time).toLocaleDateString('en-US', { 
+                                                month: 'short', 
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                              })
+                                            : 'TBA'}
+                                        </div>
                                       </div>
                                     </div>
-                                    <div>
-                                      <span className="text-gray-400">Match Time:</span>
-                                      <div className="font-medium text-gray-600 mt-0.5">
-                                        {pred.match.match_time 
-                                          ? new Date(pred.match.match_time).toLocaleDateString('en-US', { 
-                                              month: 'short', 
-                                              day: 'numeric',
-                                              hour: '2-digit',
-                                              minute: '2-digit'
-                                            })
-                                          : 'TBA'}
-                                      </div>
-                                    </div>
                                   </div>
-                                </div>
-                              )
-                            })
-                          )}
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                                )
+                              })
+                            )}
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {isLoadingUserData ? (
+                  {(isSessionLoading || isLoadingUserData) ? (
                     <div className="grid grid-cols-3 gap-4">
                       <div className="text-center">
                         <Skeleton className="h-8 w-8 mx-auto mb-2" />
@@ -608,11 +613,11 @@ export default function PredictorsPage() {
                         <Skeleton className="h-3 w-12 mx-auto" />
                       </div>
                     </div>
-                  ) : userPredictionDetails.length === 0 ? (
+                  ) : user && userPredictionDetails.length === 0 ? (
                     <div className="text-sm text-gray-500 text-center py-8">
                       No predictions yet. Start by selecting matches below.
                     </div>
-                  ) : (
+                  ) : user ? (
                     <div className="grid grid-cols-3 gap-4">
                       <div className="text-center">
                         <div className="text-2xl font-semibold text-gray-900">{userPredictionDetails.length}</div>
@@ -631,7 +636,7 @@ export default function PredictorsPage() {
                         <div className="text-xs text-gray-600 mt-1">Pending</div>
                       </div>
                     </div>
-                  )}
+                  ) : null}
                 </CardContent>
               </Card>
             )}
@@ -642,7 +647,7 @@ export default function PredictorsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {isLoadingMatches ? (
+                  {(isLoadingMatches || isSessionLoading || isLoadingUserData) ? (
                     // Skeleton for matches
                     Array.from({ length: 3 }).map((_, index) => (
                       <div key={index} className="group rounded-xl border border-gray-200 bg-white/80">

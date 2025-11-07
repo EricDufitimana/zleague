@@ -43,7 +43,7 @@ export async function GET(request: Request) {
       scores?.forEach((score: any) => {
         const playerId = score.player_id.toString();
         
-        if (!playerStats.has(playerId) && score.player) {
+        if (!playerStats.has(playerId) && score.player && score.team) {
           playerStats.set(playerId, {
             id: score.player_id,
             name: `${score.player.first_name} ${score.player.last_name}`,
@@ -104,7 +104,7 @@ export async function GET(request: Request) {
       scores?.forEach((score: any) => {
         const playerId = score.player_id?.toString();
         
-        if (!playerId || !score.player) return;
+        if (!playerId || !score.player || !score.team) return;
 
         if (!playerStats.has(playerId)) {
           playerStats.set(playerId, {
