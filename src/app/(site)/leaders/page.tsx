@@ -15,6 +15,8 @@ type FootballPlayer = {
   rank: number;
   name: string;
   team: string;
+  championship_id?: number;
+  championship_name?: string;
   goals: number;
   assists: number;
   shotsOnTarget: number;
@@ -31,6 +33,8 @@ type BasketballPlayer = {
   rank: number;
   name: string;
   team: string;
+  championship_id?: number;
+  championship_name?: string;
   points: number;
   rebounds: number;
   assists: number;
@@ -62,6 +66,7 @@ export default function LeadersPage() {
   const [selectedCategory, setSelectedCategory] = useState("goals")
   const [selectedGender, setSelectedGender] = useState("all")
   const [allLeaders, setAllLeaders] = useState<LeaderPlayer[]>([])
+  const [championship, setChampionship] = useState<{ id: number; name: string } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   // Reset category when sport changes
@@ -82,13 +87,16 @@ export default function LeadersPage() {
         
         if (data.success) {
           setAllLeaders(data.leaders)
+          setChampionship(data.championship || null)
         } else {
           console.error('Failed to fetch leaders:', data.error)
           setAllLeaders([])
+          setChampionship(null)
         }
       } catch (error) {
         console.error('Error fetching leaders:', error)
         setAllLeaders([])
+        setChampionship(null)
       } finally {
         setIsLoading(false)
       }
@@ -214,7 +222,14 @@ export default function LeadersPage() {
         {/* Page Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Leaderboards</h1>
-          <p className="text-gray-600">Top performers across all sports</p>
+          <div className="flex items-center gap-3">
+            <p className="text-gray-600">Top performers across all sports</p>
+            {championship && (
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                🏆 {championship.name}
+              </Badge>
+            )}
+          </div>
         </div>
 
         {/* Filters */}

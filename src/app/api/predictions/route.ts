@@ -113,13 +113,15 @@ export async function GET(request: NextRequest) {
       *,
       match:matches(
         id,
+        championship_id,
         team_a_id,
         team_b_id,
         winner_id,
         status,
         match_time,
         teamA:teams!team_a_id(name),
-        teamB:teams!team_b_id(name)
+        teamB:teams!team_b_id(name),
+        championship:championships(id, status)
       ),
       user:users(first_name, last_name, username)
     `);
@@ -150,11 +152,16 @@ export async function GET(request: NextRequest) {
         { status: 500 }
       );
     }
-
-    console.log(`✅ Successfully fetched ${predictions?.length || 0} predictions`);
-    console.log('📊 Predictions data:', predictions);
     
-    return NextResponse.json({ predictions });
+    // Filter predictions to only include those from ongoing championships
+    const filteredPredictions = predictions?.filter((pred: any) => {
+      return pred.match?.championship?.status === 'ongoing';
+    }) || [];
+
+    console.log(`✅ Successfully fetched ${filteredPredictions.length} predictions (filtered to ongoing championships)`);
+    console.log('📊 Predictions data:', filteredPredictions);
+    
+    return NextResponse.json({ predictions: filteredPredictions });
   } catch (error) {
     console.error('💥 Unexpected error in predictions GET:', error);
     console.error('💥 Error stack:', error instanceof Error ? error.stack : 'No stack trace');

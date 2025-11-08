@@ -23,7 +23,8 @@ export async function GET(request: Request) {
           player:players(first_name, last_name),
           team:teams(name, gender),
           match:matches!match_id(
-            championship:championships(status)
+            championship_id,
+            championship:championships(id, name, status)
           )
         `)
         .eq('match.championship.status', 'ongoing');
@@ -43,11 +44,18 @@ export async function GET(request: Request) {
       scores?.forEach((score: any) => {
         const playerId = score.player_id.toString();
         
+        // Only include scores from ongoing championships
+        if (!score.match?.championship || score.match.championship.status !== 'ongoing') {
+          return;
+        }
+        
         if (!playerStats.has(playerId) && score.player && score.team) {
           playerStats.set(playerId, {
             id: score.player_id,
             name: `${score.player.first_name} ${score.player.last_name}`,
             team: score.team.name.replace(/_/g, ' '),
+            championship_id: score.match?.championship_id || score.match?.championship?.id,
+            championship_name: score.match?.championship?.name || 'Unknown Championship',
             goals: 0,
             assists: 0,
             shotsOnTarget: 0,
@@ -84,7 +92,8 @@ export async function GET(request: Request) {
           player:players(first_name, last_name),
           team:teams(name, gender),
           match:matches!match_id(
-            championship:championships(status)
+            championship_id,
+            championship:championships(id, name, status)
           )
         `)
         .eq('match.championship.status', 'ongoing');
@@ -105,12 +114,19 @@ export async function GET(request: Request) {
         const playerId = score.player_id?.toString();
         
         if (!playerId || !score.player || !score.team) return;
+        
+        // Only include scores from ongoing championships
+        if (!score.match?.championship || score.match.championship.status !== 'ongoing') {
+          return;
+        }
 
         if (!playerStats.has(playerId)) {
           playerStats.set(playerId, {
             id: score.player_id,
             name: `${score.player.first_name} ${score.player.last_name}`,
             team: score.team.name.replace(/_/g, ' '),
+            championship_id: score.match?.championship_id || score.match?.championship?.id,
+            championship_name: score.match?.championship?.name || 'Unknown Championship',
             points: 0,
             rebounds: 0,
             assists: 0,
@@ -170,10 +186,19 @@ export async function GET(request: Request) {
       return baseData;
     });
 
+    // Get championship info from first leader (all should be from same ongoing championship)
+    const championshipInfo = rankedData.length > 0 && rankedData[0].championship_id 
+      ? {
+          id: rankedData[0].championship_id,
+          name: rankedData[0].championship_name || 'Unknown Championship'
+        }
+      : null;
+
     return NextResponse.json({
       success: true,
       sport,
       gender,
+      championship: championshipInfo,
       leaders: rankedData,
     });
   } catch (error) {
