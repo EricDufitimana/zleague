@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
+import { useQueryClient, useQuery, useIsMutating } from "@tanstack/react-query";
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -16,8 +16,15 @@ interface MatchScores {
   teamBId: string;
 }
 
+/**
+ * Realtime hook WITH mutation blocking - for LIVE SCORE EDITING pages
+ * This prevents realtime from interfering with optimistic updates during rapid clicks
+ */
 export function useRealtimeBasketballScores(matchId: string) {
   const queryClient = useQueryClient();
+  // Track if mutations are in progress - if so, ignore realtime updates
+  const isMutating = useIsMutating();
+  const pendingRealtimeUpdates = useRef(0);
 
   // 1️⃣ Fetch initial scores data using React Query
   const { data: scores = [], isLoading: isLoadingScores } = useQuery({
@@ -31,6 +38,8 @@ export function useRealtimeBasketballScores(matchId: string) {
       if (error) throw error;
       return data || [];
     },
+    staleTime: 1000, // Prevent excessive refetching
+    refetchOnWindowFocus: false, // Realtime handles updates
   });
 
   // 2️⃣ Fetch initial match data using React Query
@@ -54,7 +63,7 @@ export function useRealtimeBasketballScores(matchId: string) {
     },
   });
 
-  // 3️⃣ Subscribe to realtime changes and sync to React Query cache
+  // 3️⃣ Subscribe to realtime changes - but PAUSE when mutations are active
   useEffect(() => {
     const scoresChannel = supabase 
       .channel(`basketball_scores:${matchId}`)
@@ -67,29 +76,19 @@ export function useRealtimeBasketballScores(matchId: string) {
           filter: `match_id=eq.${matchId}`,
         },
         (payload) => {
-          console.log("Realtime update received", payload);
-
-          // Sync realtime updates to React Query cache
-          queryClient.setQueryData(["basketball-scores", matchId], (old: any[] = []) => {
-            if (payload.eventType === 'INSERT') {
-              return [...old, payload.new];
-            }
-            if (payload.eventType === 'UPDATE') {
-              return old.map((score) =>
-                score.player_id === payload.new.player_id &&
-                score.team_id === payload.new.team_id
-                  ? payload.new
-                  : score
-              );
-            }
-            if (payload.eventType === 'DELETE') {
-              return old.filter(
-                (score) =>
-                  !(score.player_id === payload.old.player_id &&
-                    score.team_id === payload.old.team_id)
-              );
-            }
-            return old;
+          console.log("📡 Realtime basketball scores update received", payload);
+          
+          // ❌ Don't invalidate if mutations are in progress
+          const mutationsInProgress = queryClient.isMutating() > 0;
+          if (mutationsInProgress) {
+            console.log("⏸️ Ignoring realtime update - mutations in progress");
+            pendingRealtimeUpdates.current++;
+            return;
+          }
+          
+          console.log("✅ Applying realtime update");
+          queryClient.invalidateQueries({
+            queryKey: ["basketball-scores", matchId],
           });
         }
       )
@@ -106,15 +105,19 @@ export function useRealtimeBasketballScores(matchId: string) {
           filter: `id=eq.${matchId}`
         },
         (payload) => {
-          console.log("Match update received", payload);
-
-          // Sync match updates to React Query cache
-          queryClient.setQueryData(["match-scores", matchId], () => ({
-            teamA: payload.new.team_a_score || 0,
-            teamB: payload.new.team_b_score || 0,
-            teamAId: payload.new.team_a_id?.toString() || '',
-            teamBId: payload.new.team_b_id?.toString() || '',
-          }));
+          console.log("📡 Realtime match update received", payload);
+          
+          // ❌ Don't invalidate if mutations are in progress
+          const mutationsInProgress = queryClient.isMutating() > 0;
+          if (mutationsInProgress) {
+            console.log("⏸️ Ignoring realtime update - mutations in progress");
+            return;
+          }
+          
+          console.log("✅ Applying realtime update");
+          queryClient.invalidateQueries({
+            queryKey: ["match-scores", matchId],
+          });
         }
       )
       .subscribe();
@@ -125,31 +128,30 @@ export function useRealtimeBasketballScores(matchId: string) {
     };
   }, [matchId, queryClient]);
 
-  // Helper functions for backward compatibility (now just read from cache)
-  const setScores = (updater: any) => {
-    const current = queryClient.getQueryData<any[]>(["basketball-scores", matchId]) || [];
-    const newValue = typeof updater === 'function' ? updater(current) : updater;
-    queryClient.setQueryData(["basketball-scores", matchId], newValue);
-  };
+  // 4️⃣ When mutations complete, apply any pending realtime updates
+  useEffect(() => {
+    if (isMutating === 0 && pendingRealtimeUpdates.current > 0) {
+      console.log(`✅ Mutations completed - applying ${pendingRealtimeUpdates.current} pending realtime updates`);
+      pendingRealtimeUpdates.current = 0;
+      
+      // Refetch to get latest server data
+      queryClient.invalidateQueries({
+        queryKey: ["basketball-scores", matchId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["match-scores", matchId],
+      });
+    }
+  }, [isMutating, matchId, queryClient]);
 
-  const setMatchScores = (updater: any) => {
-    const current = queryClient.getQueryData<MatchScores>(["match-scores", matchId]) || {
-      teamA: 0,
-      teamB: 0,
-      teamAId: '',
-      teamBId: '',
-    };
-    const newValue = typeof updater === 'function' ? updater(current) : updater;
-    queryClient.setQueryData(["match-scores", matchId], newValue);
-  };
+  // ❌ Removed setScores and setMatchScores - no longer needed
+  // React Query manages the cache automatically via invalidateQueries
 
   return {
     scores: scores || [],
     matchScores: matchData || { teamA: 0, teamB: 0, teamAId: '', teamBId: '' },
     teamAId: matchData?.teamAId || '',
     teamBId: matchData?.teamBId || '',
-    setScores,
-    setMatchScores,
     isLoading: isLoadingScores || isLoadingMatch,
   };
 }

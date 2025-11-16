@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -54,15 +55,10 @@ export default function LiveScorePage() {
   const router = useRouter();
   const matchId = params.matchId as string;
   
-  const [match, setMatch] = useState<Match | null>(null);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [playerStats, setPlayerStats] = useState<PlayerStats[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingPlayers, setIsLoadingPlayers] = useState(false);
-  const [isCreatingPlayers, setIsCreatingPlayers] = useState(false);
   const [showPlayerSelector, setShowPlayerSelector] = useState(false);
   const [isEndingMatch, setIsEndingMatch] = useState(false);
   const [showEndMatchDialog, setShowEndMatchDialog] = useState(false);
+  const [isCreatingPlayers, setIsCreatingPlayers] = useState(false);
   
   // History tracking for undo
   const [updateHistory, setUpdateHistory] = useState<Array<{
@@ -76,11 +72,6 @@ export default function LiveScorePage() {
   }>>([]);
   const [isUndoing, setIsUndoing] = useState(false);
   
-  // Use realtime hook for live updates (now uses React Query cache)
-  const { scores: realtimeScores, matchScores: realtimeMatchScores, teamAId, teamBId } = useRealtimeBasketballScores(matchId);
-  
-  // Use React Query mutation hook for score updates (simplified - only needs matchId)
-  const updateScoreMutation = useUpdateBasketballScore(matchId);
   const [selectedPlayers, setSelectedPlayers] = useState<{
     teamA: number[];
     teamB: number[];
@@ -89,185 +80,82 @@ export default function LiveScorePage() {
     teamB: []
   });
 
-  // Sync realtime data with local state (but skip if we have pending updates)
+  // ✅ Fetch match data with React Query
+  const { data: match, isLoading: isLoadingMatch } = useQuery({
+    queryKey: ['match', matchId],
+    queryFn: async () => {
+      const response = await fetch(`/api/matches?match_id=${matchId}`);
+      if (!response.ok) throw new Error('Failed to fetch match');
+      const data = await response.json();
+      return data.match as Match;
+    },
+    enabled: !!matchId,
+  });
+
+  // ✅ Fetch players with React Query
+  const { data: players = [], isLoading: isLoadingPlayers } = useQuery({
+    queryKey: ['players', match?.team_a_id, match?.team_b_id],
+    queryFn: async () => {
+      if (!match?.team_a_id || !match?.team_b_id) return [];
+      
+      const response = await fetch(`/api/players?team_a_id=${match.team_a_id}&team_b_id=${match.team_b_id}`);
+      if (!response.ok) {
+        console.error('Failed to fetch players');
+        return [];
+      }
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
+    },
+    enabled: !!match?.team_a_id && !!match?.team_b_id,
+  });
+
+  // ✅ Use realtime hook - this now returns React Query data
+  const { scores, matchScores, isLoading: isLoadingScores } = useRealtimeBasketballScores(matchId);
+  
+  // ✅ Use React Query mutation hook for score updates
+  const updateScoreMutation = useUpdateBasketballScore(matchId);
+
+  // ✅ Derive playerStats from scores (no local state needed)
+  const playerStats: PlayerStats[] = scores
+    .filter((score: any) => score.player_id)
+    .map((score: any) => ({
+      player_id: score.player_id,
+      points: score.points || 0,
+      rebounds: score.rebounds || 0,
+      assists: score.assists || 0,
+      three_points_made: score.three_points_made || 0,
+      three_points_attempted: score.three_points_attempted || 0
+    }));
+
+  // ✅ Update selected players when scores change (only once on mount)
   useEffect(() => {
-    if (realtimeScores && realtimeScores.length > 0) {
-      console.log('🔄 Syncing realtime scores:', realtimeScores);
-      console.log('🔄 Realtime match scores:', realtimeMatchScores);
+    if (scores.length > 0 && match && selectedPlayers.teamA.length === 0 && selectedPlayers.teamB.length === 0) {
+      const teamAPlayers = scores
+        .filter((score: any) => score.team_id === match.team_a_id && score.player_id)
+        .map((score: any) => score.player_id);
       
-      // Transform realtime scores to PlayerStats format
-      const playerStatsData = realtimeScores.filter((score: any) => score.player_id);
-      const transformedStats = playerStatsData.map((score: any) => ({
-        player_id: score.player_id,
-        points: score.points || 0,
-        rebounds: score.rebounds || 0,
-        assists: score.assists || 0,
-        three_points_made: score.three_points_made || 0,
-        three_points_attempted: score.three_points_attempted || 0
-      }));
+      const teamBPlayers = scores
+        .filter((score: any) => score.team_id === match.team_b_id && score.player_id)
+        .map((score: any) => score.player_id);
       
-      // Update player stats (React Query will handle conflicts)
-      setPlayerStats(transformedStats);
-      
-      // Update selected players based on realtime data
-      if (match) {
-        const teamAPlayers = playerStatsData
-          .filter((score: any) => score.team_id === match.team_a_id)
-          .map((score: any) => score.player_id);
-        
-        const teamBPlayers = playerStatsData
-          .filter((score: any) => score.team_id === match.team_b_id)
-          .map((score: any) => score.player_id);
-        
+      if (teamAPlayers.length > 0 || teamBPlayers.length > 0) {
         setSelectedPlayers({
           teamA: teamAPlayers,
           teamB: teamBPlayers
         });
       }
     }
-  }, [realtimeScores, match]);
-  
-  // Use realtime match scores if available, otherwise calculate from player stats
-  const teamAScore = realtimeMatchScores.teamA || playerStats
-    .filter(stat => stat.player_id && players.find(p => p.id === stat.player_id)?.team_id === match?.team_a_id)
+  }, [scores, match]); // Removed selectedPlayers from deps to prevent loops
+
+  // ✅ Calculate team scores from playerStats
+  const teamAScore = playerStats
+    .filter(stat => players.find(p => p.id === stat.player_id)?.team_id === match?.team_a_id)
     .reduce((total, stat) => total + stat.points, 0);
 
-  const teamBScore = realtimeMatchScores.teamB || playerStats
-    .filter(stat => stat.player_id && players.find(p => p.id === stat.player_id)?.team_id === match?.team_b_id)
+  const teamBScore = playerStats
+    .filter(stat => players.find(p => p.id === stat.player_id)?.team_id === match?.team_b_id)
     .reduce((total, stat) => total + stat.points, 0);
 
-  const fetchMatchData = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      
-      // Fetch match details
-      const matchResponse = await fetch(`/api/matches?match_id=${matchId}`);
-      if (matchResponse.ok) {
-        const matchData = await matchResponse.json();
-        setMatch(matchData.match);
-        
-        // Fetch players for both teams
-        if (matchData.match.team_a_id && matchData.match.team_b_id) {
-          setIsLoadingPlayers(true);
-          try {
-            console.log('🎯 Fetching players for teams:', { 
-              teamAId: matchData.match.team_a_id, 
-              teamBId: matchData.match.team_b_id 
-            });
-            
-            const response = await fetch(`/api/players?team_a_id=${matchData.match.team_a_id}&team_b_id=${matchData.match.team_b_id}`);
-            console.log('📡 Players API Response status:', response.status);
-            
-            if (response.ok) {
-              const data = await response.json();
-              console.log('👥 Players data received:', data);
-              console.log('👥 Total players:', data?.length || 0);
-              
-              // Ensure data is an array
-              const playersArray = Array.isArray(data) ? data : [];
-              setPlayers(playersArray);
-              
-              // Initialize selected players as empty first
-              setSelectedPlayers({
-                teamA: [],
-                teamB: []
-              });
-              
-              // Fetch player statistics from scores tables - this will populate selectedPlayers
-              await fetchPlayerStats(matchData.match.sport_type, matchData.match);
-            } else {
-              console.error('❌ Players API request failed with status:', response.status);
-              const errorText = await response.text();
-              console.error('❌ Players error response body:', errorText);
-              setPlayers([]);
-            }
-          } catch (playerError) {
-            console.error('💥 Error fetching players:', playerError);
-            console.error('💥 Players error details:', {
-              message: playerError instanceof Error ? playerError.message : 'Unknown error',
-              stack: playerError instanceof Error ? playerError.stack : 'No stack trace'
-            });
-            setPlayers([]);
-          } finally {
-            setIsLoadingPlayers(false);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching match data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [matchId]);
-
-  useEffect(() => {
-    if (matchId && !match) {
-      fetchMatchData();
-    }
-  }, [matchId, match, fetchMatchData]);
-
-  const fetchPlayerStats = useCallback(async (sportType: string, matchData?: any) => {
-    try {
-      let statsResponse;
-      if (sportType === 'basketball') {
-        statsResponse = await fetch(`/api/basketball-scores?match_id=${matchId}`);
-      } else if (sportType === 'football') {
-        statsResponse = await fetch(`/api/football-scores?match_id=${matchId}`);
-      }
-      
-      if (statsResponse && statsResponse.ok) {
-        const statsData = await statsResponse.json();
-        console.log('📊 Raw basketball scores data:', statsData);
-        
-        // Ensure we have a scores array
-        const scores = Array.isArray(statsData.scores) ? statsData.scores : (Array.isArray(statsData) ? statsData : []);
-        console.log('📊 Processed scores array:', scores);
-        
-        // Filter only player stats (not team stats)
-        const playerStatsData = scores.filter((score: any) => score.player_id) || [];
-        console.log('📊 Player stats data:', playerStatsData);
-        
-        // Transform to our PlayerStats format
-        const transformedStats = playerStatsData.map((score: any) => ({
-          player_id: score.player_id,
-          points: score.points || 0,
-          rebounds: score.rebounds || 0,
-          assists: score.assists || 0,
-          three_points_made: score.three_points_made || 0,
-          three_points_attempted: score.three_points_attempted || 0
-        }));
-        
-        setPlayerStats(transformedStats);
-        
-        // Update selected players based on existing scores
-        const currentMatch = matchData || match;
-        if (currentMatch) {
-          const teamAPlayers = playerStatsData
-            .filter((score: any) => score.team_id === currentMatch.team_a_id)
-            .map((score: any) => score.player_id);
-          
-          const teamBPlayers = playerStatsData
-            .filter((score: any) => score.team_id === currentMatch.team_b_id)
-            .map((score: any) => score.player_id);
-          
-          console.log('🎯 Setting selected players from existing scores:', {
-            teamAPlayers,
-            teamBPlayers,
-            matchTeamA: currentMatch.team_a_id,
-            matchTeamB: currentMatch.team_b_id,
-            playerStatsData
-          });
-          
-          setSelectedPlayers({
-            teamA: teamAPlayers,
-            teamB: teamBPlayers
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching player stats:', error);
-    }
-  }, [matchId, match]);
 
   const updatePlayerStats = async (
     playerId: string, 
@@ -443,11 +331,6 @@ export default function LiveScorePage() {
       if (playersToCreate.length > 0) {
         // Create all basketball score entries at once
         await createMultipleBasketballScores(matchId, playersToCreate);
-        
-        // Refresh player stats after creating entries
-        if (match?.sport_type) {
-          await fetchPlayerStats(match.sport_type, match);
-        }
       }
       
       setShowPlayerSelector(false);
@@ -492,6 +375,8 @@ export default function LiveScorePage() {
     // Show only selected players
     return teamPlayers.filter(player => selectedTeamPlayers.includes(player.id));
   };
+
+  const isLoading = isLoadingMatch || isLoadingPlayers || isLoadingScores;
 
   if (isLoading) {
     return (

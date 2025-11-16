@@ -101,10 +101,7 @@ export function useUpdateBasketballScore(matchId: string) {
         queryClient.setQueryData(["match-scores", matchId], context.previousMatchScores);
       }
     },
-    onSettled: () => {
-      // Invalidate queries to refetch latest data (realtime will also update it)
-      queryClient.invalidateQueries({ queryKey: ['basketball-scores', matchId] });
-      queryClient.invalidateQueries({ queryKey: ['match-scores', matchId] });
-    },
+    // ✅ Removed onSettled - we don't invalidate after each mutation
+    // Instead, realtime will handle syncing when ALL mutations complete
   });
 }
