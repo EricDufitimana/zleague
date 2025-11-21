@@ -540,10 +540,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Filter out scheduled matches that are in the past
+    let filteredMatches = matches;
+    if (status === 'scheduled' && matches) {
+      const now = new Date();
+      filteredMatches = matches.filter((match: any) => {
+        // If match_time is null, keep it (might be scheduled but time not set yet)
+        if (!match.match_time) {
+          return true;
+        }
+        // Only keep matches where match_time is in the future
+        const matchTime = new Date(match.match_time);
+        return matchTime > now;
+      });
+      console.log(`🔍 Filtered scheduled matches: ${matches.length} → ${filteredMatches.length} (removed past matches)`);
+    }
+
     // Optionally validate tournament integrity
     let validation = null;
     if (validate && championship_id && gender) {
-      const sport_type = matches?.[0]?.sport_type;
+      const sport_type = filteredMatches?.[0]?.sport_type;
       if (sport_type) {
         validation = await validateTournamentIntegrity(
           supabase,
@@ -555,7 +571,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      matches,
+      matches: filteredMatches,
       ...(validation && { integrity_check: validation })
     });
   } catch (error) {
