@@ -689,12 +689,24 @@ export default function PredictorsPage() {
                         : "You have already made predictions on all available matches."}
                     </div>
                   ) : (
-                    availableMatches.map((match) => (
-                  <div key={match.id} className="group rounded-xl border border-gray-200 bg-white/80 hover:bg-white shadow-sm hover:shadow-md transition-all">
-                    <div className="p-5">
+                    availableMatches.map((match) => {
+
+
+                      const getSportIcon = (sport: string) => {
+                        switch(sport) {
+                          case 'basketball': return '🏀';
+                          case 'football': return '⚽';
+                          case 'volleyball': return '🏐';
+                          default: return '';
+                        }
+                      };
+
+                      return (
+                  <div key={match.id} className="group relative rounded-xl border border-gray-200 bg-white/80 hover:bg-white shadow-sm hover:shadow-md transition-all">
+                    <div className="p-5 pl-6">
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-2 min-w-0">
+                                               <div className="flex items-center gap-2 min-w-0">
                             <Avatar className="h-8 w-8 border border-gray-100 shrink-0">
                               <AvatarImage src={match.homeTeam.logo} alt={match.homeTeam.name} />
                               <AvatarFallback className="bg-gray-50 text-gray-600 font-semibold text-[10px]">
@@ -719,6 +731,8 @@ export default function PredictorsPage() {
                               {match.awayTeam.name}
                             </span>
                           </div>
+                          <span className="text-sm opacity-70" title={match.sport}>{getSportIcon(match.sport)}</span>
+
                         </div>
                         <div className="text-right shrink-0">
                           <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-gray-200 bg-gray-50">
@@ -769,7 +783,9 @@ export default function PredictorsPage() {
                       </div>
                     </div>
                   </div>
-                  )))}
+                      );
+                    })
+                  )}
                   <div className="flex justify-end pt-4">
                     <Button 
                       onClick={handleSubmitPredictions} 
