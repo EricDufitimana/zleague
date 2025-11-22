@@ -18,6 +18,7 @@ interface Match {
   winner_id?: number
   team_a_score?: number
   team_b_score?: number
+  match_time?: string
   championship?: {
     id: number
     name: string
@@ -249,13 +250,18 @@ export default function ScoresPage() {
               match.status === 'live' ? 'live' as const :
               match.status === 'scheduled' ? 'not_played' as const : 'not_played' as const,
       sport: match.sport_type as "football" | "basketball" | "volleyball",
-      time: match.status === 'scheduled' ? 
+      time: match.status === 'scheduled' && match.match_time ? 
+        `${new Date(match.match_time).toLocaleDateString('en-US', { weekday: 'short' })} ${new Date(match.match_time).toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: false 
+        })}` : match.status === 'scheduled' ? 
         `${new Date(match.created_at).toLocaleDateString('en-US', { weekday: 'short' })} ${new Date(match.created_at).toLocaleTimeString('en-US', { 
           hour: '2-digit', 
           minute: '2-digit',
           hour12: false 
         })}` : undefined,
-      date: match.created_at
+      date: match.match_time || match.created_at
     }
     
     console.log('✅ Converted match result:', {
@@ -298,10 +304,10 @@ export default function ScoresPage() {
       }
     }
     
-    // Date filter
+    // Date filter - use match_time if available, otherwise created_at
     if (selectedDate !== "all") {
-      const matchDate = match.created_at
-      const matchDateStr = new Date(matchDate).toISOString().split('T')[0]
+      const dateToUse = match.match_time || match.created_at
+      const matchDateStr = new Date(dateToUse).toISOString().split('T')[0]
       if (selectedDate !== matchDateStr) {
         return false
       }
@@ -359,8 +365,9 @@ export default function ScoresPage() {
         }
       }
       
-      // Filter by date range
-      const matchDate = new Date(match.created_at)
+      // Filter by date range - use match_time if available, otherwise created_at
+      const dateToUse = match.match_time || match.created_at
+      const matchDate = new Date(dateToUse)
       const now = new Date()
       const diffDays = Math.floor((now.getTime() - matchDate.getTime()) / (1000 * 60 * 60 * 24))
       
@@ -374,7 +381,7 @@ export default function ScoresPage() {
         console.log('❌ Filtered out - date mismatch:', { 
           diffDays, 
           selectedDate, 
-          matchDate: match.created_at 
+          matchDate: dateToUse 
         })
         return false
       }
@@ -407,7 +414,9 @@ export default function ScoresPage() {
       const originalMatch = matches.find(m => m.id.toString() === match.id)
       if (!originalMatch) return acc
       
-      const weekLabel = getWeekLabel(originalMatch.created_at)
+      // Use match_time if available, otherwise fall back to created_at
+      const dateToUse = originalMatch.match_time || originalMatch.created_at
+      const weekLabel = getWeekLabel(dateToUse)
       if (!acc[weekLabel]) acc[weekLabel] = []
       acc[weekLabel].push(match)
       return acc

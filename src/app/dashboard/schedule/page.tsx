@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Trophy, Loader2, Target, Settings, CalendarDays, Play } from "lucide-react";
+import { Calendar, Trophy, Loader2, Target, Settings, CalendarDays, Play, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "react-hot-toast";
 
 interface Championship {
@@ -48,6 +49,9 @@ export default function RecordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedMatchForSchedule, setSelectedMatchForSchedule] = useState<Match | null>(null);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [selectedMatchForEdit, setSelectedMatchForEdit] = useState<Match | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [unscheduleMatch, setUnscheduleMatch] = useState(false);
   const [activeView, setActiveView] = useState<'unscheduled' | 'scheduled'>('unscheduled');
 
   // Fetch all data once
@@ -199,6 +203,92 @@ export default function RecordPage() {
     setSelectedTime(timeStr);
     setSelectedMatchForSchedule(match);
     setShowScheduleModal(true);
+  };
+
+  const handleEditMatch = (match: Match) => {
+    if (match.match_time) {
+      const matchDate = new Date(match.match_time);
+      const isoDate = matchDate.toISOString().split('T')[0];
+      const timeStr = matchDate.toTimeString().slice(0, 5);
+      
+      setSelectedDate(isoDate);
+      setSelectedTime(timeStr);
+    } else {
+      const now = new Date();
+      const isoDate = now.toISOString().split('T')[0];
+      const timeStr = now.toTimeString().slice(0, 5);
+      
+      setSelectedDate(isoDate);
+      setSelectedTime(timeStr);
+    }
+    setUnscheduleMatch(false);
+    setSelectedMatchForEdit(match);
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedMatchForEdit) {
+      toast.error('No match selected');
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      let updateData: any = {};
+      
+      if (unscheduleMatch) {
+        // Unschedule: set match_time to null and status to not_yet_scheduled
+        updateData = {
+          match_id: selectedMatchForEdit.id,
+          match_time: null,
+          status: 'not_yet_scheduled',
+        };
+      } else {
+        // Update schedule: set new date/time and keep status as scheduled
+        if (!selectedDate || !selectedTime) {
+          toast.error('Please fill in all fields');
+          setIsLoading(false);
+          return;
+        }
+        updateData = {
+          match_id: selectedMatchForEdit.id,
+          match_time: `${selectedDate}T${selectedTime}`,
+          status: 'scheduled',
+        };
+      }
+
+      const response = await fetch('/api/matches', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update match');
+      }
+
+      toast.success(unscheduleMatch ? 'Match unscheduled successfully!' : 'Match updated successfully!');
+      closeEditModal();
+      fetchInitialData(); // Refresh all data
+      
+    } catch (error) {
+      console.error('Error updating match:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to update match');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const closeEditModal = () => {
+    setSelectedDate("");
+    setSelectedTime("");
+    setUnscheduleMatch(false);
+    setShowEditModal(false);
+    setSelectedMatchForEdit(null);
   };
 
   const handleScheduleSubmit = async (e: React.FormEvent) => {
@@ -480,6 +570,15 @@ export default function RecordPage() {
                                         <div className="text-right text-xs font-semibold text-black">
                                           {match.match_time && new Date(match.match_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                                         </div>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => handleEditMatch(match)}
+                                          className="h-8 px-3 text-xs"
+                                        >
+                                          <Edit className="w-3 h-3 mr-1" />
+                                          Edit
+                                        </Button>
                                         {match.sport_type !== 'volleyball' && (
                                           <Button
                                             size="sm"
@@ -618,6 +717,82 @@ export default function RecordPage() {
                   </div>
                 ) : (
                   "Schedule Match"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Match Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Scheduled Match</DialogTitle>
+            <DialogDescription>
+              {selectedMatchForEdit && (() => {
+                const { teamAName, teamBName } = getMatchDisplayName(selectedMatchForEdit);
+                return `Update the schedule for ${teamAName} vs ${teamBName}`;
+              })()}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="unschedule"
+                checked={unscheduleMatch}
+                onCheckedChange={(checked) => {
+                  setUnscheduleMatch(checked as boolean);
+                }}
+              />
+              <Label
+                htmlFor="unschedule"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Unschedule this match
+              </Label>
+            </div>
+            {!unscheduleMatch && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-date" className="text-sm font-medium">
+                    Date
+                  </Label>
+                  <Input
+                    id="edit-date"
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    min={getCurrentDate()}
+                    required={!unscheduleMatch}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-time" className="text-sm font-medium">
+                    Time
+                  </Label>
+                  <Input
+                    id="edit-time"
+                    type="time"
+                    value={selectedTime}
+                    onChange={(e) => setSelectedTime(e.target.value)}
+                    required={!unscheduleMatch}
+                  />
+                </div>
+              </>
+            )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={closeEditModal}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading || (!unscheduleMatch && (!selectedDate || !selectedTime))}>
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="size-4 animate-spin" />
+                    {unscheduleMatch ? 'Unscheduling...' : 'Updating...'}
+                  </div>
+                ) : (
+                  unscheduleMatch ? "Unschedule Match" : "Update Match"
                 )}
               </Button>
             </DialogFooter>
