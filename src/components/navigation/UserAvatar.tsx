@@ -19,7 +19,7 @@ import { AuthDialog } from "@/components/auth/AuthDialog";
 import { Loader2 } from "lucide-react";
   
 export function UserAvatar() {
-  const { user, isAdmin, isLoading, refreshSession } = useSession();
+  const { user, userData, isAdmin, isLoading, refreshSession } = useSession();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
@@ -130,6 +130,11 @@ export function UserAvatar() {
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{displayName}</p>
+            {userData?.username && (
+              <p className="text-xs leading-none text-muted-foreground">
+                @{userData.username}
+              </p>
+            )}
             <p className="text-xs leading-none text-muted-foreground">
               {user.email}
             </p>
