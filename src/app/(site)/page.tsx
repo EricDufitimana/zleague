@@ -49,14 +49,14 @@ export default function ScoresPage() {
   const [liveMatches, setLiveMatches] = useState<Match[]>([])
   const [isUpdatingLiveMatches, setIsUpdatingLiveMatches] = useState(false)
 
-  // Fetch matches from API (only from ongoing championships)
+  // Fetch matches from API (testing championship only)
   useEffect(() => {
     const fetchMatches = async () => {
       console.log('🚀 Starting to fetch matches from server...')
       setIsLoading(true)
       try {
-        // Fetch all matches from ongoing championships
-        const response = await fetch('/api/matches?ongoing_only=true')
+        // Fetch all matches from testing championship (ID: 15)
+        const response = await fetch('/api/matches?championship_id=15')
         console.log('📡 API Response status:', response.status)
         console.log('📡 API Response ok:', response.ok)
         
@@ -128,7 +128,7 @@ export default function ScoresPage() {
       try {
         setIsUpdatingLiveMatches(true)
         console.log('🔄 Fetching live matches...')
-        const response = await fetch('/api/matches?status=live&ongoing_only=true')
+        const response = await fetch('/api/matches?status=live&championship_id=15')
         if (response.ok) {
           const data = await response.json()
           const liveMatchesData = data.matches || []

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useQueryClient, useQuery, useIsMutating } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -16,17 +16,10 @@ interface MatchScores {
   teamBId: string;
 }
 
-/**
- * Realtime hook WITH mutation blocking - for LIVE SCORE EDITING pages
- * This prevents realtime from interfering with optimistic updates during rapid clicks
- */
 export function useRealtimeBasketballScores(matchId: string) {
   const queryClient = useQueryClient();
-  // Track if mutations are in progress - if so, ignore realtime updates
-  const isMutating = useIsMutating();
-  const pendingRealtimeUpdates = useRef(0);
+  const pendingInvalidationRef = useRef<NodeJS.Timeout>();
 
-  // 1️⃣ Fetch initial scores data using React Query
   const { data: scores = [], isLoading: isLoadingScores } = useQuery({
     queryKey: ["basketball-scores", matchId],
     queryFn: async () => {
@@ -38,11 +31,11 @@ export function useRealtimeBasketballScores(matchId: string) {
       if (error) throw error;
       return data || [];
     },
-    staleTime: 1000, // Prevent excessive refetching
-    refetchOnWindowFocus: false, // Realtime handles updates
+    staleTime: 5000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
-  // 2️⃣ Fetch initial match data using React Query
   const { data: matchData, isLoading: isLoadingMatch } = useQuery({
     queryKey: ["match-scores", matchId],
     queryFn: async () => {
@@ -61,91 +54,83 @@ export function useRealtimeBasketballScores(matchId: string) {
         teamBId: data?.team_b_id?.toString() || '',
       } as MatchScores;
     },
+    staleTime: 5000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
-  // 3️⃣ Subscribe to realtime changes - but PAUSE when mutations are active
   useEffect(() => {
+    const safeInvalidate = (queryKey: string[]) => {
+      // ✅ Check queue status
+      const queueStatus = queryClient.getQueryData<{processing: boolean, lastCompleted: number}>(['queue-status', matchId]);
+      
+      if (queueStatus?.processing) {
+        console.log('🔔 [REALTIME] ⏸️  Queue is processing, delaying invalidation');
+        // Retry after queue finishes
+        pendingInvalidationRef.current = setTimeout(() => {
+          safeInvalidate(queryKey);
+        }, 1000);
+        return;
+      }
+
+      // ✅ Only invalidate if queue finished recently OR hasn't run yet
+      const timeSinceQueueFinished = Date.now() - (queueStatus?.lastCompleted || 0);
+      
+      if (timeSinceQueueFinished < 500) {
+        console.log('🔔 [REALTIME] ⏸️  Queue just finished, waiting a bit...');
+        pendingInvalidationRef.current = setTimeout(() => {
+          safeInvalidate(queryKey);
+        }, 500);
+        return;
+      }
+
+      console.log(`🔔 [REALTIME] ✅ INVALIDATING ${queryKey[0]}`);
+      queryClient.invalidateQueries({ queryKey });
+    };
+  
     const scoresChannel = supabase 
       .channel(`basketball_scores:${matchId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'basketball_scores',
-          filter: `match_id=eq.${matchId}`,
-        },
-        (payload) => {
-          console.log("📡 Realtime basketball scores update received", payload);
-          
-          // ❌ Don't invalidate if mutations are in progress
-          const mutationsInProgress = queryClient.isMutating() > 0;
-          if (mutationsInProgress) {
-            console.log("⏸️ Ignoring realtime update - mutations in progress");
-            pendingRealtimeUpdates.current++;
-            return;
-          }
-          
-          console.log("✅ Applying realtime update");
-          queryClient.invalidateQueries({
-            queryKey: ["basketball-scores", matchId],
-          });
-        }
-      )
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'basketball_scores',
+        filter: `match_id=eq.${matchId}`,
+      }, (payload) => {
+        console.log("🔔 [REALTIME] Score change detected");
+        
+        clearTimeout(pendingInvalidationRef.current);
+        
+        // ✅ Debounce and check queue status
+        pendingInvalidationRef.current = setTimeout(() => {
+          safeInvalidate(['basketball-scores', matchId]);
+        }, 1000); // Wait 1 second before invalidating
+      })
       .subscribe();
 
     const matchChannel = supabase 
       .channel(`matches:${matchId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'matches',
-          filter: `id=eq.${matchId}`
-        },
-        (payload) => {
-          console.log("📡 Realtime match update received", payload);
-          
-          // ❌ Don't invalidate if mutations are in progress
-          const mutationsInProgress = queryClient.isMutating() > 0;
-          if (mutationsInProgress) {
-            console.log("⏸️ Ignoring realtime update - mutations in progress");
-            return;
-          }
-          
-          console.log("✅ Applying realtime update");
-          queryClient.invalidateQueries({
-            queryKey: ["match-scores", matchId],
-          });
-        }
-      )
+      .on("postgres_changes", {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'matches',
+        filter: `id=eq.${matchId}`
+      }, (payload) => {
+        console.log("🔔 [REALTIME] Match change detected");
+        
+        clearTimeout(pendingInvalidationRef.current);
+        
+        pendingInvalidationRef.current = setTimeout(() => {
+          safeInvalidate(['match-scores', matchId]);
+        }, 1000);
+      })
       .subscribe();
 
     return () => {
+      clearTimeout(pendingInvalidationRef.current);
       supabase.removeChannel(scoresChannel);
       supabase.removeChannel(matchChannel);
     };
   }, [matchId, queryClient]);
-
-  // 4️⃣ When mutations complete, apply any pending realtime updates
-  useEffect(() => {
-    if (isMutating === 0 && pendingRealtimeUpdates.current > 0) {
-      console.log(`✅ Mutations completed - applying ${pendingRealtimeUpdates.current} pending realtime updates`);
-      pendingRealtimeUpdates.current = 0;
-      
-      // Refetch to get latest server data
-      queryClient.invalidateQueries({
-        queryKey: ["basketball-scores", matchId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["match-scores", matchId],
-      });
-    }
-  }, [isMutating, matchId, queryClient]);
-
-  // ❌ Removed setScores and setMatchScores - no longer needed
-  // React Query manages the cache automatically via invalidateQueries
 
   return {
     scores: scores || [],

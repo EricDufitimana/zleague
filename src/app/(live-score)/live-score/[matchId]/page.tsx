@@ -6,10 +6,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Trophy, Users, Clock, Target, CheckCircle, Loader2, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Trophy, Users, Clock, Target, CheckCircle, Loader2, RotateCcw, Wifi, WifiOff } from 'lucide-react';
 import { createMultipleBasketballScores } from '@/actions/livescore/basketball-update';
 import { useRealtimeBasketballScores } from '@/hooks/useRealtimeBasketballScores';
-import { useUpdateBasketballScore } from '@/hooks/useUpdateBasketballScore';
+import { useMutationQueue } from '@/hooks/useMutationQueue';
 
 interface Team {
   id: number;
@@ -59,6 +59,25 @@ export default function LiveScorePage() {
   const [isEndingMatch, setIsEndingMatch] = useState(false);
   const [showEndMatchDialog, setShowEndMatchDialog] = useState(false);
   const [isCreatingPlayers, setIsCreatingPlayers] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+  
+  // ✅ Track mutation queue status
+  const { isProcessing } = useMutationQueue(matchId);
+  
+  // ✅ Monitor online status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    setIsOnline(navigator.onLine);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   
   // History tracking for undo
   const [updateHistory, setUpdateHistory] = useState<Array<{
@@ -113,7 +132,8 @@ export default function LiveScorePage() {
   const { scores, matchScores, isLoading: isLoadingScores } = useRealtimeBasketballScores(matchId);
   
   // ✅ Use React Query mutation hook for score updates
-  const updateScoreMutation = useUpdateBasketballScore(matchId);
+  const { queueUpdate, getQueueLength } = useMutationQueue(matchId);
+  const queueLength = getQueueLength();
 
   // ✅ Derive playerStats from scores (no local state needed)
   const playerStats: PlayerStats[] = scores
@@ -157,77 +177,61 @@ export default function LiveScorePage() {
     .reduce((total, stat) => total + stat.points, 0);
 
 
-  const updatePlayerStats = async (
-    playerId: string, 
-    teamId: string, 
-    statType: 'points' | 'rebounds' | 'assists', 
-    value: number
-  ) => {
-    // Prepare increment values
-    const incrementStats = {
-      points: statType === 'points' ? value : 0,
-      rebounds: statType === 'rebounds' ? value : 0,
-      assists: statType === 'assists' ? value : 0,
-      three_points_made: 0,
-      three_points_attempted: 0
-    };
-
-    // Generate unique ID for this update
-    const updateId = `${Date.now()}-${playerId}-${statType}`;
+    const updatePlayerStats = async (
+      playerId: string, 
+      teamId: string, 
+      statType: 'points' | 'rebounds' | 'assists', 
+      value: number
+    ) => {
+      const incrementStats = {
+        points: statType === 'points' ? value : 0,
+        rebounds: statType === 'rebounds' ? value : 0,
+        assists: statType === 'assists' ? value : 0,
+        three_points_made: 0,
+        three_points_attempted: 0
+      };
     
-    // Find player name for better history display
-    const player = players.find(p => p.id === parseInt(playerId));
-    const playerName = player ? `${player.first_name} ${player.last_name}` : `Player ${playerId}`;
-
-    // Add to history BEFORE making changes
-    setUpdateHistory(prev => [...prev, {
-      id: updateId,
-      playerId,
-      teamId,
-      statType,
-      value,
-      timestamp: Date.now(),
-      playerName
-    }]);
-
-    // Use React Query mutation - it handles queuing, optimistic updates, and rollback automatically
-    updateScoreMutation.mutate({
-      matchId,
-      teamId,
-      playerId,
-      points: incrementStats.points,
-      rebounds: incrementStats.rebounds,
-      assists: incrementStats.assists,
-      threePointsMade: incrementStats.three_points_made,
-      threePointsAttempted: incrementStats.three_points_attempted
-    }, {
-      onError: (error) => {
+      const updateId = `${Date.now()}-${playerId}-${statType}`;
+      const player = players.find(p => p.id === parseInt(playerId));
+      const playerName = player ? `${player.first_name} ${player.last_name}` : `Player ${playerId}`;
+    
+      // Add to history for undo
+      setUpdateHistory(prev => [...prev, {
+        id: updateId,
+        playerId,
+        teamId,
+        statType,
+        value,
+        timestamp: Date.now(),
+        playerName
+      }]);
+    
+      try {
+        // ✅ Queue the update - UI updates instantly, execution is sequential
+        await queueUpdate({
+          teamId,
+          playerId,
+          points: incrementStats.points,
+          rebounds: incrementStats.rebounds,
+          assists: incrementStats.assists,
+          threePointsMade: incrementStats.three_points_made,
+          threePointsAttempted: incrementStats.three_points_attempted
+        });
+        
+        console.log('✅ Update completed successfully');
+      } catch (error) {
         console.error('❌ Error updating stats:', error);
-        // Remove from history if API fails
+        // Remove from history on error
         setUpdateHistory(prev => prev.filter(item => item.id !== updateId));
       }
-    });
-  };
-
-  const undoLastUpdate = async () => {
-    if (updateHistory.length === 0) {
-      alert('Nothing to undo!');
-      return;
-    }
-
-    if (isUndoing || updateScoreMutation.isPending) {
-      console.log('⏳ Already undoing or update in progress...');
-      return;
-    }
-
-    setIsUndoing(true);
-
-    try {
-      // Get the last update from history
+    };
+    
+    const undoLastUpdate = async () => {
+      if (updateHistory.length === 0 || isUndoing) return;
+    
+      setIsUndoing(true);
       const lastUpdate = updateHistory[updateHistory.length - 1];
-      console.log('🔙 Undoing update:', lastUpdate);
-
-      // Prepare NEGATIVE increment values (to subtract)
+    
       const incrementStats = {
         points: lastUpdate.statType === 'points' ? -lastUpdate.value : 0,
         rebounds: lastUpdate.statType === 'rebounds' ? -lastUpdate.value : 0,
@@ -235,35 +239,25 @@ export default function LiveScorePage() {
         three_points_made: 0,
         three_points_attempted: 0
       };
-
-      // Use React Query mutation for undo - it handles queuing and optimistic updates
-      updateScoreMutation.mutate({
-        matchId,
-        teamId: lastUpdate.teamId,
-        playerId: lastUpdate.playerId,
-        points: incrementStats.points,
-        rebounds: incrementStats.rebounds,
-        assists: incrementStats.assists,
-        threePointsMade: incrementStats.three_points_made,
-        threePointsAttempted: incrementStats.three_points_attempted
-      }, {
-        onSuccess: () => {
-          // Remove from history on success
-          setUpdateHistory(prev => prev.slice(0, -1));
-          console.log('✅ Undo successful');
-          setIsUndoing(false);
-        },
-        onError: (error) => {
-          console.error('❌ Error undoing update:', error);
-          setIsUndoing(false);
-        }
-      });
-
-    } catch (error) {
-      console.error('❌ Error in undo:', error);
-      setIsUndoing(false);
-    }
-  };
+    
+      try {
+        await queueUpdate({
+          teamId: lastUpdate.teamId,
+          playerId: lastUpdate.playerId,
+          points: incrementStats.points,
+          rebounds: incrementStats.rebounds,
+          assists: incrementStats.assists,
+          threePointsMade: incrementStats.three_points_made,
+          threePointsAttempted: incrementStats.three_points_attempted
+        });
+    
+        setUpdateHistory(prev => prev.slice(0, -1));
+        setIsUndoing(false);
+      } catch (error) {
+        console.error('❌ Error undoing update:', error);
+        setIsUndoing(false);
+      }
+    };
 
   const getTeamPlayers = (teamId: number) => {
     return players.filter(player => player.team_id === teamId);
@@ -429,24 +423,41 @@ export default function LiveScorePage() {
               <Badge variant="outline" className="capitalize">{match.sport_type}</Badge>
               <Badge variant="secondary" className="capitalize">{match.gender}</Badge>
               
-              {/* Undo Button */}
+              {/* ✅ Offline/Online Status */}
+              {!isOnline && (
+                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300">
+                  <WifiOff className="w-3 h-3 mr-1" />
+                  Offline
+                </Badge>
+              )}
+              
+              {/* ✅ Queue Status */}
+              {queueLength > 0 && (
+                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
+                  ⏳ {queueLength} queued
+                </Badge>
+              )}
+              
+              {isOnline && queueLength === 0 && (
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                  <Wifi className="w-3 h-3 mr-1" />
+                  Synced
+                </Badge>
+              )}
+              
               <Button
                 onClick={undoLastUpdate}
-                disabled={isUndoing || updateScoreMutation.isPending || updateHistory.length === 0}
+                disabled={isUndoing || updateHistory.length === 0}  // Only disable if undoing or no history
                 variant="outline"
                 size="sm"
-                className="ml-4"
               >
-                {isUndoing || updateScoreMutation.isPending ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    
-                  </div>
+                {isUndoing ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <RotateCcw className="w-4 h-4" />
-                    Undo Last ({updateHistory.length})
-                  </div>
+                  <>
+                    <RotateCcw className="w-4 h-4 mr-1" />
+                    Undo ({updateHistory.length})
+                  </>
                 )}
               </Button>
               
@@ -455,13 +466,12 @@ export default function LiveScorePage() {
                 disabled={isEndingMatch}
                 variant="destructive"
                 size="sm"
-                className="ml-4"
               >
                 {isEndingMatch ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Ending Match...
-                  </div>
+                  </>
                 ) : (
                   'End Match'
                 )}
