@@ -28,6 +28,7 @@ type TopPredictor = {
   name: string
   accuracy: number
   predictions: number
+  correct: number
   avatar: string
 }
 
@@ -185,9 +186,21 @@ export default function PredictorsPage() {
             name: stats.name,
             accuracy: Math.round((stats.correct / stats.total) * 100),
             predictions: stats.total,
+            correct: stats.correct,
             avatar: ''
           }))
-          .sort((a, b) => b.accuracy - a.accuracy)
+          .sort((a, b) => {
+            // Primary sort: Number of correct predictions (more wins = higher rank)
+            if (b.correct !== a.correct) {
+              return b.correct - a.correct;
+            }
+            // Secondary sort: Accuracy percentage (if same number of wins)
+            if (b.accuracy !== a.accuracy) {
+              return b.accuracy - a.accuracy;
+            }
+            // Tertiary sort: Total predictions (if same wins and accuracy, more predictions = more experience)
+            return b.predictions - a.predictions;
+          })
 
         setTopPredictors(topPredictorsList)
         setIsLoadingPredictors(false)
@@ -382,8 +395,8 @@ export default function PredictorsPage() {
                   </div>
                 ) : (
                   currentPredictors.map((predictor, index) => {
-                  // Calculate correct and wrong predictions
-                  const correct = Math.round((predictor.accuracy / 100) * predictor.predictions)
+                  // Use correct count directly from predictor data
+                  const correct = predictor.correct
                   const wrong = predictor.predictions - correct
                   const globalIndex = startIndex + index
                   
