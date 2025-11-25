@@ -23,17 +23,20 @@ export function useRealtimeBasketballScores(matchId: string) {
   const { data: scores = [], isLoading: isLoadingScores } = useQuery({
     queryKey: ["basketball-scores", matchId],
     queryFn: async () => {
+      console.log('🔍 [FETCH] Fetching scores from database...');
       const { data, error } = await supabase
         .from("basketball_scores")
         .select('*')
         .eq('match_id', matchId);
       
       if (error) throw error;
+      console.log('🔍 [FETCH] Fetched', data?.length || 0, 'scores');
       return data || [];
     },
-    staleTime: 5000,
+    staleTime: 10000, // ✅ Increased to 10 seconds
     refetchOnWindowFocus: false,
     refetchOnMount: false,
+    refetchOnReconnect: false, // ✅ Don't auto-refetch on reconnect
   });
 
   const { data: matchData, isLoading: isLoadingMatch } = useQuery({
@@ -54,18 +57,26 @@ export function useRealtimeBasketballScores(matchId: string) {
         teamBId: data?.team_b_id?.toString() || '',
       } as MatchScores;
     },
-    staleTime: 5000,
+    staleTime: 10000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   useEffect(() => {
     const safeInvalidate = (queryKey: string[]) => {
-      // ✅ Check queue status
-      const queueStatus = queryClient.getQueryData<{processing: boolean, lastCompleted: number}>(['queue-status', matchId]);
+      // ✅ Check queue status with blockRealtime flag
+      const queueStatus = queryClient.getQueryData<{
+        processing: boolean;
+        lastCompleted: number;
+        blockRealtime: boolean;
+        queueLength: number;
+      }>(['queue-status', matchId]);
       
-      if (queueStatus?.processing) {
-        console.log('🔔 [REALTIME] ⏸️  Queue is processing, delaying invalidation');
+      // ✅ CRITICAL: Check if realtime is blocked by queue
+      if (queueStatus?.blockRealtime) {
+        console.log(`🔔 [REALTIME] 🚫 BLOCKED by queue (${queueStatus.queueLength} items processing)`);
+        
         // Retry after queue finishes
         pendingInvalidationRef.current = setTimeout(() => {
           safeInvalidate(queryKey);
@@ -73,18 +84,18 @@ export function useRealtimeBasketballScores(matchId: string) {
         return;
       }
 
-      // ✅ Only invalidate if queue finished recently OR hasn't run yet
+      // ✅ Check if queue just finished
       const timeSinceQueueFinished = Date.now() - (queueStatus?.lastCompleted || 0);
       
-      if (timeSinceQueueFinished < 500) {
-        console.log('🔔 [REALTIME] ⏸️  Queue just finished, waiting a bit...');
+      if (queueStatus?.lastCompleted && timeSinceQueueFinished < 1000) {
+        console.log(`🔔 [REALTIME] ⏸️  Queue just finished (${timeSinceQueueFinished}ms ago), waiting...`);
         pendingInvalidationRef.current = setTimeout(() => {
           safeInvalidate(queryKey);
-        }, 500);
+        }, 1000 - timeSinceQueueFinished);
         return;
       }
 
-      console.log(`🔔 [REALTIME] ✅ INVALIDATING ${queryKey[0]}`);
+      console.log(`🔔 [REALTIME] ✅ SAFE TO INVALIDATE ${queryKey[0]}`);
       queryClient.invalidateQueries({ queryKey });
     };
   
@@ -96,14 +107,14 @@ export function useRealtimeBasketballScores(matchId: string) {
         table: 'basketball_scores',
         filter: `match_id=eq.${matchId}`,
       }, (payload) => {
-        console.log("🔔 [REALTIME] Score change detected");
+        console.log("🔔 [REALTIME] Score change detected from database");
         
         clearTimeout(pendingInvalidationRef.current);
         
-        // ✅ Debounce and check queue status
+        // ✅ Longer debounce to let queue finish
         pendingInvalidationRef.current = setTimeout(() => {
           safeInvalidate(['basketball-scores', matchId]);
-        }, 1000); // Wait 1 second before invalidating
+        }, 1500);
       })
       .subscribe();
 
@@ -115,16 +126,15 @@ export function useRealtimeBasketballScores(matchId: string) {
         table: 'matches',
         filter: `id=eq.${matchId}`
       }, (payload) => {
-        console.log("🔔 [REALTIME] Match change detected");
+        console.log("🔔 [REALTIME] Match change detected from database");
         
         clearTimeout(pendingInvalidationRef.current);
         
         pendingInvalidationRef.current = setTimeout(() => {
           safeInvalidate(['match-scores', matchId]);
-        }, 1000);
+        }, 1500);
       })
       .subscribe();
-
     return () => {
       clearTimeout(pendingInvalidationRef.current);
       supabase.removeChannel(scoresChannel);

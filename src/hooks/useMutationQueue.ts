@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { updateBasketballScore } from '@/actions/livescore/basketball-update';
 
@@ -15,7 +15,7 @@ interface QueuedUpdate {
   threePointsMade: number;
   threePointsAttempted: number;
   timestamp: number;
-  retryCount: number; // ✅ Track retries
+  retryCount: number;
   resolve: (value: any) => void;
   reject: (error: any) => void;
 }
@@ -38,13 +38,28 @@ export function useMutationQueue(matchId: string) {
   const isProcessingRef = useRef(false);
   const versionRef = useRef<number>(Date.now());
   const isOnlineRef = useRef(true);
+  
+  // ✅ REACTIVE state for queue length (triggers re-renders)
+  const [queueLength, setQueueLength] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  // ✅ Monitor online/offline status
+  // ✅ Update queue length state whenever queue changes
+  const updateQueueLength = useCallback(() => {
+    const newLength = queueRef.current.length;
+    console.log(`📊 [QUEUE] Length updated: ${newLength}`);
+    setQueueLength(newLength);
+    setIsProcessing(newLength > 0);
+  }, []);
+
   useEffect(() => {
     const handleOnline = () => {
       console.log('🌐 [QUEUE] Back online - resuming queue processing');
       isOnlineRef.current = true;
-      processQueue(); // Resume processing when back online
+      
+      if (queueRef.current.length > 0) {
+        console.log(`🌐 [QUEUE] Processing ${queueRef.current.length} queued items`);
+        processQueue();
+      }
     };
     
     const handleOffline = () => {
@@ -68,16 +83,23 @@ export function useMutationQueue(matchId: string) {
       return;
     }
 
-    // ✅ Don't process if offline
     if (!isOnlineRef.current) {
       console.log('📡 [QUEUE] Offline - pausing until connection restored');
       return;
     }
 
     isProcessingRef.current = true;
+    setIsProcessing(true);
     const update = queueRef.current[0];
 
-    console.log(`🔵 [QUEUE] Processing ${queueRef.current.length} items (Retry: ${update.retryCount})`);
+    console.log(`🔵 [QUEUE] Processing item for player ${update.playerId} (${queueRef.current.length} in queue)`);
+
+    // ✅ Mark queue as actively processing
+    queryClient.setQueryData(['queue-status', matchId], { 
+      processing: true, 
+      queueLength: queueRef.current.length,
+      blockRealtime: true, // ✅ Block realtime invalidation
+    });
 
     try {
       const result = await updateBasketballScore(
@@ -98,13 +120,13 @@ export function useMutationQueue(matchId: string) {
       console.log(`✅ [QUEUE] Success for player ${update.playerId}`);
       update.resolve(result.data);
       
-      // ✅ Only remove from queue on SUCCESS
+      // ✅ Remove from queue on success
       queueRef.current.shift();
+      updateQueueLength(); // ✅ Trigger UI update
       
     } catch (error: any) {
       console.error(`❌ [QUEUE] Error:`, error?.message);
 
-      // ✅ Check if it's a network/connection error
       const isNetworkError = 
         error?.message?.includes('fetch') ||
         error?.message?.includes('network') ||
@@ -113,42 +135,45 @@ export function useMutationQueue(matchId: string) {
         !navigator.onLine;
 
       if (isNetworkError) {
-        // ✅ Network error - keep in queue and retry
         console.log(`🔄 [QUEUE] Network error - will retry (attempt ${update.retryCount + 1})`);
         update.retryCount++;
         
-        // ✅ Max 10 retries to prevent infinite loops
         if (update.retryCount > 10) {
-          console.error(`❌ [QUEUE] Max retries exceeded, removing from queue`);
+          console.error(`❌ [QUEUE] Max retries exceeded`);
           update.reject(new Error('Max retries exceeded'));
           queueRef.current.shift();
+          updateQueueLength();
         }
-        // Otherwise keep in queue for retry
-        
       } else {
-        // ✅ Business logic error - remove from queue
         console.error(`❌ [QUEUE] Non-network error, removing from queue`);
         update.reject(error);
         queueRef.current.shift();
+        updateQueueLength();
       }
     } finally {
       isProcessingRef.current = false;
 
-      // ✅ Continue processing if online and queue not empty
       if (queueRef.current.length > 0 && isOnlineRef.current) {
         console.log(`🔄 [QUEUE] ${queueRef.current.length} items remaining, continuing...`);
-        setTimeout(() => processQueue(), 100);
+        setTimeout(() => processQueue(), 150); // ✅ Small delay between updates
       } else if (queueRef.current.length === 0) {
-        console.log('🎉 [QUEUE] All processed!');
-        queryClient.setQueryData(['queue-status', matchId], { 
-          processing: false, 
-          lastCompleted: Date.now() 
-        });
+        console.log('🎉 [QUEUE] All processed! Safe to invalidate now.');
+        setIsProcessing(false);
+        
+        // ✅ Allow realtime to invalidate AFTER a delay
+        setTimeout(() => {
+          queryClient.setQueryData(['queue-status', matchId], { 
+            processing: false, 
+            lastCompleted: Date.now(),
+            blockRealtime: false, // ✅ Unblock realtime
+          });
+        }, 500); // Wait 500ms before allowing realtime refresh
       } else {
         console.log('📡 [QUEUE] Paused - waiting for connection');
+        setIsProcessing(false);
       }
     }
-  }, [matchId, queryClient]);
+  }, [matchId, queryClient, updateQueueLength]);
 
   const queueUpdate = useCallback((params: {
     teamId: string;
@@ -165,16 +190,19 @@ export function useMutationQueue(matchId: string) {
         matchId,
         ...params,
         timestamp: Date.now(),
-        retryCount: 0, // ✅ Initialize retry counter
+        retryCount: 0,
         resolve,
         reject,
       };
 
       queueRef.current.push(update);
+      updateQueueLength(); // ✅ Trigger UI update immediately
       
+      // ✅ Block realtime while queue is active
       queryClient.setQueryData(['queue-status', matchId], { 
         processing: true, 
-        queueLength: queueRef.current.length 
+        queueLength: queueRef.current.length,
+        blockRealtime: true,
       });
 
       console.log(`➕ [QUEUE] Added update, queue: ${queueRef.current.length}, online: ${isOnlineRef.current}`);
@@ -182,7 +210,7 @@ export function useMutationQueue(matchId: string) {
       versionRef.current = Date.now();
       const currentVersion = versionRef.current;
 
-      // ✅ Optimistic update (happens regardless of online status)
+      // ✅ Optimistic update
       queryClient.setQueryData<PlayerScore[]>(
         ["basketball-scores", matchId], 
         (old = []) => {
@@ -222,27 +250,17 @@ export function useMutationQueue(matchId: string) {
         }
       );
 
-      // ✅ Only try to process if online
       if (isOnlineRef.current) {
         processQueue();
       } else {
         console.log('📡 [QUEUE] Offline - update queued for later');
       }
     });
-  }, [matchId, queryClient, processQueue]);
-
-  const getQueueLength = useCallback(() => {
-    return queueRef.current.length;
-  }, []);
-
-  const getLatestVersion = useCallback(() => {
-    return versionRef.current;
-  }, []);
+  }, [matchId, queryClient, processQueue, updateQueueLength]);
 
   return {
     queueUpdate,
-    getQueueLength,
-    getLatestVersion,
-    isProcessing: isProcessingRef.current,
+    queueLength, // ✅ Return reactive state
+    isProcessing, // ✅ Return reactive state
   };
 }

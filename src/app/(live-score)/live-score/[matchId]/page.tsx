@@ -62,7 +62,6 @@ export default function LiveScorePage() {
   const [isOnline, setIsOnline] = useState(true);
   
   // ✅ Track mutation queue status
-  const { isProcessing } = useMutationQueue(matchId);
   
   // ✅ Monitor online status
   useEffect(() => {
@@ -132,8 +131,7 @@ export default function LiveScorePage() {
   const { scores, matchScores, isLoading: isLoadingScores } = useRealtimeBasketballScores(matchId);
   
   // ✅ Use React Query mutation hook for score updates
-  const { queueUpdate, getQueueLength } = useMutationQueue(matchId);
-  const queueLength = getQueueLength();
+  const { queueUpdate, queueLength, isProcessing } = useMutationQueue(matchId);
 
   // ✅ Derive playerStats from scores (no local state needed)
   const playerStats: PlayerStats[] = scores
