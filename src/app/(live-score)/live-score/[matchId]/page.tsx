@@ -83,7 +83,7 @@ export default function LiveScorePage() {
     id: string;
     playerId: string;
     teamId: string;
-    statType: 'points' | 'rebounds' | 'assists';
+    statType: 'points' | 'rebounds' | 'assists' | 'three_points_attempted' | 'three_points_made';
     value: number;
     timestamp: number;
     playerName?: string;
@@ -178,15 +178,15 @@ export default function LiveScorePage() {
     const updatePlayerStats = async (
       playerId: string, 
       teamId: string, 
-      statType: 'points' | 'rebounds' | 'assists', 
+      statType: 'points' | 'rebounds' | 'assists' | 'three_points_attempted' | 'three_points_made', 
       value: number
     ) => {
       const incrementStats = {
         points: statType === 'points' ? value : 0,
         rebounds: statType === 'rebounds' ? value : 0,
         assists: statType === 'assists' ? value : 0,
-        three_points_made: 0,
-        three_points_attempted: 0
+        three_points_made: statType === 'three_points_made' ? value : 0,
+        three_points_attempted: statType === 'three_points_attempted' ? value : 0
       };
     
       const updateId = `${Date.now()}-${playerId}-${statType}`;
@@ -234,8 +234,8 @@ export default function LiveScorePage() {
         points: lastUpdate.statType === 'points' ? -lastUpdate.value : 0,
         rebounds: lastUpdate.statType === 'rebounds' ? -lastUpdate.value : 0,
         assists: lastUpdate.statType === 'assists' ? -lastUpdate.value : 0,
-        three_points_made: 0,
-        three_points_attempted: 0
+        three_points_made: lastUpdate.statType === 'three_points_made' ? -lastUpdate.value : 0,
+        three_points_attempted: lastUpdate.statType === 'three_points_attempted' ? -lastUpdate.value : 0
       };
     
       try {
@@ -568,6 +568,22 @@ export default function LiveScorePage() {
                             >
                               A+1
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'three_points_attempted', 1)}
+                              className="h-8 w-12 text-xs"
+                            >
+                              +3A
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'three_points_made', 1)}
+                              className="h-8 w-12 text-xs"
+                            >
+                              +3M
+                            </Button>
                           </div>
                         </div>
                       ))}
@@ -626,6 +642,22 @@ export default function LiveScorePage() {
                               className="h-8 w-12 text-xs"
                             >
                               A+1
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'three_points_attempted', 1)}
+                              className="h-8 w-12 text-xs"
+                            >
+                              +3A
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'three_points_made', 1)}
+                              className="h-8 w-12 text-xs"
+                            >
+                              +3M
                             </Button>
                           </div>
                         </div>

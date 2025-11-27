@@ -16,8 +16,6 @@ interface QueuedUpdate {
   threePointsAttempted: number;
   timestamp: number;
   retryCount: number;
-  resolve: (value: any) => void;
-  reject: (error: any) => void;
 }
 
 interface PlayerScore {
@@ -32,24 +30,133 @@ interface PlayerScore {
   __optimistic_version?: number;
 }
 
+// ✅ localStorage key for persisting queue
+const QUEUE_STORAGE_KEY = 'basketball-mutation-queue';
+
+// ✅ Helper functions for localStorage persistence
+function saveQueueToStorage(matchId: string, queue: QueuedUpdate[]) {
+  try {
+    const allQueues = JSON.parse(localStorage.getItem(QUEUE_STORAGE_KEY) || '{}');
+    allQueues[matchId] = queue;
+    localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(allQueues));
+    console.log(`💾 [QUEUE] Saved ${queue.length} items to localStorage`);
+  } catch (error) {
+    console.error('❌ [QUEUE] Failed to save to localStorage:', error);
+  }
+}
+
+function loadQueueFromStorage(matchId: string): QueuedUpdate[] {
+  try {
+    const allQueues = JSON.parse(localStorage.getItem(QUEUE_STORAGE_KEY) || '{}');
+    const queue = allQueues[matchId] || [];
+    console.log(`💾 [QUEUE] Loaded ${queue.length} items from localStorage`);
+    return queue;
+  } catch (error) {
+    console.error('❌ [QUEUE] Failed to load from localStorage:', error);
+    return [];
+  }
+}
+
+function clearQueueFromStorage(matchId: string) {
+  try {
+    const allQueues = JSON.parse(localStorage.getItem(QUEUE_STORAGE_KEY) || '{}');
+    delete allQueues[matchId];
+    localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(allQueues));
+    console.log('💾 [QUEUE] Cleared from localStorage');
+  } catch (error) {
+    console.error('❌ [QUEUE] Failed to clear from localStorage:', error);
+  }
+}
+
 export function useMutationQueue(matchId: string) {
   const queryClient = useQueryClient();
   const queueRef = useRef<QueuedUpdate[]>([]);
   const isProcessingRef = useRef(false);
   const versionRef = useRef<number>(Date.now());
   const isOnlineRef = useRef(true);
+  const hasRestoredRef = useRef(false); // ✅ Track if we've restored from storage
   
-  // ✅ REACTIVE state for queue length (triggers re-renders)
   const [queueLength, setQueueLength] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // ✅ Update queue length state whenever queue changes
   const updateQueueLength = useCallback(() => {
     const newLength = queueRef.current.length;
     console.log(`📊 [QUEUE] Length updated: ${newLength}`);
     setQueueLength(newLength);
     setIsProcessing(newLength > 0);
-  }, []);
+    
+    // ✅ Save to localStorage whenever queue changes
+    saveQueueToStorage(matchId, queueRef.current);
+  }, [matchId]);
+
+  // ✅ RESTORE queue from localStorage on mount
+  useEffect(() => {
+    if (hasRestoredRef.current) return;
+    hasRestoredRef.current = true;
+
+    console.log('🔄 [QUEUE] Checking localStorage for persisted queue...');
+    const savedQueue = loadQueueFromStorage(matchId);
+    
+    if (savedQueue.length > 0) {
+      console.log(`🔄 [QUEUE] Restoring ${savedQueue.length} items from localStorage`);
+      queueRef.current = savedQueue;
+      setQueueLength(savedQueue.length);
+      setIsProcessing(true);
+      
+      // ✅ Restore optimistic updates to React Query cache
+      savedQueue.forEach(update => {
+        versionRef.current = update.timestamp;
+        const currentVersion = versionRef.current;
+
+        queryClient.setQueryData<PlayerScore[]>(
+          ["basketball-scores", matchId], 
+          (old = []) => {
+            const existingIndex = old.findIndex(
+              score => score.player_id === parseInt(update.playerId) && 
+                       score.team_id === parseInt(update.teamId)
+            );
+
+            if (existingIndex >= 0) {
+              const updated = [...old];
+              updated[existingIndex] = {
+                ...updated[existingIndex],
+                points: updated[existingIndex].points + update.points,
+                rebounds: updated[existingIndex].rebounds + update.rebounds,
+                assists: updated[existingIndex].assists + update.assists,
+                three_points_made: updated[existingIndex].three_points_made + update.threePointsMade,
+                three_points_attempted: updated[existingIndex].three_points_attempted + update.threePointsAttempted,
+                __optimistic_version: currentVersion,
+              };
+              return updated;
+            } else {
+              return [
+                ...old,
+                {
+                  player_id: parseInt(update.playerId),
+                  team_id: parseInt(update.teamId),
+                  match_id: parseInt(matchId),
+                  points: update.points,
+                  rebounds: update.rebounds,
+                  assists: update.assists,
+                  three_points_made: update.threePointsMade,
+                  three_points_attempted: update.threePointsAttempted,
+                  __optimistic_version: currentVersion,
+                },
+              ];
+            }
+          }
+        );
+      });
+
+      // ✅ Start processing if online
+      if (navigator.onLine) {
+        console.log('🔄 [QUEUE] Online - starting to process restored queue');
+        setTimeout(() => processQueue(), 100);
+      } else {
+        console.log('🔄 [QUEUE] Offline - queue restored but waiting for connection');
+      }
+    }
+  }, [matchId, queryClient]);
 
   useEffect(() => {
     const handleOnline = () => {
@@ -94,11 +201,10 @@ export function useMutationQueue(matchId: string) {
 
     console.log(`🔵 [QUEUE] Processing item for player ${update.playerId} (${queueRef.current.length} in queue)`);
 
-    // ✅ Mark queue as actively processing
     queryClient.setQueryData(['queue-status', matchId], { 
       processing: true, 
       queueLength: queueRef.current.length,
-      blockRealtime: true, // ✅ Block realtime invalidation
+      blockRealtime: true,
     });
 
     try {
@@ -118,11 +224,10 @@ export function useMutationQueue(matchId: string) {
       }
 
       console.log(`✅ [QUEUE] Success for player ${update.playerId}`);
-      update.resolve(result.data);
       
       // ✅ Remove from queue on success
       queueRef.current.shift();
-      updateQueueLength(); // ✅ Trigger UI update
+      updateQueueLength(); // ✅ This saves to localStorage
       
     } catch (error: any) {
       console.error(`❌ [QUEUE] Error:`, error?.message);
@@ -140,13 +245,14 @@ export function useMutationQueue(matchId: string) {
         
         if (update.retryCount > 10) {
           console.error(`❌ [QUEUE] Max retries exceeded`);
-          update.reject(new Error('Max retries exceeded'));
           queueRef.current.shift();
           updateQueueLength();
+        } else {
+          // ✅ Update retry count in localStorage
+          saveQueueToStorage(matchId, queueRef.current);
         }
       } else {
         console.error(`❌ [QUEUE] Non-network error, removing from queue`);
-        update.reject(error);
         queueRef.current.shift();
         updateQueueLength();
       }
@@ -155,19 +261,21 @@ export function useMutationQueue(matchId: string) {
 
       if (queueRef.current.length > 0 && isOnlineRef.current) {
         console.log(`🔄 [QUEUE] ${queueRef.current.length} items remaining, continuing...`);
-        setTimeout(() => processQueue(), 150); // ✅ Small delay between updates
+        setTimeout(() => processQueue(), 150);
       } else if (queueRef.current.length === 0) {
-        console.log('🎉 [QUEUE] All processed! Safe to invalidate now.');
+        console.log('🎉 [QUEUE] All processed!');
         setIsProcessing(false);
         
-        // ✅ Allow realtime to invalidate AFTER a delay
+        // ✅ Clear from localStorage when queue is empty
+        clearQueueFromStorage(matchId);
+        
         setTimeout(() => {
           queryClient.setQueryData(['queue-status', matchId], { 
             processing: false, 
             lastCompleted: Date.now(),
-            blockRealtime: false, // ✅ Unblock realtime
+            blockRealtime: false,
           });
-        }, 500); // Wait 500ms before allowing realtime refresh
+        }, 500);
       } else {
         console.log('📡 [QUEUE] Paused - waiting for connection');
         setIsProcessing(false);
@@ -191,14 +299,13 @@ export function useMutationQueue(matchId: string) {
         ...params,
         timestamp: Date.now(),
         retryCount: 0,
-        resolve,
-        reject,
+        // Note: resolve/reject functions can't be serialized to localStorage
+        // We'll handle this differently
       };
 
       queueRef.current.push(update);
-      updateQueueLength(); // ✅ Trigger UI update immediately
+      updateQueueLength(); // ✅ Saves to localStorage
       
-      // ✅ Block realtime while queue is active
       queryClient.setQueryData(['queue-status', matchId], { 
         processing: true, 
         queueLength: queueRef.current.length,
@@ -210,7 +317,6 @@ export function useMutationQueue(matchId: string) {
       versionRef.current = Date.now();
       const currentVersion = versionRef.current;
 
-      // ✅ Optimistic update
       queryClient.setQueryData<PlayerScore[]>(
         ["basketball-scores", matchId], 
         (old = []) => {
@@ -255,12 +361,15 @@ export function useMutationQueue(matchId: string) {
       } else {
         console.log('📡 [QUEUE] Offline - update queued for later');
       }
+
+      // ✅ Always resolve immediately since we can't persist promise callbacks
+      resolve({ queued: true });
     });
   }, [matchId, queryClient, processQueue, updateQueueLength]);
 
   return {
     queueUpdate,
-    queueLength, // ✅ Return reactive state
-    isProcessing, // ✅ Return reactive state
+    queueLength,
+    isProcessing,
   };
 }
