@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { createClient } from '@supabase/supabase-js';
 
@@ -18,22 +18,27 @@ interface MatchScores {
 
 export function useRealtimeBasketballScores(matchId: string) {
   const queryClient = useQueryClient();
+  const pendingInvalidationRef = useRef<NodeJS.Timeout>();
 
-  // 1️⃣ Fetch initial scores data using React Query
   const { data: scores = [], isLoading: isLoadingScores } = useQuery({
     queryKey: ["basketball-scores", matchId],
     queryFn: async () => {
+      console.log('🔍 [FETCH] Fetching scores from database...');
       const { data, error } = await supabase
         .from("basketball_scores")
         .select('*')
         .eq('match_id', matchId);
       
       if (error) throw error;
+      console.log('🔍 [FETCH] Fetched', data?.length || 0, 'scores');
       return data || [];
     },
+    staleTime: 10000, // ✅ Increased to 10 seconds
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false, // ✅ Don't auto-refetch on reconnect
   });
 
-  // 2️⃣ Fetch initial match data using React Query
   const { data: matchData, isLoading: isLoadingMatch } = useQuery({
     queryKey: ["match-scores", matchId],
     queryFn: async () => {
@@ -52,104 +57,96 @@ export function useRealtimeBasketballScores(matchId: string) {
         teamBId: data?.team_b_id?.toString() || '',
       } as MatchScores;
     },
+    staleTime: 10000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
-  // 3️⃣ Subscribe to realtime changes and sync to React Query cache
   useEffect(() => {
+    const safeInvalidate = (queryKey: string[]) => {
+      // ✅ Check queue status with blockRealtime flag
+      const queueStatus = queryClient.getQueryData<{
+        processing: boolean;
+        lastCompleted: number;
+        blockRealtime: boolean;
+        queueLength: number;
+      }>(['queue-status', matchId]);
+      
+      // ✅ CRITICAL: Check if realtime is blocked by queue
+      if (queueStatus?.blockRealtime) {
+        console.log(`🔔 [REALTIME] 🚫 BLOCKED by queue (${queueStatus.queueLength} items processing)`);
+        
+        // Retry after queue finishes
+        pendingInvalidationRef.current = setTimeout(() => {
+          safeInvalidate(queryKey);
+        }, 1000);
+        return;
+      }
+
+      // ✅ Check if queue just finished
+      const timeSinceQueueFinished = Date.now() - (queueStatus?.lastCompleted || 0);
+      
+      if (queueStatus?.lastCompleted && timeSinceQueueFinished < 1000) {
+        console.log(`🔔 [REALTIME] ⏸️  Queue just finished (${timeSinceQueueFinished}ms ago), waiting...`);
+        pendingInvalidationRef.current = setTimeout(() => {
+          safeInvalidate(queryKey);
+        }, 1000 - timeSinceQueueFinished);
+        return;
+      }
+
+      console.log(`🔔 [REALTIME] ✅ SAFE TO INVALIDATE ${queryKey[0]}`);
+      queryClient.invalidateQueries({ queryKey });
+    };
+  
     const scoresChannel = supabase 
       .channel(`basketball_scores:${matchId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'basketball_scores',
-          filter: `match_id=eq.${matchId}`,
-        },
-        (payload) => {
-          console.log("Realtime update received", payload);
-
-          // Sync realtime updates to React Query cache
-          queryClient.setQueryData(["basketball-scores", matchId], (old: any[] = []) => {
-            if (payload.eventType === 'INSERT') {
-              return [...old, payload.new];
-            }
-            if (payload.eventType === 'UPDATE') {
-              return old.map((score) =>
-                score.player_id === payload.new.player_id &&
-                score.team_id === payload.new.team_id
-                  ? payload.new
-                  : score
-              );
-            }
-            if (payload.eventType === 'DELETE') {
-              return old.filter(
-                (score) =>
-                  !(score.player_id === payload.old.player_id &&
-                    score.team_id === payload.old.team_id)
-              );
-            }
-            return old;
-          });
-        }
-      )
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'basketball_scores',
+        filter: `match_id=eq.${matchId}`,
+      }, (payload) => {
+        console.log("🔔 [REALTIME] Score change detected from database");
+        
+        clearTimeout(pendingInvalidationRef.current);
+        
+        // ✅ Longer debounce to let queue finish
+        pendingInvalidationRef.current = setTimeout(() => {
+          safeInvalidate(['basketball-scores', matchId]);
+        }, 1500);
+      })
       .subscribe();
 
     const matchChannel = supabase 
       .channel(`matches:${matchId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'matches',
-          filter: `id=eq.${matchId}`
-        },
-        (payload) => {
-          console.log("Match update received", payload);
-
-          // Sync match updates to React Query cache
-          queryClient.setQueryData(["match-scores", matchId], () => ({
-            teamA: payload.new.team_a_score || 0,
-            teamB: payload.new.team_b_score || 0,
-            teamAId: payload.new.team_a_id?.toString() || '',
-            teamBId: payload.new.team_b_id?.toString() || '',
-          }));
-        }
-      )
+      .on("postgres_changes", {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'matches',
+        filter: `id=eq.${matchId}`
+      }, (payload) => {
+        console.log("🔔 [REALTIME] Match change detected from database");
+        
+        clearTimeout(pendingInvalidationRef.current);
+        
+        pendingInvalidationRef.current = setTimeout(() => {
+          safeInvalidate(['match-scores', matchId]);
+        }, 1500);
+      })
       .subscribe();
-
     return () => {
+      clearTimeout(pendingInvalidationRef.current);
       supabase.removeChannel(scoresChannel);
       supabase.removeChannel(matchChannel);
     };
   }, [matchId, queryClient]);
-
-  // Helper functions for backward compatibility (now just read from cache)
-  const setScores = (updater: any) => {
-    const current = queryClient.getQueryData<any[]>(["basketball-scores", matchId]) || [];
-    const newValue = typeof updater === 'function' ? updater(current) : updater;
-    queryClient.setQueryData(["basketball-scores", matchId], newValue);
-  };
-
-  const setMatchScores = (updater: any) => {
-    const current = queryClient.getQueryData<MatchScores>(["match-scores", matchId]) || {
-      teamA: 0,
-      teamB: 0,
-      teamAId: '',
-      teamBId: '',
-    };
-    const newValue = typeof updater === 'function' ? updater(current) : updater;
-    queryClient.setQueryData(["match-scores", matchId], newValue);
-  };
 
   return {
     scores: scores || [],
     matchScores: matchData || { teamA: 0, teamB: 0, teamAId: '', teamBId: '' },
     teamAId: matchData?.teamAId || '',
     teamBId: matchData?.teamBId || '',
-    setScores,
-    setMatchScores,
     isLoading: isLoadingScores || isLoadingMatch,
   };
 }
