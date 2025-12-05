@@ -56,7 +56,6 @@ export default function ScoresPage() {
       console.log('🚀 Starting to fetch matches from server...')
       setIsLoading(true)
       try {
-        // Fetch all matches from ongoing championships
         const response = await fetch('/api/matches?ongoing_only=true')
         console.log('📡 API Response status:', response.status)
         console.log('📡 API Response ok:', response.ok)
