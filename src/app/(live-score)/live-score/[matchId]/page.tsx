@@ -540,7 +540,6 @@ export default function LiveScorePage() {
       }
     });
     
-    // Check Team B
     selectedPlayers.teamB.forEach(playerId => {
       const jersey = jerseyNumbers[playerId]?.trim().toUpperCase();
       if (jersey) {
