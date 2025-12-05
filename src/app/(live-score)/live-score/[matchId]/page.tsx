@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -84,6 +84,7 @@ function loadJerseyNumbersFromStorage(matchId: string): { [playerId: number]: st
 export default function LiveScorePage() {
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const matchId = params.matchId as string;
   
   const [showPlayerSelector, setShowPlayerSelector] = useState(false);
@@ -138,6 +139,11 @@ export default function LiveScorePage() {
   // Quick search by jersey number
   const [jerseySearch, setJerseySearch] = useState<{ teamA: string; teamB: string }>({ teamA: '', teamB: '' });
 
+  // ✅ EY player names state: { teamId: Array<{firstName: string, lastName: string}> }
+  const [eyPlayerNames, setEyPlayerNames] = useState<{
+    [teamId: number]: Array<{ firstName: string; lastName: string }>;
+  }>({});
+
   // ✅ Load jersey numbers from localStorage on mount
   useEffect(() => {
     if (!matchId) return;
@@ -190,6 +196,9 @@ export default function LiveScorePage() {
   
   // ✅ Use React Query mutation hook for score updates
   const { queueUpdate, queueLength, isProcessing } = useMutationQueue(matchId);
+
+  // ✅ Check if teams are EY grade
+  const isEYMatch = match?.teamA?.grade?.toLowerCase() === 'ey' || match?.teamB?.grade?.toLowerCase() === 'ey';
 
   // ✅ Derive playerStats from scores (no local state needed)
   const playerStats: PlayerStats[] = scores
@@ -368,26 +377,96 @@ export default function LiveScorePage() {
     try {
       setIsCreatingPlayers(true);
       
-      // Prepare all selected players for bulk creation
-      const allSelectedPlayers = [...selectedPlayers.teamA, ...selectedPlayers.teamB];
-      const playersToCreate = allSelectedPlayers.map(playerId => {
-        const player = players.find(p => p.id === playerId);
-        return {
-          teamId: player?.team_id.toString() || '',
-          playerId: playerId.toString()
-        };
-      }).filter(p => p.teamId); // Filter out any invalid entries
+      let finalPlayersToCreate: Array<{ teamId: string; playerId: string }> = [];
+      let newEyPlayersCreated = 0;
       
-      if (playersToCreate.length > 0) {
-        // Create all basketball score entries at once
-        await createMultipleBasketballScores(matchId, playersToCreate);
+      // ✅ If EY match, create players first from typed names
+      if (isEYMatch) {
+        const eyPlayersToCreate: Array<{ teamId: string; firstName: string; lastName: string }> = [];
+        
+        // Collect EY players from both teams
+        Object.entries(eyPlayerNames).forEach(([teamIdStr, names]) => {
+          const teamId = parseInt(teamIdStr);
+          names.forEach(name => {
+            if (name.firstName.trim() && name.lastName.trim()) {
+              eyPlayersToCreate.push({
+                teamId: teamId.toString(),
+                firstName: name.firstName.trim(),
+                lastName: name.lastName.trim()
+              });
+            }
+          });
+        });
+
+        if (eyPlayersToCreate.length > 0) {
+          newEyPlayersCreated = eyPlayersToCreate.length;
+          // Create players via API
+          const createResponse = await fetch('/api/players', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              players: eyPlayersToCreate.map(p => ({
+                teamId: p.teamId,
+                firstName: p.firstName,
+                lastName: p.lastName
+              }))
+            })
+          });
+
+          if (!createResponse.ok) {
+            const error = await createResponse.json();
+            throw new Error(error.error || 'Failed to create players');
+          }
+
+          const { players: createdPlayers } = await createResponse.json();
+          
+          // Add created players to final list
+          finalPlayersToCreate = createdPlayers.map((p: any) => ({
+            teamId: p.team_id.toString(),
+            playerId: p.id.toString()
+          }));
+
+          // Refresh players list and wait for it to complete
+          await queryClient.invalidateQueries({ queryKey: ['players', match?.team_a_id, match?.team_b_id] });
+          // Wait a bit for the query to refetch
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
       }
       
-      setShowPlayerSelector(false);
+      // ✅ Add existing selected players (non-EY or if EY players were already in the list)
+      const allSelectedPlayers = [...selectedPlayers.teamA, ...selectedPlayers.teamB];
+      const existingPlayersToCreate = allSelectedPlayers
+        .filter(playerId => {
+          // Don't include if we just created this player
+          return !finalPlayersToCreate.some(p => p.playerId === playerId.toString());
+        })
+        .map(playerId => {
+          const player = players.find(p => p.id === playerId);
+          return {
+            teamId: player?.team_id.toString() || '',
+            playerId: playerId.toString()
+          };
+        })
+        .filter(p => p.teamId);
+      
+      finalPlayersToCreate = [...finalPlayersToCreate, ...existingPlayersToCreate];
+      
+      if (finalPlayersToCreate.length > 0) {
+        // Create all basketball score entries at once
+        await createMultipleBasketballScores(matchId, finalPlayersToCreate);
+      }
+      
+      // Clear EY names after successful creation (but keep modal open if EY match so user can add jersey numbers)
+      setEyPlayerNames({});
+      
+      // Only close modal if no new EY players were created (user can add jersey numbers to existing ones)
+      if (!isEYMatch || newEyPlayersCreated === 0) {
+        setShowPlayerSelector(false);
+      }
     } catch (error) {
       console.error('Error creating player score entries:', error);
-      // Still close the modal even if there's an error
-      setShowPlayerSelector(false);
+      alert(error instanceof Error ? error.message : 'Failed to create players');
+      // Don't close modal on error so user can fix
     } finally {
       setIsCreatingPlayers(false);
     }
@@ -1092,127 +1171,460 @@ export default function LiveScorePage() {
         </Card>
 
         {/* Player Selection Modal */}
-        {showPlayerSelector && match && players.length > 0 && (
+        {showPlayerSelector && match && (isEYMatch || players.length > 0) && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <Card className="max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>Select Players Who Played</CardTitle>
+                  <CardTitle>
+                    {isEYMatch ? 'Enter Player Names (EY)' : 'Select Players Who Played'}
+                  </CardTitle>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setShowPlayerSelector(false)}
+                    onClick={() => {
+                      setShowPlayerSelector(false);
+                      setEyPlayerNames({});
+                    }}
                   >
                     ✕
                   </Button>
                 </div>
-                <CardDescription>Choose which players participated in this match</CardDescription>
+                <CardDescription>
+                  {isEYMatch 
+                    ? 'Type in the names of players who participated in this match'
+                    : 'Choose which players participated in this match'
+                  }
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Team A Players */}
-                  <div>
-                    <h4 className="font-medium mb-3 flex items-center gap-2">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                      {match.teamA?.name || `Team ${match.team_a_id}`}
-                    </h4>
-                    <div className="grid grid-cols-1 gap-2">
-                      {players
-                        .filter(p => p && p.team_id === match.team_a_id)
-                        .map(player => (
-                          <div key={player.id} className="flex items-center gap-2 p-3 rounded-lg border hover:bg-blue-50">
-                            <input
-                              type="checkbox"
-                              checked={selectedPlayers.teamA.includes(player.id)}
-                              onChange={() => togglePlayerSelection(player.team_id, player.id)}
-                              className="rounded border-gray-300 cursor-pointer"
-                            />
-                            <span className="text-sm font-medium flex-1 min-w-0">
-                              {player?.first_name || 'Unknown'} {player?.last_name || 'Player'}
-                            </span>
-                            {selectedPlayers.teamA.includes(player.id) && (
-                              <div className="flex flex-col gap-1">
-                                <Input
-                                  type="text"
-                                  placeholder="#"
-                                  value={jerseyNumbers[player.id] || ''}
-                                  onChange={(e) => updateJerseyNumber(player.id, e.target.value, player.team_id)}
-                                  className={`w-16 h-8 text-sm text-center ${duplicateJerseys[player.id] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                                  maxLength={3}
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                                {duplicateJerseys[player.id] && (
-                                  <span className="text-xs text-red-500">Duplicate!</span>
-                                )}
-                              </div>
-                            )}
+                {isEYMatch ? (
+                  // EY Mode: Show existing players AND name input fields for new ones
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Team A EY - Existing Players + New Name Inputs */}
+                    {match.teamA?.grade?.toLowerCase() === 'ey' && (
+                      <div>
+                        <h4 className="font-medium mb-3 flex items-center gap-2">
+                          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                          {match.teamA?.name || `Team ${match.team_a_id}`}
+                        </h4>
+                        
+                        {/* Existing Players */}
+                        {players.length > 0 && (
+                          <div className="mb-4">
+                            <p className="text-sm text-gray-600 mb-2">Existing Players:</p>
+                            <div className="grid grid-cols-1 gap-2">
+                              {players
+                                .filter(p => p && p.team_id === match.team_a_id)
+                                .map(player => (
+                                  <div key={player.id} className="flex items-center gap-2 p-3 rounded-lg border hover:bg-blue-50">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedPlayers.teamA.includes(player.id)}
+                                      onChange={() => togglePlayerSelection(player.team_id, player.id)}
+                                      className="rounded border-gray-300 cursor-pointer"
+                                    />
+                                    <span className="text-sm font-medium flex-1 min-w-0">
+                                      {player?.first_name || 'Unknown'} {player?.last_name || 'Player'}
+                                    </span>
+                                    {selectedPlayers.teamA.includes(player.id) && (
+                                      <div className="flex flex-col gap-1">
+                                        <Input
+                                          type="text"
+                                          placeholder="#"
+                                          value={jerseyNumbers[player.id] || ''}
+                                          onChange={(e) => updateJerseyNumber(player.id, e.target.value, player.team_id)}
+                                          className={`w-16 h-8 text-sm text-center ${duplicateJerseys[player.id] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                                          maxLength={3}
+                                          onClick={(e) => e.stopPropagation()}
+                                        />
+                                        {duplicateJerseys[player.id] && (
+                                          <span className="text-xs text-red-500">Duplicate!</span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                            </div>
                           </div>
-                        ))}
-                    </div>
-                  </div>
+                        )}
 
-                  {/* Team B Players */}
-                  <div>
-                    <h4 className="font-medium mb-3 flex items-center gap-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      {match.teamB?.name || `Team ${match.team_b_id}`}
-                    </h4>
-                    <div className="grid grid-cols-1 gap-2">
-                      {players
-                        .filter(p => p && p.team_id === match.team_b_id)
-                        .map(player => (
-                          <div key={player.id} className="flex items-center gap-2 p-3 rounded-lg border hover:bg-green-50">
-                            <input
-                              type="checkbox"
-                              checked={selectedPlayers.teamB.includes(player.id)}
-                              onChange={() => togglePlayerSelection(player.team_id, player.id)}
-                              className="rounded border-gray-300 cursor-pointer"
-                            />
-                            <span className="text-sm font-medium flex-1 min-w-0">
-                              {player?.first_name || 'Unknown'} {player?.last_name || 'Player'}
-                            </span>
-                            {selectedPlayers.teamB.includes(player.id) && (
-                              <div className="flex flex-col gap-1">
+                        {/* Add New Players */}
+                        <div className="mt-4">
+                          <p className="text-sm text-gray-600 mb-2">Add New Players:</p>
+                          <div className="space-y-3">
+                            {(eyPlayerNames[match.team_a_id] || []).map((player, index) => (
+                              <div key={index} className="flex gap-2">
                                 <Input
                                   type="text"
-                                  placeholder="#"
-                                  value={jerseyNumbers[player.id] || ''}
-                                  onChange={(e) => updateJerseyNumber(player.id, e.target.value, player.team_id)}
-                                  className={`w-16 h-8 text-sm text-center ${duplicateJerseys[player.id] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                                  maxLength={3}
-                                  onClick={(e) => e.stopPropagation()}
+                                  placeholder="First Name"
+                                  value={player.firstName}
+                                  onChange={(e) => {
+                                    const newNames = [...(eyPlayerNames[match.team_a_id] || [])];
+                                    newNames[index] = { ...newNames[index], firstName: e.target.value };
+                                    setEyPlayerNames({ ...eyPlayerNames, [match.team_a_id]: newNames });
+                                  }}
+                                  className="flex-1"
                                 />
-                                {duplicateJerseys[player.id] && (
-                                  <span className="text-xs text-red-500">Duplicate!</span>
+                                <Input
+                                  type="text"
+                                  placeholder="Last Name"
+                                  value={player.lastName}
+                                  onChange={(e) => {
+                                    const newNames = [...(eyPlayerNames[match.team_a_id] || [])];
+                                    newNames[index] = { ...newNames[index], lastName: e.target.value };
+                                    setEyPlayerNames({ ...eyPlayerNames, [match.team_a_id]: newNames });
+                                  }}
+                                  className="flex-1"
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newNames = [...(eyPlayerNames[match.team_a_id] || [])];
+                                    newNames.splice(index, 1);
+                                    setEyPlayerNames({ ...eyPlayerNames, [match.team_a_id]: newNames });
+                                  }}
+                                >
+                                  ✕
+                                </Button>
+                              </div>
+                            ))}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const currentNames = eyPlayerNames[match.team_a_id] || [];
+                                setEyPlayerNames({
+                                  ...eyPlayerNames,
+                                  [match.team_a_id]: [...currentNames, { firstName: '', lastName: '' }]
+                                });
+                              }}
+                              className="w-full"
+                            >
+                              + Add New Player
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Team B EY - Existing Players + New Name Inputs */}
+                    {match.teamB?.grade?.toLowerCase() === 'ey' && (
+                      <div>
+                        <h4 className="font-medium mb-3 flex items-center gap-2">
+                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                          {match.teamB?.name || `Team ${match.team_b_id}`}
+                        </h4>
+                        
+                        {/* Existing Players */}
+                        {players.length > 0 && (
+                          <div className="mb-4">
+                            <p className="text-sm text-gray-600 mb-2">Existing Players:</p>
+                            <div className="grid grid-cols-1 gap-2">
+                              {players
+                                .filter(p => p && p.team_id === match.team_b_id)
+                                .map(player => (
+                                  <div key={player.id} className="flex items-center gap-2 p-3 rounded-lg border hover:bg-green-50">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedPlayers.teamB.includes(player.id)}
+                                      onChange={() => togglePlayerSelection(player.team_id, player.id)}
+                                      className="rounded border-gray-300 cursor-pointer"
+                                    />
+                                    <span className="text-sm font-medium flex-1 min-w-0">
+                                      {player?.first_name || 'Unknown'} {player?.last_name || 'Player'}
+                                    </span>
+                                    {selectedPlayers.teamB.includes(player.id) && (
+                                      <div className="flex flex-col gap-1">
+                                        <Input
+                                          type="text"
+                                          placeholder="#"
+                                          value={jerseyNumbers[player.id] || ''}
+                                          onChange={(e) => updateJerseyNumber(player.id, e.target.value, player.team_id)}
+                                          className={`w-16 h-8 text-sm text-center ${duplicateJerseys[player.id] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                                          maxLength={3}
+                                          onClick={(e) => e.stopPropagation()}
+                                        />
+                                        {duplicateJerseys[player.id] && (
+                                          <span className="text-xs text-red-500">Duplicate!</span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Add New Players */}
+                        <div className="mt-4">
+                          <p className="text-sm text-gray-600 mb-2">Add New Players:</p>
+                          <div className="space-y-3">
+                            {(eyPlayerNames[match.team_b_id] || []).map((player, index) => (
+                              <div key={index} className="flex gap-2">
+                                <Input
+                                  type="text"
+                                  placeholder="First Name"
+                                  value={player.firstName}
+                                  onChange={(e) => {
+                                    const newNames = [...(eyPlayerNames[match.team_b_id] || [])];
+                                    newNames[index] = { ...newNames[index], firstName: e.target.value };
+                                    setEyPlayerNames({ ...eyPlayerNames, [match.team_b_id]: newNames });
+                                  }}
+                                  className="flex-1"
+                                />
+                                <Input
+                                  type="text"
+                                  placeholder="Last Name"
+                                  value={player.lastName}
+                                  onChange={(e) => {
+                                    const newNames = [...(eyPlayerNames[match.team_b_id] || [])];
+                                    newNames[index] = { ...newNames[index], lastName: e.target.value };
+                                    setEyPlayerNames({ ...eyPlayerNames, [match.team_b_id]: newNames });
+                                  }}
+                                  className="flex-1"
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newNames = [...(eyPlayerNames[match.team_b_id] || [])];
+                                    newNames.splice(index, 1);
+                                    setEyPlayerNames({ ...eyPlayerNames, [match.team_b_id]: newNames });
+                                  }}
+                                >
+                                  ✕
+                                </Button>
+                              </div>
+                            ))}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const currentNames = eyPlayerNames[match.team_b_id] || [];
+                                setEyPlayerNames({
+                                  ...eyPlayerNames,
+                                  [match.team_b_id]: [...currentNames, { firstName: '', lastName: '' }]
+                                });
+                              }}
+                              className="w-full"
+                            >
+                              + Add New Player
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Show existing players for non-EY teams */}
+                    {match.teamA?.grade?.toLowerCase() !== 'ey' && players.length > 0 && (
+                      <div>
+                        <h4 className="font-medium mb-3 flex items-center gap-2">
+                          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                          {match.teamA?.name || `Team ${match.team_a_id}`}
+                        </h4>
+                        <div className="grid grid-cols-1 gap-2">
+                          {players
+                            .filter(p => p && p.team_id === match.team_a_id)
+                            .map(player => (
+                              <div key={player.id} className="flex items-center gap-2 p-3 rounded-lg border hover:bg-blue-50">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedPlayers.teamA.includes(player.id)}
+                                  onChange={() => togglePlayerSelection(player.team_id, player.id)}
+                                  className="rounded border-gray-300 cursor-pointer"
+                                />
+                                <span className="text-sm font-medium flex-1 min-w-0">
+                                  {player?.first_name || 'Unknown'} {player?.last_name || 'Player'}
+                                </span>
+                                {selectedPlayers.teamA.includes(player.id) && (
+                                  <div className="flex flex-col gap-1">
+                                    <Input
+                                      type="text"
+                                      placeholder="#"
+                                      value={jerseyNumbers[player.id] || ''}
+                                      onChange={(e) => updateJerseyNumber(player.id, e.target.value, player.team_id)}
+                                      className={`w-16 h-8 text-sm text-center ${duplicateJerseys[player.id] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                                      maxLength={3}
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                    {duplicateJerseys[player.id] && (
+                                      <span className="text-xs text-red-500">Duplicate!</span>
+                                    )}
+                                  </div>
                                 )}
                               </div>
-                            )}
-                          </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {match.teamB?.grade?.toLowerCase() !== 'ey' && players.length > 0 && (
+                      <div>
+                        <h4 className="font-medium mb-3 flex items-center gap-2">
+                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                          {match.teamB?.name || `Team ${match.team_b_id}`}
+                        </h4>
+                        <div className="grid grid-cols-1 gap-2">
+                          {players
+                            .filter(p => p && p.team_id === match.team_b_id)
+                            .map(player => (
+                              <div key={player.id} className="flex items-center gap-2 p-3 rounded-lg border hover:bg-green-50">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedPlayers.teamB.includes(player.id)}
+                                  onChange={() => togglePlayerSelection(player.team_id, player.id)}
+                                  className="rounded border-gray-300 cursor-pointer"
+                                />
+                                <span className="text-sm font-medium flex-1 min-w-0">
+                                  {player?.first_name || 'Unknown'} {player?.last_name || 'Player'}
+                                </span>
+                                {selectedPlayers.teamB.includes(player.id) && (
+                                  <div className="flex flex-col gap-1">
+                                    <Input
+                                      type="text"
+                                      placeholder="#"
+                                      value={jerseyNumbers[player.id] || ''}
+                                      onChange={(e) => updateJerseyNumber(player.id, e.target.value, player.team_id)}
+                                      className={`w-16 h-8 text-sm text-center ${duplicateJerseys[player.id] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                                      maxLength={3}
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                    {duplicateJerseys[player.id] && (
+                                      <span className="text-xs text-red-500">Duplicate!</span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
+                ) : (
+                  // Normal Mode: Show existing player selection
+                  players.length > 0 && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Team A Players */}
+                      <div>
+                        <h4 className="font-medium mb-3 flex items-center gap-2">
+                          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                          {match.teamA?.name || `Team ${match.team_a_id}`}
+                        </h4>
+                        <div className="grid grid-cols-1 gap-2">
+                          {players
+                            .filter(p => p && p.team_id === match.team_a_id)
+                            .map(player => (
+                              <div key={player.id} className="flex items-center gap-2 p-3 rounded-lg border hover:bg-blue-50">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedPlayers.teamA.includes(player.id)}
+                                  onChange={() => togglePlayerSelection(player.team_id, player.id)}
+                                  className="rounded border-gray-300 cursor-pointer"
+                                />
+                                <span className="text-sm font-medium flex-1 min-w-0">
+                                  {player?.first_name || 'Unknown'} {player?.last_name || 'Player'}
+                                </span>
+                                {selectedPlayers.teamA.includes(player.id) && (
+                                  <div className="flex flex-col gap-1">
+                                    <Input
+                                      type="text"
+                                      placeholder="#"
+                                      value={jerseyNumbers[player.id] || ''}
+                                      onChange={(e) => updateJerseyNumber(player.id, e.target.value, player.team_id)}
+                                      className={`w-16 h-8 text-sm text-center ${duplicateJerseys[player.id] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                                      maxLength={3}
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                    {duplicateJerseys[player.id] && (
+                                      <span className="text-xs text-red-500">Duplicate!</span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+
+                      {/* Team B Players */}
+                      <div>
+                        <h4 className="font-medium mb-3 flex items-center gap-2">
+                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                          {match.teamB?.name || `Team ${match.team_b_id}`}
+                        </h4>
+                        <div className="grid grid-cols-1 gap-2">
+                          {players
+                            .filter(p => p && p.team_id === match.team_b_id)
+                            .map(player => (
+                              <div key={player.id} className="flex items-center gap-2 p-3 rounded-lg border hover:bg-green-50">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedPlayers.teamB.includes(player.id)}
+                                  onChange={() => togglePlayerSelection(player.team_id, player.id)}
+                                  className="rounded border-gray-300 cursor-pointer"
+                                />
+                                <span className="text-sm font-medium flex-1 min-w-0">
+                                  {player?.first_name || 'Unknown'} {player?.last_name || 'Player'}
+                                </span>
+                                {selectedPlayers.teamB.includes(player.id) && (
+                                  <div className="flex flex-col gap-1">
+                                    <Input
+                                      type="text"
+                                      placeholder="#"
+                                      value={jerseyNumbers[player.id] || ''}
+                                      onChange={(e) => updateJerseyNumber(player.id, e.target.value, player.team_id)}
+                                      className={`w-16 h-8 text-sm text-center ${duplicateJerseys[player.id] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                                      maxLength={3}
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                    {duplicateJerseys[player.id] && (
+                                      <span className="text-xs text-red-500">Duplicate!</span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                )}
 
                 <div className="flex justify-end gap-3 mt-6">
                   <Button
                     variant="outline"
-                    onClick={() => setShowPlayerSelector(false)}
+                    onClick={() => {
+                      setShowPlayerSelector(false);
+                      setEyPlayerNames({});
+                    }}
                   >
                     Cancel
                   </Button>
-                <Button
-                  onClick={handlePlayerSelection}
-                  disabled={selectedPlayers.teamA.length === 0 && selectedPlayers.teamB.length === 0 || isCreatingPlayers}
-                >
-                  {isCreatingPlayers ? (
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Creating Entries...
-                    </div>
-                  ) : (
-                    `Confirm Selection (${selectedPlayers.teamA.length + selectedPlayers.teamB.length} players)`
-                  )}
-                </Button>
+                  <Button
+                    onClick={handlePlayerSelection}
+                    disabled={
+                      isCreatingPlayers ||
+                      (isEYMatch
+                        ? (eyPlayerNames[match.team_a_id] || []).filter(p => p.firstName.trim() && p.lastName.trim()).length === 0 &&
+                          (eyPlayerNames[match.team_b_id] || []).filter(p => p.firstName.trim() && p.lastName.trim()).length === 0
+                        : selectedPlayers.teamA.length === 0 && selectedPlayers.teamB.length === 0)
+                    }
+                  >
+                    {isCreatingPlayers ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Creating Entries...
+                      </div>
+                    ) : isEYMatch ? (
+                      `Confirm (${[
+                        ...(eyPlayerNames[match.team_a_id] || []),
+                        ...(eyPlayerNames[match.team_b_id] || [])
+                      ].filter(p => p.firstName.trim() && p.lastName.trim()).length} players)`
+                    ) : (
+                      `Confirm Selection (${selectedPlayers.teamA.length + selectedPlayers.teamB.length} players)`
+                    )}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
