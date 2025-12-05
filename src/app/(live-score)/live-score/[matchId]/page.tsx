@@ -527,7 +527,6 @@ export default function LiveScorePage() {
     
     const newDuplicateJerseys: { [playerId: number]: boolean } = {};
     
-    // Check Team A
     selectedPlayers.teamA.forEach(playerId => {
       const jersey = jerseyNumbers[playerId]?.trim().toUpperCase();
       if (jersey) {
