@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { ArrowLeft, Trophy, Users, Clock, Target, CheckCircle, Loader2, RotateCcw, Wifi, WifiOff } from 'lucide-react';
 import { createMultipleBasketballScores } from '@/actions/livescore/basketball-update';
 import { useRealtimeBasketballScores } from '@/hooks/useRealtimeBasketballScores';
@@ -48,6 +49,36 @@ interface PlayerStats {
   assists: number;
   three_points_made?: number;
   three_points_attempted?: number;
+}
+
+// ✅ localStorage key for persisting jersey numbers
+const JERSEY_STORAGE_KEY = 'basketball-jersey-numbers';
+
+// ✅ Helper functions for localStorage persistence
+function saveJerseyNumbersToStorage(matchId: string, jerseyNumbers: { [playerId: number]: string }) {
+  try {
+    const allJerseys = JSON.parse(localStorage.getItem(JERSEY_STORAGE_KEY) || '{}');
+    allJerseys[matchId] = jerseyNumbers;
+    localStorage.setItem(JERSEY_STORAGE_KEY, JSON.stringify(allJerseys));
+  } catch (error) {
+    console.error('❌ Failed to save jersey numbers to localStorage:', error);
+  }
+}
+
+function loadJerseyNumbersFromStorage(matchId: string): { [playerId: number]: string } {
+  try {
+    const allJerseys = JSON.parse(localStorage.getItem(JERSEY_STORAGE_KEY) || '{}');
+    const jerseys = allJerseys[matchId] || {};
+    // Convert string keys back to numbers
+    const result: { [playerId: number]: string } = {};
+    Object.keys(jerseys).forEach(key => {
+      result[parseInt(key)] = jerseys[key];
+    });
+    return result;
+  } catch (error) {
+    console.error('❌ Failed to load jersey numbers from localStorage:', error);
+    return {};
+  }
 }
 
 export default function LiveScorePage() {
@@ -97,6 +128,33 @@ export default function LiveScorePage() {
     teamA: [],
     teamB: []
   });
+
+  // Store jersey numbers for players: { playerId: jerseyNumber }
+  const [jerseyNumbers, setJerseyNumbers] = useState<{ [playerId: number]: string }>({});
+  
+  // Track duplicate jersey numbers: { playerId: true } if duplicate
+  const [duplicateJerseys, setDuplicateJerseys] = useState<{ [playerId: number]: boolean }>({});
+  
+  // Quick search by jersey number
+  const [jerseySearch, setJerseySearch] = useState<{ teamA: string; teamB: string }>({ teamA: '', teamB: '' });
+
+  // ✅ Load jersey numbers from localStorage on mount
+  useEffect(() => {
+    if (!matchId) return;
+    
+    const savedJerseys = loadJerseyNumbersFromStorage(matchId);
+    if (Object.keys(savedJerseys).length > 0) {
+      console.log('💾 [JERSEY] Loaded jersey numbers from localStorage:', savedJerseys);
+      setJerseyNumbers(savedJerseys);
+    }
+  }, [matchId]);
+
+  // ✅ Save jersey numbers to localStorage whenever they change
+  useEffect(() => {
+    if (!matchId || Object.keys(jerseyNumbers).length === 0) return;
+    
+    saveJerseyNumbersToStorage(matchId, jerseyNumbers);
+  }, [jerseyNumbers, matchId]);
 
   // ✅ Fetch match data with React Query
   const { data: match, isLoading: isLoadingMatch } = useQuery({
@@ -341,6 +399,41 @@ export default function LiveScorePage() {
       const currentSelected = prev[teamKey];
       
       if (currentSelected.includes(playerId)) {
+        // Remove player, their jersey number, and duplicate flag
+        setJerseyNumbers(prevJerseys => {
+          const newJerseys = { ...prevJerseys };
+          const removedJersey = newJerseys[playerId]?.trim().toUpperCase();
+          delete newJerseys[playerId];
+          
+          // Re-check duplicates for remaining players if we removed a jersey
+          if (removedJersey) {
+            const remainingPlayers = currentSelected.filter(id => id !== playerId);
+            remainingPlayers.forEach(otherPlayerId => {
+              const otherJersey = newJerseys[otherPlayerId]?.trim().toUpperCase();
+              if (otherJersey === removedJersey) {
+                // Check if this player still has a duplicate
+                const stillDuplicate = remainingPlayers.some(checkPlayerId => {
+                  if (checkPlayerId === otherPlayerId) return false;
+                  return newJerseys[checkPlayerId]?.trim().toUpperCase() === otherJersey;
+                });
+                
+                setDuplicateJerseys(prev => ({
+                  ...prev,
+                  [otherPlayerId]: stillDuplicate
+                }));
+              }
+            });
+          }
+          
+          return newJerseys;
+        });
+        
+        setDuplicateJerseys(prev => {
+          const newDups = { ...prev };
+          delete newDups[playerId];
+          return newDups;
+        });
+        
         return {
           ...prev,
           [teamKey]: currentSelected.filter(id => id !== playerId)
@@ -354,19 +447,116 @@ export default function LiveScorePage() {
     });
   };
 
+  const updateJerseyNumber = (playerId: number, jerseyNumber: string, teamId: number) => {
+    // Find the team key
+    const teamKey = teamId === match?.team_a_id ? 'teamA' : 'teamB';
+    const selectedTeamPlayers = selectedPlayers[teamKey];
+    
+    // Calculate what the updated jerseys will be
+    const updatedJerseys = {
+      ...jerseyNumbers,
+      [playerId]: jerseyNumber
+    };
+    
+    // Check for duplicates within the same team after update
+    const newDuplicateJerseys: { [playerId: number]: boolean } = {};
+    
+    selectedTeamPlayers.forEach(currentPlayerId => {
+      const currentJersey = updatedJerseys[currentPlayerId]?.trim().toUpperCase();
+      if (!currentJersey) {
+        // No jersey number, no duplicate
+        return;
+      }
+      
+      // Check if any other player on the same team has this jersey number
+      const hasDuplicate = selectedTeamPlayers.some(otherPlayerId => {
+        if (otherPlayerId === currentPlayerId) return false; // Don't check against self
+        const otherJersey = updatedJerseys[otherPlayerId]?.trim().toUpperCase();
+        return otherJersey && otherJersey === currentJersey;
+      });
+      
+      if (hasDuplicate) {
+        newDuplicateJerseys[currentPlayerId] = true;
+      }
+    });
+    
+    // Update jersey numbers (this will trigger the useEffect to save to localStorage)
+    setJerseyNumbers(updatedJerseys);
+    
+    // Update duplicate tracking
+    setDuplicateJerseys(prev => {
+      const updated = { ...prev };
+      // Update duplicates for all players on this team
+      selectedTeamPlayers.forEach(id => {
+        if (newDuplicateJerseys[id]) {
+          updated[id] = true;
+        } else {
+          delete updated[id];
+        }
+      });
+      return updated;
+    });
+  };
+
   const getFilteredTeamPlayers = (teamId: number) => {
     const teamPlayers = getTeamPlayers(teamId);
     const teamKey = teamId === match?.team_a_id ? 'teamA' : 'teamB';
     const selectedTeamPlayers = selectedPlayers[teamKey];
+    const searchTerm = jerseySearch[teamKey].trim().toLowerCase();
     
     // If no players are selected, show all players
-    if (selectedTeamPlayers.length === 0) {
-      return teamPlayers;
+    let filtered = selectedTeamPlayers.length === 0 
+      ? teamPlayers 
+      : teamPlayers.filter(player => selectedTeamPlayers.includes(player.id));
+    
+    // Filter by jersey number or name if search term exists
+    if (searchTerm) {
+      filtered = filtered.filter(player => {
+        const jerseyNum = jerseyNumbers[player.id]?.toLowerCase() || '';
+        const playerName = `${player.first_name} ${player.last_name}`.toLowerCase();
+        return jerseyNum.includes(searchTerm) || playerName.includes(searchTerm);
+      });
     }
     
-    // Show only selected players
-    return teamPlayers.filter(player => selectedTeamPlayers.includes(player.id));
+    return filtered;
   };
+
+  // ✅ Recalculate duplicates when jersey numbers or selected players change
+  useEffect(() => {
+    if (!match) return;
+    
+    const newDuplicateJerseys: { [playerId: number]: boolean } = {};
+    
+    // Check Team A
+    selectedPlayers.teamA.forEach(playerId => {
+      const jersey = jerseyNumbers[playerId]?.trim().toUpperCase();
+      if (jersey) {
+        const hasDuplicate = selectedPlayers.teamA.some(otherId => {
+          if (otherId === playerId) return false;
+          return jerseyNumbers[otherId]?.trim().toUpperCase() === jersey;
+        });
+        if (hasDuplicate) {
+          newDuplicateJerseys[playerId] = true;
+        }
+      }
+    });
+    
+    // Check Team B
+    selectedPlayers.teamB.forEach(playerId => {
+      const jersey = jerseyNumbers[playerId]?.trim().toUpperCase();
+      if (jersey) {
+        const hasDuplicate = selectedPlayers.teamB.some(otherId => {
+          if (otherId === playerId) return false;
+          return jerseyNumbers[otherId]?.trim().toUpperCase() === jersey;
+        });
+        if (hasDuplicate) {
+          newDuplicateJerseys[playerId] = true;
+        }
+      }
+    });
+    
+    setDuplicateJerseys(newDuplicateJerseys);
+  }, [jerseyNumbers, selectedPlayers, match]);
 
   const isLoading = isLoadingMatch || isLoadingPlayers || isLoadingScores;
 
@@ -399,75 +589,157 @@ export default function LiveScorePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
+      <div className="bg-white shadow-sm border-b overflow-x-hidden">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+          {/* Mobile Layout */}
+          <div className="flex flex-col md:hidden gap-3 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => router.push('/dashboard/schedule')}
+                  className="flex items-center gap-1.5 h-10 sm:h-12 flex-shrink-0 px-3 sm:px-4"
+                  size="sm"
+                >
+                  <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="text-sm sm:text-base">Back</span>
+                </Button>
+                <div className="h-5 w-px bg-gray-300" />
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-sm font-semibold text-gray-900 truncate">Live Score</h1>
+                  <p className="text-xs text-gray-600 truncate">{match.championship?.name || 'Championship'}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <Badge variant="outline" className="capitalize text-xs px-1.5 py-0">{match.sport_type}</Badge>
+                <Badge variant="secondary" className="capitalize text-xs px-1.5 py-0">{match.gender}</Badge>
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 flex-1">
+                {!isOnline && (
+                  <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300 text-xs px-1.5 py-0">
+                    <WifiOff className="w-3 h-3 mr-1" />
+                    Offline
+                  </Badge>
+                )}
+                {queueLength > 0 && (
+                  <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300 text-xs px-1.5 py-0">
+                    ⏳ {queueLength}
+                  </Badge>
+                )}
+                {isOnline && queueLength === 0 && (
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300 text-xs px-1.5 py-0">
+                    <Wifi className="w-3 h-3 mr-1" />
+                    Synced
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={undoLastUpdate}
+                  disabled={isUndoing || updateHistory.length === 0}
+                  variant="outline"
+                  size="sm"
+                  className="h-10 sm:h-12 px-3 sm:px-4 text-sm"
+                >
+                  {isUndoing ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <RotateCcw className="w-4 h-4 mr-1.5" />
+                      {updateHistory.length}
+                    </>
+                  )}
+                </Button>
+                <Button
+                  onClick={() => setShowEndMatchDialog(true)}
+                  disabled={isEndingMatch}
+                  variant="destructive"
+                  size="sm"
+                  className="h-10 sm:h-12 px-4 sm:px-5 text-sm"
+                >
+                  {isEndingMatch ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    'End'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Tablet & Desktop Layout */}
+          <div className="hidden md:flex items-center justify-between h-16 gap-4">
+            {/* Left Section */}
+            <div className="flex items-center gap-4 min-w-0 flex-1">
               <Button 
                 variant="ghost" 
                 onClick={() => router.push('/dashboard/schedule')}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 h-10 md:h-12 lg:h-10 flex-shrink-0"
+                size="sm"
               >
-                <ArrowLeft className="w-4 h-4" />
-                Back to Schedule
+                <ArrowLeft className="w-4 h-4 md:w-5 md:h-5" />
+                <span>Back to Schedule</span>
               </Button>
               <div className="h-6 w-px bg-gray-300" />
-              <div>
-                <h1 className="text-lg font-semibold text-gray-900">Live Score Update</h1>
-                <p className="text-sm text-gray-600">{match.championship?.name || 'Championship'}</p>
+              <div className="min-w-0">
+                <h1 className="text-lg font-semibold text-gray-900 truncate">Live Score Update</h1>
+                <p className="text-sm text-gray-600 truncate">{match.championship?.name || 'Championship'}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+
+            {/* Center Section - Badges */}
+            <div className="flex items-center gap-2 flex-shrink-0">
               <Badge variant="outline" className="capitalize">{match.sport_type}</Badge>
               <Badge variant="secondary" className="capitalize">{match.gender}</Badge>
-              
-              {/* ✅ Offline/Online Status */}
               {!isOnline && (
                 <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300">
                   <WifiOff className="w-3 h-3 mr-1" />
                   Offline
                 </Badge>
               )}
-              
-              {/* ✅ Queue Status */}
               {queueLength > 0 && (
                 <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
                   ⏳ {queueLength} queued
                 </Badge>
               )}
-              
               {isOnline && queueLength === 0 && (
                 <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
                   <Wifi className="w-3 h-3 mr-1" />
                   Synced
                 </Badge>
               )}
-              
+            </div>
+
+            {/* Right Section - Actions */}
+            <div className="flex items-center gap-2 flex-shrink-0">
               <Button
                 onClick={undoLastUpdate}
-                disabled={isUndoing || updateHistory.length === 0}  // Only disable if undoing or no history
+                disabled={isUndoing || updateHistory.length === 0}
                 variant="outline"
                 size="sm"
+                className="h-10 md:h-12 lg:h-10"
               >
                 {isUndoing ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <>
-                    <RotateCcw className="w-4 h-4 mr-1" />
+                    <RotateCcw className="w-4 h-4 md:w-5 md:h-5 mr-1.5" />
                     Undo ({updateHistory.length})
                   </>
                 )}
               </Button>
-              
               <Button
                 onClick={() => setShowEndMatchDialog(true)}
                 disabled={isEndingMatch}
                 variant="destructive"
                 size="sm"
+                className="h-10 md:h-12 lg:h-10"
               >
                 {isEndingMatch ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader2 className="w-4 h-4 md:w-5 md:h-5 mr-2 animate-spin" />
                     Ending Match...
                   </>
                 ) : (
@@ -480,7 +752,7 @@ export default function LiveScorePage() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8 overflow-x-hidden">
         {/* Scoreboard */}
         <Card className="mb-8">
           <CardContent className="p-8">
@@ -518,21 +790,37 @@ export default function LiveScorePage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Team A Action Buttons */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    {match.teamA?.name || `Team ${match.team_a_id}`}
-                  </h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      {match.teamA?.name || `Team ${match.team_a_id}`}
+                    </h3>
+                    <Input
+                      type="text"
+                      placeholder="Search jersey/name"
+                      value={jerseySearch.teamA}
+                      onChange={(e) => setJerseySearch(prev => ({ ...prev, teamA: e.target.value }))}
+                      className="w-32 sm:w-40 h-8 text-sm"
+                    />
+                  </div>
                   <div className="p-4 bg-blue-50 rounded-lg">
                     <div className="grid grid-cols-2 gap-2">
                       {getFilteredTeamPlayers(match.team_a_id).map((player) => (
                         <div key={player.id} className="space-y-2">
-                          <div className="text-sm font-medium text-gray-700">{player.first_name} {player.last_name}</div>
-                          <div className="flex gap-1">
+                          <div className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            {jerseyNumbers[player.id] && (
+                              <span className="bg-blue-600 text-white px-2 py-0.5 rounded text-xs font-bold">
+                                #{jerseyNumbers[player.id]}
+                              </span>
+                            )}
+                            <span>{player.first_name} {player.last_name}</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1 sm:gap-2">
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'points', 1)}
-                              className="h-8 w-12 text-xs"
+                              className="h-12 sm:h-12  w-16  text-sm sm:text-base md:text-xs"
                             >
                               +1
                             </Button>
@@ -540,7 +828,7 @@ export default function LiveScorePage() {
                               size="sm"
                               variant="outline"
                               onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'points', 2)}
-                              className="h-8 w-12 text-xs"
+                              className="h-12 sm:h-12  w-16  text-sm sm:text-base md:text-xs"
                             >
                               +2
                             </Button>
@@ -548,7 +836,7 @@ export default function LiveScorePage() {
                               size="sm"
                               variant="outline"
                               onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'points', 3)}
-                              className="h-8 w-12 text-xs"
+                              className="h-12 sm:h-12  w-16  text-sm sm:text-base md:text-xs"
                             >
                               +3
                             </Button>
@@ -556,7 +844,7 @@ export default function LiveScorePage() {
                               size="sm"
                               variant="outline"
                               onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'rebounds', 1)}
-                              className="h-8 w-12 text-xs"
+                              className="h-12 sm:h-12  w-16  text-sm sm:text-base md:text-xs"
                             >
                               R+1
                             </Button>
@@ -564,7 +852,7 @@ export default function LiveScorePage() {
                               size="sm"
                               variant="outline"
                               onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'assists', 1)}
-                              className="h-8 w-12 text-xs"
+                              className="h-12 sm:h-12  w-16  text-sm sm:text-base md:text-xs"
                             >
                               A+1
                             </Button>
@@ -572,7 +860,7 @@ export default function LiveScorePage() {
                               size="sm"
                               variant="outline"
                               onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'three_points_attempted', 1)}
-                              className="h-8 w-12 text-xs"
+                              className="h-12 sm:h-12  w-16  text-sm sm:text-base md:text-xs"
                             >
                               +3A
                             </Button>
@@ -580,7 +868,7 @@ export default function LiveScorePage() {
                               size="sm"
                               variant="outline"
                               onClick={() => updatePlayerStats(player.id.toString(), match.team_a_id.toString(), 'three_points_made', 1)}
-                              className="h-8 w-12 text-xs"
+                              className="h-12 sm:h-12  w-16  text-sm sm:text-base md:text-xs"
                             >
                               +3M
                             </Button>
@@ -593,21 +881,37 @@ export default function LiveScorePage() {
 
                 {/* Team B Action Buttons */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    {match.teamB?.name || `Team ${match.team_b_id}`}
-                  </h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      {match.teamB?.name || `Team ${match.team_b_id}`}
+                    </h3>
+                    <Input
+                      type="text"
+                      placeholder="Search jersey/name"
+                      value={jerseySearch.teamB}
+                      onChange={(e) => setJerseySearch(prev => ({ ...prev, teamB: e.target.value }))}
+                      className="w-32 sm:w-40 h-8 text-sm"
+                    />
+                  </div>
                   <div className="p-4 bg-green-50 rounded-lg">
                     <div className="grid grid-cols-2 gap-2">
                       {getFilteredTeamPlayers(match.team_b_id).map((player) => (
                         <div key={player.id} className="space-y-2">
-                          <div className="text-sm font-medium text-gray-700">{player.first_name} {player.last_name}</div>
-                          <div className="flex gap-1">
+                          <div className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            {jerseyNumbers[player.id] && (
+                              <span className="bg-green-600 text-white px-2 py-0.5 rounded text-xs font-bold">
+                                #{jerseyNumbers[player.id]}
+                              </span>
+                            )}
+                            <span>{player.first_name} {player.last_name}</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1 sm:gap-2">
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'points', 1)}
-                              className="h-8 w-12 text-xs"
+                              className="h-12 sm:h-12  w-16  text-sm sm:text-base md:text-xs"
                             >
                               +1
                             </Button>
@@ -615,7 +919,7 @@ export default function LiveScorePage() {
                               size="sm"
                               variant="outline"
                               onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'points', 2)}
-                              className="h-8 w-12 text-xs"
+                              className="h-12 sm:h-12  w-16  text-sm sm:text-base md:text-xs"
                             >
                               +2
                             </Button>
@@ -623,7 +927,7 @@ export default function LiveScorePage() {
                               size="sm"
                               variant="outline"
                               onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'points', 3)}
-                              className="h-8 w-12 text-xs"
+                              className="h-12 sm:h-12  w-16  text-sm sm:text-base md:text-xs"
                             >
                               +3
                             </Button>
@@ -631,7 +935,7 @@ export default function LiveScorePage() {
                               size="sm"
                               variant="outline"
                               onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'rebounds', 1)}
-                              className="h-8 w-12 text-xs"
+                              className="h-12 sm:h-12  w-16  text-sm sm:text-base md:text-xs"
                             >
                               R+1
                             </Button>
@@ -639,7 +943,7 @@ export default function LiveScorePage() {
                               size="sm"
                               variant="outline"
                               onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'assists', 1)}
-                              className="h-8 w-12 text-xs"
+                              className="h-12 sm:h-12  w-16  text-sm sm:text-base md:text-xs"
                             >
                               A+1
                             </Button>
@@ -647,7 +951,7 @@ export default function LiveScorePage() {
                               size="sm"
                               variant="outline"
                               onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'three_points_attempted', 1)}
-                              className="h-8 w-12 text-xs"
+                              className="h-12 sm:h-12  w-16  text-sm sm:text-base md:text-xs"
                             >
                               +3A
                             </Button>
@@ -655,7 +959,7 @@ export default function LiveScorePage() {
                               size="sm"
                               variant="outline"
                               onClick={() => updatePlayerStats(player.id.toString(), match.team_b_id.toString(), 'three_points_made', 1)}
-                              className="h-8 w-12 text-xs"
+                              className="h-12 sm:h-12  w-16  text-sm sm:text-base md:text-xs"
                             >
                               +3M
                             </Button>
@@ -818,17 +1122,33 @@ export default function LiveScorePage() {
                       {players
                         .filter(p => p && p.team_id === match.team_a_id)
                         .map(player => (
-                          <label key={player.id} className="flex items-center space-x-2 cursor-pointer p-3 rounded-lg border hover:bg-blue-50">
+                          <div key={player.id} className="flex items-center gap-2 p-3 rounded-lg border hover:bg-blue-50">
                             <input
                               type="checkbox"
                               checked={selectedPlayers.teamA.includes(player.id)}
                               onChange={() => togglePlayerSelection(player.team_id, player.id)}
-                              className="rounded border-gray-300"
+                              className="rounded border-gray-300 cursor-pointer"
                             />
-                            <span className="text-sm font-medium">
+                            <span className="text-sm font-medium flex-1 min-w-0">
                               {player?.first_name || 'Unknown'} {player?.last_name || 'Player'}
                             </span>
-                          </label>
+                            {selectedPlayers.teamA.includes(player.id) && (
+                              <div className="flex flex-col gap-1">
+                                <Input
+                                  type="text"
+                                  placeholder="#"
+                                  value={jerseyNumbers[player.id] || ''}
+                                  onChange={(e) => updateJerseyNumber(player.id, e.target.value, player.team_id)}
+                                  className={`w-16 h-8 text-sm text-center ${duplicateJerseys[player.id] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                                  maxLength={3}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                                {duplicateJerseys[player.id] && (
+                                  <span className="text-xs text-red-500">Duplicate!</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         ))}
                     </div>
                   </div>
@@ -843,17 +1163,33 @@ export default function LiveScorePage() {
                       {players
                         .filter(p => p && p.team_id === match.team_b_id)
                         .map(player => (
-                          <label key={player.id} className="flex items-center space-x-2 cursor-pointer p-3 rounded-lg border hover:bg-green-50">
+                          <div key={player.id} className="flex items-center gap-2 p-3 rounded-lg border hover:bg-green-50">
                             <input
                               type="checkbox"
                               checked={selectedPlayers.teamB.includes(player.id)}
                               onChange={() => togglePlayerSelection(player.team_id, player.id)}
-                              className="rounded border-gray-300"
+                              className="rounded border-gray-300 cursor-pointer"
                             />
-                            <span className="text-sm font-medium">
+                            <span className="text-sm font-medium flex-1 min-w-0">
                               {player?.first_name || 'Unknown'} {player?.last_name || 'Player'}
                             </span>
-                          </label>
+                            {selectedPlayers.teamB.includes(player.id) && (
+                              <div className="flex flex-col gap-1">
+                                <Input
+                                  type="text"
+                                  placeholder="#"
+                                  value={jerseyNumbers[player.id] || ''}
+                                  onChange={(e) => updateJerseyNumber(player.id, e.target.value, player.team_id)}
+                                  className={`w-16 h-8 text-sm text-center ${duplicateJerseys[player.id] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                                  maxLength={3}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                                {duplicateJerseys[player.id] && (
+                                  <span className="text-xs text-red-500">Duplicate!</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         ))}
                     </div>
                   </div>
