@@ -19,6 +19,10 @@ interface Match {
   time?: string
   date?: string
   sport: "football" | "basketball" | "volleyball"
+  penaltyScore?: {
+    team_a: number
+    team_b: number
+  } | null
 }
 
 interface MatchCardProps {
@@ -74,6 +78,11 @@ export function MatchCard({ match, className, onClick }: MatchCardProps) {
               <div className="text-xl font-bold text-gray-900">
                 {match.homeTeam.score !== null ? match.homeTeam.score : <span className="text-gray-400">--</span>}
               </div>
+              {match.sport === 'football' && match.penaltyScore && (
+                <div className="text-xs text-gray-500 mt-0.5">
+                  ({match.penaltyScore.team_a})
+                </div>
+              )}
             </div>
             <div className="text-center">
               <div className="text-lg mb-0.5">{sportIcon}</div>
@@ -83,6 +92,11 @@ export function MatchCard({ match, className, onClick }: MatchCardProps) {
               <div className="text-xl font-bold text-gray-900">
                 {match.awayTeam.score !== null ? match.awayTeam.score : <span className="text-gray-400">--</span>}
               </div>
+              {match.sport === 'football' && match.penaltyScore && (
+                <div className="text-xs text-gray-500 mt-0.5">
+                  ({match.penaltyScore.team_b})
+                </div>
+              )}
             </div>
           </div>
 

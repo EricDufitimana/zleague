@@ -18,6 +18,7 @@ interface Match {
   winner_id?: number
   team_a_score?: number
   team_b_score?: number
+  penalty_score?: { team_a: number; team_b: number } | null
   match_time?: string
   championship?: {
     id: number
@@ -249,6 +250,7 @@ export default function ScoresPage() {
               match.status === 'live' ? 'live' as const :
               match.status === 'scheduled' ? 'not_played' as const : 'not_played' as const,
       sport: match.sport_type as "football" | "basketball" | "volleyball",
+      penaltyScore: match.penalty_score || null,
       time: match.status === 'scheduled' && match.match_time ? 
         `${new Date(match.match_time).toLocaleDateString('en-US', { weekday: 'short' })} ${new Date(match.match_time).toLocaleTimeString('en-US', { 
           hour: '2-digit', 

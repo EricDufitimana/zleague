@@ -580,6 +580,11 @@ export default function FootballLiveScorePage() {
             <div className="flex items-center justify-center">
               <div className="text-center">
                 <div className="text-6xl font-bold text-gray-900 mb-2">{teamAScore}</div>
+                {(match as any)?.penalty_score && (
+                  <div className="text-sm text-gray-500 mb-2">
+                    ({((match as any).penalty_score as { team_a: number; team_b: number }).team_a})
+                  </div>
+                )}
                 <div className="text-xl font-semibold text-gray-700 uppercase">
                   {match.teamA?.name || `Team ${match.team_a_id}`}
                 </div>
@@ -591,6 +596,11 @@ export default function FootballLiveScorePage() {
               
               <div className="text-center">
                 <div className="text-6xl font-bold text-gray-900 mb-2">{teamBScore}</div>
+                {(match as any)?.penalty_score && (
+                  <div className="text-sm text-gray-500 mb-2">
+                    ({((match as any).penalty_score as { team_a: number; team_b: number }).team_b})
+                  </div>
+                )}
                 <div className="text-xl font-semibold text-gray-700 uppercase">
                   {match.teamB?.name || `Team ${match.team_b_id}`}
                 </div>

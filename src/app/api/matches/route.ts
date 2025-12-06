@@ -572,7 +572,7 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     console.log('🔧 PATCH /api/matches - Request body:', body);
     
-    const { match_id, match_time, status, winner_id, team_a_score, team_b_score } = body;
+    const { match_id, match_time, status, winner_id, team_a_score, team_b_score, penalty_score } = body;
 
     if (!match_id) {
       console.log('❌ PATCH /api/matches - Missing match_id');
@@ -647,6 +647,10 @@ export async function PATCH(request: NextRequest) {
       
       if (team_b_score !== undefined) {
         updateData.team_b_score = parseInt(team_b_score);
+      }
+      
+      if (penalty_score !== undefined) {
+        updateData.penalty_score = penalty_score; // JSONB field - store as-is
       }
 
       console.log('📝 PATCH /api/matches - Update data:', updateData);

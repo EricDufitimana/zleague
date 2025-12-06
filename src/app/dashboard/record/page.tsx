@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Trophy, Calendar, Users, Target, CheckCircle, AlertCircle, Clock, BarChart3, Loader2, Play } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface Championship {
   id: number;
@@ -33,6 +34,7 @@ interface Match {
   match_time?: string;
   status: string;
   winner_id?: number;
+  penalty_score?: { team_a: number; team_b: number } | null;
   teamA: Team;
   teamB: Team;
   championship: Championship;
@@ -41,6 +43,7 @@ interface Match {
 interface MatchWithScores extends Match {
   team_a_score?: number;
   team_b_score?: number;
+  penalty_score?: { team_a: number; team_b: number } | null;
 }
 
 interface BasketballScore {
@@ -72,8 +75,10 @@ interface Player {
 export default function RecordPage() {
   const [championships, setChampionships] = useState<Championship[]>([]);
   const [selectedChampionship, setSelectedChampionship] = useState<string>("");
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [matchesWithScores, setMatchesWithScores] = useState<MatchWithScores[]>([]);
+  const [allMatches, setAllMatches] = useState<Match[]>([]); // Store all matches from all championships
+  const [allMatchesWithScores, setAllMatchesWithScores] = useState<MatchWithScores[]>([]); // Store all matches with scores
+  const [matches, setMatches] = useState<Match[]>([]); // Filtered matches based on selected championship
+  const [matchesWithScores, setMatchesWithScores] = useState<MatchWithScores[]>([]); // Filtered matches with scores
   const [selectedMatch, setSelectedMatch] = useState<string>("");
   const [selectedMatchData, setSelectedMatchData] = useState<Match | null>(null);
   const [winningTeam, setWinningTeam] = useState<string>("");
@@ -111,6 +116,9 @@ export default function RecordPage() {
   });
   const [selectedTeamForStats, setSelectedTeamForStats] = useState<'teamA' | 'teamB' | 'both'>('both');
   const [showPlayerSelector, setShowPlayerSelector] = useState(false);
+  // Penalty scores state: { team_a: number, team_b: number } or null
+  const [penaltyScores, setPenaltyScores] = useState<{ team_a: number; team_b: number } | null>(null);
+  const [showPenaltyDialog, setShowPenaltyDialog] = useState(false);
   const [selectedPlayers, setSelectedPlayers] = useState<{
     teamA: number[];
     teamB: number[];
@@ -118,6 +126,11 @@ export default function RecordPage() {
     teamA: [],
     teamB: []
   });
+  // ✅ EY player names state: { teamId: Array<{firstName: string, lastName: string}> }
+  const [eyPlayerNames, setEyPlayerNames] = useState<{
+    [teamId: number]: Array<{ firstName: string; lastName: string }>;
+  }>({});
+  const [isCreatingPlayers, setIsCreatingPlayers] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingPlayers, setIsLoadingPlayers] = useState(false);
@@ -148,6 +161,8 @@ export default function RecordPage() {
 
   const [isFetchingMatches, setIsFetchingMatches] = useState(false);
   const [isFetchingChampionships, setIsFetchingChampionships] = useState(false);
+  const [isLoadingAllMatches, setIsLoadingAllMatches] = useState(false);
+  
   // Fetch championships on component mount
   useEffect(() => {
     // Only fetch on client side
@@ -158,26 +173,72 @@ export default function RecordPage() {
     }
   }, []);
 
-  // Fetch matches when championship changes
+  // Load all matches in the background when championships are loaded
   useEffect(() => {
-    const fetchMatchesForChampionship = async () => {
-      console.log('🔄 Championship selection changed:', selectedChampionship);
+    const loadAllMatches = async () => {
+      if (championships.length > 0 && allMatches.length === 0) {
+        console.log('🔄 Loading all matches in background...');
+        setIsLoadingAllMatches(true);
+        try {
+          // Fetch all matches without championship filter
+          const response = await fetch('/api/matches');
+          if (response.ok) {
+            const responseData = await response.json();
+            const data = responseData.matches || [];
+            
+            // Filter out matches with null team IDs
+            const validMatches = data.filter((match: Match) => 
+              match.team_a_id !== null && match.team_b_id !== null
+            );
+            
+            console.log('✅ All matches loaded in background:', validMatches.length);
+            setAllMatches(validMatches);
+            
+            // Pre-fetch scores for all matches and store in allMatchesWithScores
+            const matchesWithScoresData = await fetchAllMatchScores(validMatches);
+            setAllMatchesWithScores(matchesWithScoresData);
+          }
+        } catch (error) {
+          console.error('💥 Error loading all matches:', error);
+        } finally {
+          setIsLoadingAllMatches(false);
+        }
+      }
+    };
     
-    if (selectedChampionship) {
-      console.log('🚀 Triggering match fetch for championship:', selectedChampionship);
-      setIsFetchingMatches(true);
-      await fetchMatches(selectedChampionship);
-      setIsFetchingMatches(false);
+    loadAllMatches();
+  }, [championships]);
+
+  // Filter matches when championship changes (no fetching, just filtering)
+  useEffect(() => {
+    console.log('🔄 Championship selection changed:', selectedChampionship);
+    
+    if (selectedChampionship && allMatches.length > 0) {
+      console.log('🔍 Filtering matches for championship:', selectedChampionship);
+      const filtered = allMatches.filter(
+        match => match.championship_id.toString() === selectedChampionship
+      );
+      console.log('✅ Filtered matches:', filtered.length);
+      setMatches(filtered);
+      
+      // Filter matchesWithScores for selected championship
+      const filteredWithScores = allMatchesWithScores.filter(
+        match => match.championship_id.toString() === selectedChampionship
+      );
+      setMatchesWithScores(filteredWithScores);
+    } else if (selectedChampionship && allMatches.length === 0) {
+      // If matches haven't loaded yet, show empty
+      console.log('⏳ Waiting for matches to load...');
+      setMatches([]);
+      setMatchesWithScores([]);
     } else {
       console.log('🧹 Clearing matches data (no championship selected)');
       setMatches([]);
+      setMatchesWithScores([]);
       setSelectedMatch("");
       setSelectedMatchData(null);
     }
-    };
-    
-    fetchMatchesForChampionship();
-  }, [selectedChampionship]);
+  }, [selectedChampionship, allMatches, allMatchesWithScores]);
 
   // Update selected match data when match selection changes
   useEffect(() => {
@@ -193,8 +254,10 @@ export default function RecordPage() {
         });
         setWinningTeam("");
         setIndividualStats({ teamA: [], teamB: [] });
+        setPenaltyScores(null);
         setFootballIndividualStats({ teamA: [], teamB: [] });
         setSelectedPlayers({ teamA: [], teamB: [] });
+        setEyPlayerNames({}); // Reset EY player names
         
         // Fetch players for both teams
         fetchPlayers(match.team_a_id, match.team_b_id);
@@ -306,12 +369,12 @@ export default function RecordPage() {
     }
   };
 
-  const fetchAllMatchScores = async (matchesData: Match[]) => {
+  const fetchAllMatchScores = async (matchesData: Match[]): Promise<MatchWithScores[]> => {
     try {
       const matchesWithScoresData: MatchWithScores[] = await Promise.all(
         matchesData.map(async (match) => {
           if (match.status !== 'played') {
-            return { ...match, team_a_score: undefined, team_b_score: undefined };
+            return { ...match, team_a_score: undefined, team_b_score: undefined, penalty_score: null };
           }
 
           try {
@@ -344,17 +407,20 @@ export default function RecordPage() {
               }
             }
 
-            return { ...match, team_a_score, team_b_score };
+            // Include penalty_score from match data if it exists
+            const penaltyScore = (match as any).penalty_score || null;
+            return { ...match, team_a_score, team_b_score, penalty_score: penaltyScore };
           } catch (error) {
             console.error(`Error fetching scores for match ${match.id}:`, error);
-            return { ...match, team_a_score: undefined, team_b_score: undefined };
+            return { ...match, team_a_score: undefined, team_b_score: undefined, penalty_score: null };
           }
         })
       );
 
-      setMatchesWithScores(matchesWithScoresData);
+      return matchesWithScoresData;
     } catch (error) {
       console.error('Error fetching all match scores:', error);
+      return [];
     }
   };
 
@@ -560,20 +626,163 @@ export default function RecordPage() {
         setWinningTeam(selectedMatchData.winner_id.toString());
       }
       
+      // Load penalty scores if they exist
+      const matchData = selectedMatchData as Match & { penalty_score?: { team_a: number; team_b: number } | null };
+      if (matchData?.penalty_score && typeof matchData.penalty_score === 'object') {
+        const penalty = matchData.penalty_score as { team_a: number; team_b: number };
+        setPenaltyScores({
+          team_a: penalty.team_a || 0,
+          team_b: penalty.team_b || 0
+        });
+      } else {
+        setPenaltyScores(null);
+      }
+      
     } catch (error) {
       console.error('Error loading existing match data:', error);
     }
   };
 
-  const handlePlayerSelection = () => {
-    // Filter individual stats to only show selected players
-    const filteredStats = {
-      teamA: individualStats.teamA.filter(stat => selectedPlayers.teamA.includes(stat.player_id)),
-      teamB: individualStats.teamB.filter(stat => selectedPlayers.teamB.includes(stat.player_id))
-    };
-    
-    setIndividualStats(filteredStats);
-    setShowPlayerSelector(false);
+  // ✅ Check if teams are EY grade
+  const isEYMatch = selectedMatchData?.teamA?.grade?.toLowerCase() === 'ey' || selectedMatchData?.teamB?.grade?.toLowerCase() === 'ey';
+
+  const handlePlayerSelection = async () => {
+    try {
+      setIsCreatingPlayers(true);
+      
+      // ✅ If EY match, create players first from typed names
+      if (isEYMatch && selectedMatchData) {
+        const eyPlayersToCreate: Array<{ teamId: string; firstName: string; lastName: string }> = [];
+        
+        // Collect EY players from both teams
+        Object.entries(eyPlayerNames).forEach(([teamIdStr, names]) => {
+          const teamId = parseInt(teamIdStr);
+          names.forEach(name => {
+            if (name.firstName.trim() && name.lastName.trim()) {
+              eyPlayersToCreate.push({
+                teamId: teamId.toString(),
+                firstName: name.firstName.trim(),
+                lastName: name.lastName.trim()
+              });
+            }
+          });
+        });
+
+        if (eyPlayersToCreate.length > 0) {
+          // Create players via API
+          const createResponse = await fetch('/api/players', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              players: eyPlayersToCreate.map(p => ({
+                teamId: p.teamId,
+                firstName: p.firstName,
+                lastName: p.lastName
+              }))
+            })
+          });
+
+          if (!createResponse.ok) {
+            const error = await createResponse.json();
+            throw new Error(error.error || 'Failed to create players');
+          }
+
+          const { players: createdPlayers } = await createResponse.json();
+          
+          // Add created players to selected players
+          const newPlayerIds = createdPlayers.map((p: any) => p.id);
+          setSelectedPlayers(prev => {
+            const updated = { ...prev };
+            createdPlayers.forEach((p: any) => {
+              const teamKey = p.team_id === selectedMatchData.team_a_id ? 'teamA' : 'teamB';
+              if (!updated[teamKey].includes(p.id)) {
+                updated[teamKey] = [...updated[teamKey], p.id];
+              }
+            });
+            return updated;
+          });
+
+          // Refresh players list
+          await fetchPlayers(selectedMatchData.team_a_id, selectedMatchData.team_b_id);
+          
+          // Wait a bit for the query to complete
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+      
+      // Filter individual stats to only show selected players
+      const filteredStats = {
+        teamA: individualStats.teamA.filter(stat => selectedPlayers.teamA.includes(stat.player_id)),
+        teamB: individualStats.teamB.filter(stat => selectedPlayers.teamB.includes(stat.player_id))
+      };
+      
+      // Also initialize stats for newly selected players that don't have stats yet
+      const allSelectedTeamA = selectedPlayers.teamA;
+      const allSelectedTeamB = selectedPlayers.teamB;
+      
+      const teamAPlayersToAdd = allSelectedTeamA.filter(id => !filteredStats.teamA.some(stat => stat.player_id === id));
+      const teamBPlayersToAdd = allSelectedTeamB.filter(id => !filteredStats.teamB.some(stat => stat.player_id === id));
+      
+      if (selectedMatchData?.sport_type === 'basketball') {
+        setIndividualStats({
+          teamA: [
+            ...filteredStats.teamA,
+            ...teamAPlayersToAdd.map(id => ({
+              player_id: id,
+              points: 0,
+              rebounds: 0,
+              assists: 0,
+              three_points_made: 0,
+              three_points_attempted: 0
+            }))
+          ],
+          teamB: [
+            ...filteredStats.teamB,
+            ...teamBPlayersToAdd.map(id => ({
+              player_id: id,
+              points: 0,
+              rebounds: 0,
+              assists: 0,
+              three_points_made: 0,
+              three_points_attempted: 0
+            }))
+          ]
+        });
+      } else if (selectedMatchData?.sport_type === 'football') {
+        setFootballIndividualStats({
+          teamA: [
+            ...footballIndividualStats.teamA.filter(stat => allSelectedTeamA.includes(stat.player_id)),
+            ...teamAPlayersToAdd.map(id => ({
+              player_id: id,
+              goals: 0,
+              assists: 0,
+              shots_on_target: 0,
+              saves: 0
+            }))
+          ],
+          teamB: [
+            ...footballIndividualStats.teamB.filter(stat => allSelectedTeamB.includes(stat.player_id)),
+            ...teamBPlayersToAdd.map(id => ({
+              player_id: id,
+              goals: 0,
+              assists: 0,
+              shots_on_target: 0,
+              saves: 0
+            }))
+          ]
+        });
+      }
+      
+      // Clear EY names after successful creation
+      setEyPlayerNames({});
+      setShowPlayerSelector(false);
+    } catch (error) {
+      console.error('Error creating player score entries:', error);
+      alert(error instanceof Error ? error.message : 'Failed to create players');
+      // Don't close modal on error so user can fix
+    } finally {
+      setIsCreatingPlayers(false);
+    }
   };
 
   const togglePlayerSelection = (teamId: number, playerId: number) => {
@@ -646,8 +855,21 @@ export default function RecordPage() {
   };
 
   const handleSubmit = async () => {
-    if (!selectedMatchData || !winningTeam) {
-      setMessage({ type: "error", text: "Please select a match and winning team" });
+    if (!selectedMatchData) {
+      setMessage({ type: "error", text: "Please select a match" });
+      return;
+    }
+    
+    // Check if we need a winning team selection
+    // If scores are 0-0 with penalties, winner will be determined by penalties
+    const isZeroZeroWithPenalties = selectedMatchData.sport_type === 'football' && 
+      footballScores.teamA.goals === 0 && 
+      footballScores.teamB.goals === 0 && 
+      penaltyScores && 
+      (penaltyScores.team_a > 0 || penaltyScores.team_b > 0);
+    
+    if (!winningTeam && !isZeroZeroWithPenalties) {
+      setMessage({ type: "error", text: "Please select a winning team" });
       return;
     }
 
@@ -668,18 +890,36 @@ export default function RecordPage() {
     }
 
     if (selectedMatchData.sport_type === 'football') {
-      if (footballScores.teamA.goals === 0 && footballScores.teamB.goals === 0) {
-        setMessage({ type: "error", text: "Please enter goals for both teams" });
+      // Allow 0-0 scores if penalties are entered
+      const hasPenalties = penaltyScores && (penaltyScores.team_a > 0 || penaltyScores.team_b > 0);
+      
+      if (footballScores.teamA.goals === 0 && footballScores.teamB.goals === 0 && !hasPenalties) {
+        setMessage({ type: "error", text: "Please enter goals for both teams, or enter penalty scores if the match ended 0-0" });
         return;
       }
       
-      // Validate that team statistics match individual player statistics
-      if (!validateFootballStatistics()) {
-        setMessage({ 
-          type: "error", 
-          text: "Team totals must match the sum of individual player statistics for goals and assists. Please check your entries." 
-        });
-        return;
+      // If scores are 0-0 and penalties are entered, validate penalties
+      if (footballScores.teamA.goals === 0 && footballScores.teamB.goals === 0 && hasPenalties) {
+        if (!penaltyScores || (penaltyScores.team_a === 0 && penaltyScores.team_b === 0)) {
+          setMessage({ type: "error", text: "Please enter penalty scores for both teams" });
+          return;
+        }
+        // Determine winner based on penalties
+        if (penaltyScores.team_a === penaltyScores.team_b) {
+          setMessage({ type: "error", text: "Penalty scores cannot be tied. Please enter different penalty scores." });
+          return;
+        }
+      }
+      
+      // Validate that team statistics match individual player statistics (only if there are goals)
+      if (footballScores.teamA.goals > 0 || footballScores.teamB.goals > 0) {
+        if (!validateFootballStatistics()) {
+          setMessage({ 
+            type: "error", 
+            text: "Team totals must match the sum of individual player statistics for goals and assists. Please check your entries." 
+          });
+          return;
+        }
       }
     }
 
@@ -699,17 +939,51 @@ export default function RecordPage() {
         teamBScore = footballScores.teamB.goals;
       }
 
-      // Update match with winner, status, and team scores
+      // Prepare penalty score data if scores are tied and penalty scores exist
+      let penaltyScoreData = null;
+      let finalWinnerId = winningTeam ? parseInt(winningTeam) : null;
+      
+      if (selectedMatchData.sport_type === 'football' && 
+          teamAScore === teamBScore && 
+          penaltyScores && 
+          (penaltyScores.team_a > 0 || penaltyScores.team_b > 0)) {
+        penaltyScoreData = {
+          team_a: penaltyScores.team_a,
+          team_b: penaltyScores.team_b
+        };
+        
+        // Determine winner based on penalties when scores are tied
+        if (penaltyScores.team_a > penaltyScores.team_b) {
+          finalWinnerId = selectedMatchData.team_a_id;
+        } else if (penaltyScores.team_b > penaltyScores.team_a) {
+          finalWinnerId = selectedMatchData.team_b_id;
+        }
+      }
+      
+      // Ensure we have a winner
+      if (!finalWinnerId) {
+        setMessage({ type: "error", text: "Unable to determine winner. Please check your entries." });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Update match with winner, status, team scores, and penalty scores
+      const matchUpdateBody: any = {
+        match_id: selectedMatchData.id,
+        winner_id: finalWinnerId,
+        status: 'played',
+        team_a_score: teamAScore,
+        team_b_score: teamBScore
+      };
+      
+      if (penaltyScoreData) {
+        matchUpdateBody.penalty_score = penaltyScoreData;
+      }
+
       const matchUpdateResponse = await fetch('/api/matches', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          match_id: selectedMatchData.id,
-          winner_id: parseInt(winningTeam),
-          status: 'played',
-          team_a_score: teamAScore,
-          team_b_score: teamBScore
-        })
+        body: JSON.stringify(matchUpdateBody)
       });
 
       if (!matchUpdateResponse.ok) {
@@ -758,40 +1032,45 @@ export default function RecordPage() {
 
       // If football, record scores
       if (selectedMatchData.sport_type === 'football') {
-        // Combine team scores with individual player stats
-        const allScores = [
-          ...footballIndividualStats.teamA.map(stat => ({
-            match_id: selectedMatchData.id,
-            team_id: selectedMatchData.team_a_id,
-            goals: stat.goals,
-            assists: stat.assists,
-            shots_on_target: stat.shots_on_target || 0,
-            saves: stat.saves || 0,
-            player_id: stat.player_id
-          })),
-          ...footballIndividualStats.teamB.map(stat => ({
-            match_id: selectedMatchData.id,
-            team_id: selectedMatchData.team_b_id,
-            goals: stat.goals,
-            assists: stat.assists,
-            shots_on_target: stat.shots_on_target || 0,
-            saves: stat.saves || 0,
-            player_id: stat.player_id
-          }))
-        ];
+        // Only record individual player stats if there are goals (not 0-0)
+        // For 0-0 matches with penalties, we don't need individual stats
+        if (teamAScore > 0 || teamBScore > 0) {
+          // Combine team scores with individual player stats
+          const allScores = [
+            ...footballIndividualStats.teamA.map(stat => ({
+              match_id: selectedMatchData.id,
+              team_id: selectedMatchData.team_a_id,
+              goals: stat.goals,
+              assists: stat.assists,
+              shots_on_target: stat.shots_on_target || 0,
+              saves: stat.saves || 0,
+              player_id: stat.player_id
+            })),
+            ...footballIndividualStats.teamB.map(stat => ({
+              match_id: selectedMatchData.id,
+              team_id: selectedMatchData.team_b_id,
+              goals: stat.goals,
+              assists: stat.assists,
+              shots_on_target: stat.shots_on_target || 0,
+              saves: stat.saves || 0,
+              player_id: stat.player_id
+            }))
+          ];
 
-        const scoresResponse = await fetch('/api/football-scores', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            match_id: selectedMatchData.id,
-            scores: allScores
-          })
-        });
+          const scoresResponse = await fetch('/api/football-scores', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              match_id: selectedMatchData.id,
+              scores: allScores
+            })
+          });
 
-        if (!scoresResponse.ok) {
-          throw new Error('Failed to record football scores');
+          if (!scoresResponse.ok) {
+            throw new Error('Failed to record football scores');
+          }
         }
+        // For 0-0 matches with penalties, we don't need to record individual scores
       }
 
       setMessage({ 
@@ -825,10 +1104,29 @@ export default function RecordPage() {
         teamB: []
       });
 
-      // Refresh matches and scores table
-      if (selectedChampionship) {
-        await fetchMatches(selectedChampionship);
-      }
+      // Refresh all matches and scores in background
+      const refreshAllMatches = async () => {
+        try {
+          const response = await fetch('/api/matches');
+          if (response.ok) {
+            const responseData = await response.json();
+            const data = responseData.matches || [];
+            const validMatches = data.filter((match: Match) => 
+              match.team_a_id !== null && match.team_b_id !== null
+            );
+            setAllMatches(validMatches);
+            
+            // Refresh scores for all matches
+            const matchesWithScoresData = await fetchAllMatchScores(validMatches);
+            setAllMatchesWithScores(matchesWithScoresData);
+          }
+        } catch (error) {
+          console.error('Error refreshing matches:', error);
+        }
+      };
+      
+      // Refresh in background (don't await)
+      refreshAllMatches();
 
     } catch (error) {
       setMessage({ 
@@ -1674,7 +1972,7 @@ export default function RecordPage() {
                         <h3 className="text-sm font-semibold text-rose-900">Football Statistics</h3>
                         <p className="text-xs text-rose-700/80">Record team and individual player statistics</p>
                       </div>
-                      {/* Team Filter for Statistics */}
+                      {/* Team Filter for Statistics and Penalty Button */}
                       <div className="flex items-center gap-3">
                         <Label htmlFor="team-filter-football" className="text-sm font-medium">
                           Show Stats For:
@@ -1689,6 +1987,79 @@ export default function RecordPage() {
                             <SelectItem value="teamB">{selectedMatchData.teamB.name} ({selectedMatchData.teamB.grade})</SelectItem>
                           </SelectContent>
                         </Select>
+                        <Dialog open={showPenaltyDialog} onOpenChange={setShowPenaltyDialog}>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" type="button">
+                              ⚽ Penalty
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Enter Penalty Shootout Scores</DialogTitle>
+                              <DialogDescription>
+                                Enter the penalty shootout scores for both teams if the match ended in a tie.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid grid-cols-2 gap-4 py-4">
+                              <div>
+                                <Label htmlFor="dialog-penalty-team-a">
+                                  {selectedMatchData.teamA.name} Penalties
+                                </Label>
+                                <Input
+                                  id="dialog-penalty-team-a"
+                                  type="number"
+                                  min="0"
+                                  value={penaltyScores?.team_a || 0}
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value) || 0;
+                                    setPenaltyScores(prev => ({
+                                      team_a: value,
+                                      team_b: prev?.team_b || 0
+                                    }));
+                                  }}
+                                  placeholder="0"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="dialog-penalty-team-b">
+                                  {selectedMatchData.teamB.name} Penalties
+                                </Label>
+                                <Input
+                                  id="dialog-penalty-team-b"
+                                  type="number"
+                                  min="0"
+                                  value={penaltyScores?.team_b || 0}
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value) || 0;
+                                    setPenaltyScores(prev => ({
+                                      team_a: prev?.team_a || 0,
+                                      team_b: value
+                                    }));
+                                  }}
+                                  placeholder="0"
+                                />
+                              </div>
+                            </div>
+                            <DialogFooter>
+                              <Button
+                                variant="outline"
+                                onClick={() => {
+                                  setPenaltyScores(null);
+                                  setShowPenaltyDialog(false);
+                                }}
+                              >
+                                Clear
+                              </Button>
+                              <Button
+                                onClick={() => {
+                                  setShowPenaltyDialog(false);
+                                }}
+                              >
+                                Save
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
                       </div>
                     </div>
                 
@@ -1785,6 +2156,59 @@ export default function RecordPage() {
                         </div>
                       </div>
                     </div>
+                    
+                    {/* Penalty Scores Section - Show when scores are tied */}
+                    {footballScores.teamA.goals === footballScores.teamB.goals && footballScores.teamA.goals > 0 && (
+                      <div className="bg-yellow-50 border-2 border-yellow-300 p-4 rounded-lg mb-4">
+                        <h6 className="font-semibold text-yellow-900 mb-3 flex items-center gap-2">
+                          <span>⚽</span>
+                          Penalty Shootout (Scores are tied)
+                        </h6>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="penalty-team-a">
+                              {selectedMatchData.teamA.name} Penalties
+                            </Label>
+                            <Input
+                              id="penalty-team-a"
+                              type="number"
+                              min="0"
+                              value={penaltyScores?.team_a || 0}
+                              onChange={(e) => {
+                                const value = parseInt(e.target.value) || 0;
+                                setPenaltyScores(prev => ({
+                                  team_a: value,
+                                  team_b: prev?.team_b || 0
+                                }));
+                              }}
+                              placeholder="0"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="penalty-team-b">
+                              {selectedMatchData.teamB.name} Penalties
+                            </Label>
+                            <Input
+                              id="penalty-team-b"
+                              type="number"
+                              min="0"
+                              value={penaltyScores?.team_b || 0}
+                              onChange={(e) => {
+                                const value = parseInt(e.target.value) || 0;
+                                setPenaltyScores(prev => ({
+                                  team_a: prev?.team_a || 0,
+                                  team_b: value
+                                }));
+                              }}
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+                        <p className="text-xs text-yellow-700 mt-2">
+                          Enter penalty shootout scores if the match ended in a tie
+                        </p>
+                      </div>
+                    )}
                     
                     {/* Individual Player Stats for Team A */}
                     <div className="space-y-3">
@@ -2170,86 +2594,363 @@ export default function RecordPage() {
       )}
 
       {/* Player Selection Modal */}
-      {showPlayerSelector && selectedMatchData && players.length > 0 && (
+      {showPlayerSelector && selectedMatchData && (isEYMatch || players.length > 0) && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+          <Card className="max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Select Players Who Played</CardTitle>
+                <CardTitle>
+                  {isEYMatch ? 'Enter Player Names (EY)' : 'Select Players Who Played'}
+                </CardTitle>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setShowPlayerSelector(false)}
+                  onClick={() => {
+                    setShowPlayerSelector(false);
+                    setEyPlayerNames({});
+                  }}
                 >
                   ✕
                 </Button>
               </div>
-              <CardDescription>Choose which players participated in this match</CardDescription>
+              <CardDescription>
+                {isEYMatch 
+                  ? 'Type in the names of players who participated in this match'
+                  : 'Choose which players participated in this match'
+                }
+              </CardDescription>
             </CardHeader>
             <CardContent>
-            
-              <div className="space-y-6">
-                {/* Team A Players */}
-                <div>
-                  <h4 className="font-medium mb-3">
-                    {selectedMatchData.teamA.name} ({selectedMatchData.teamA.grade})
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    {players
-                      .filter(p => p && p.team_id === selectedMatchData.team_a_id)
-                      .map(player => (
-                        <label key={player.id} className="flex items-center space-x-2 cursor-pointer p-2 rounded hover:bg-muted/50">
-                          <input
-                            type="checkbox"
-                            checked={selectedPlayers.teamA.includes(player.id)}
-                            onChange={() => togglePlayerSelection(player.team_id, player.id)}
-                            className="rounded border-gray-300"
-                          />
-                          <span className="text-sm">
-                            {player?.first_name || 'Unknown'} {player?.last_name || 'Player'}
-                          </span>
-                        </label>
-                      ))}
-                  </div>
-                </div>
+              {isEYMatch ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Team A EY - Existing Players + New Name Inputs */}
+                  {selectedMatchData.teamA?.grade?.toLowerCase() === 'ey' && (
+                    <div>
+                      <h4 className="font-medium mb-3 flex items-center gap-2">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        {selectedMatchData.teamA?.name || `Team ${selectedMatchData.team_a_id}`}
+                      </h4>
+                      
+                      {/* Existing Players */}
+                      {players.length > 0 && (
+                        <div className="mb-4">
+                          <p className="text-sm text-gray-600 mb-2">Existing Players:</p>
+                          <div className="grid grid-cols-1 gap-2">
+                            {players
+                              .filter(p => p && p.team_id === selectedMatchData.team_a_id)
+                              .map(player => (
+                                <div key={player.id} className="flex items-center gap-2 p-3 rounded-lg border hover:bg-blue-50">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedPlayers.teamA.includes(player.id)}
+                                    onChange={() => togglePlayerSelection(player.team_id, player.id)}
+                                    className="rounded border-gray-300 cursor-pointer"
+                                  />
+                                  <span className="text-sm font-medium flex-1 min-w-0">
+                                    {player?.first_name || 'Unknown'} {player?.last_name || 'Player'}
+                                  </span>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
 
-                {/* Team B Players */}
-                <div>
-                  <h4 className="font-medium mb-3">
-                    {selectedMatchData.teamB.name} ({selectedMatchData.teamB.grade})
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    {players
-                      .filter(p => p && p.team_id === selectedMatchData.team_b_id)
-                      .map(player => (
-                        <label key={player.id} className="flex items-center space-x-2 cursor-pointer p-2 rounded hover:bg-muted/50">
-                          <input
-                            type="checkbox"
-                            checked={selectedPlayers.teamB.includes(player.id)}
-                            onChange={() => togglePlayerSelection(player.team_id, player.id)}
-                            className="rounded border-gray-300"
-                          />
-                          <span className="text-sm">
-                            {player?.first_name || 'Unknown'} {player?.last_name || 'Player'}
-                          </span>
-                        </label>
-                      ))}
-                  </div>
+                      {/* Add New Players */}
+                      <div className="mt-4">
+                        <p className="text-sm text-gray-600 mb-2">Add New Players:</p>
+                        <div className="space-y-3">
+                          {(eyPlayerNames[selectedMatchData.team_a_id] || []).map((player, index) => (
+                            <div key={index} className="flex gap-2">
+                              <Input
+                                type="text"
+                                placeholder="First Name"
+                                value={player.firstName}
+                                onChange={(e) => {
+                                  const newNames = [...(eyPlayerNames[selectedMatchData.team_a_id] || [])];
+                                  newNames[index] = { ...newNames[index], firstName: e.target.value };
+                                  setEyPlayerNames({ ...eyPlayerNames, [selectedMatchData.team_a_id]: newNames });
+                                }}
+                                className="flex-1"
+                              />
+                              <Input
+                                type="text"
+                                placeholder="Last Name"
+                                value={player.lastName}
+                                onChange={(e) => {
+                                  const newNames = [...(eyPlayerNames[selectedMatchData.team_a_id] || [])];
+                                  newNames[index] = { ...newNames[index], lastName: e.target.value };
+                                  setEyPlayerNames({ ...eyPlayerNames, [selectedMatchData.team_a_id]: newNames });
+                                }}
+                                className="flex-1"
+                              />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const newNames = [...(eyPlayerNames[selectedMatchData.team_a_id] || [])];
+                                  newNames.splice(index, 1);
+                                  setEyPlayerNames({ ...eyPlayerNames, [selectedMatchData.team_a_id]: newNames });
+                                }}
+                              >
+                                ✕
+                              </Button>
+                            </div>
+                          ))}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const currentNames = eyPlayerNames[selectedMatchData.team_a_id] || [];
+                              setEyPlayerNames({
+                                ...eyPlayerNames,
+                                [selectedMatchData.team_a_id]: [...currentNames, { firstName: '', lastName: '' }]
+                              });
+                            }}
+                            className="w-full"
+                          >
+                            + Add New Player
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Team B EY - Existing Players + New Name Inputs */}
+                  {selectedMatchData.teamB?.grade?.toLowerCase() === 'ey' && (
+                    <div>
+                      <h4 className="font-medium mb-3 flex items-center gap-2">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        {selectedMatchData.teamB?.name || `Team ${selectedMatchData.team_b_id}`}
+                      </h4>
+                      
+                      {/* Existing Players */}
+                      {players.length > 0 && (
+                        <div className="mb-4">
+                          <p className="text-sm text-gray-600 mb-2">Existing Players:</p>
+                          <div className="grid grid-cols-1 gap-2">
+                            {players
+                              .filter(p => p && p.team_id === selectedMatchData.team_b_id)
+                              .map(player => (
+                                <div key={player.id} className="flex items-center gap-2 p-3 rounded-lg border hover:bg-green-50">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedPlayers.teamB.includes(player.id)}
+                                    onChange={() => togglePlayerSelection(player.team_id, player.id)}
+                                    className="rounded border-gray-300 cursor-pointer"
+                                  />
+                                  <span className="text-sm font-medium flex-1 min-w-0">
+                                    {player?.first_name || 'Unknown'} {player?.last_name || 'Player'}
+                                  </span>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Add New Players */}
+                      <div className="mt-4">
+                        <p className="text-sm text-gray-600 mb-2">Add New Players:</p>
+                        <div className="space-y-3">
+                          {(eyPlayerNames[selectedMatchData.team_b_id] || []).map((player, index) => (
+                            <div key={index} className="flex gap-2">
+                              <Input
+                                type="text"
+                                placeholder="First Name"
+                                value={player.firstName}
+                                onChange={(e) => {
+                                  const newNames = [...(eyPlayerNames[selectedMatchData.team_b_id] || [])];
+                                  newNames[index] = { ...newNames[index], firstName: e.target.value };
+                                  setEyPlayerNames({ ...eyPlayerNames, [selectedMatchData.team_b_id]: newNames });
+                                }}
+                                className="flex-1"
+                              />
+                              <Input
+                                type="text"
+                                placeholder="Last Name"
+                                value={player.lastName}
+                                onChange={(e) => {
+                                  const newNames = [...(eyPlayerNames[selectedMatchData.team_b_id] || [])];
+                                  newNames[index] = { ...newNames[index], lastName: e.target.value };
+                                  setEyPlayerNames({ ...eyPlayerNames, [selectedMatchData.team_b_id]: newNames });
+                                }}
+                                className="flex-1"
+                              />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const newNames = [...(eyPlayerNames[selectedMatchData.team_b_id] || [])];
+                                  newNames.splice(index, 1);
+                                  setEyPlayerNames({ ...eyPlayerNames, [selectedMatchData.team_b_id]: newNames });
+                                }}
+                              >
+                                ✕
+                              </Button>
+                            </div>
+                          ))}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const currentNames = eyPlayerNames[selectedMatchData.team_b_id] || [];
+                              setEyPlayerNames({
+                                ...eyPlayerNames,
+                                [selectedMatchData.team_b_id]: [...currentNames, { firstName: '', lastName: '' }]
+                              });
+                            }}
+                            className="w-full"
+                          >
+                            + Add New Player
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Show existing players for non-EY teams */}
+                  {selectedMatchData.teamA?.grade?.toLowerCase() !== 'ey' && players.length > 0 && (
+                    <div>
+                      <h4 className="font-medium mb-3 flex items-center gap-2">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        {selectedMatchData.teamA?.name || `Team ${selectedMatchData.team_a_id}`}
+                      </h4>
+                      <div className="grid grid-cols-1 gap-2">
+                        {players
+                          .filter(p => p && p.team_id === selectedMatchData.team_a_id)
+                          .map(player => (
+                            <div key={player.id} className="flex items-center gap-2 p-3 rounded-lg border hover:bg-blue-50">
+                              <input
+                                type="checkbox"
+                                checked={selectedPlayers.teamA.includes(player.id)}
+                                onChange={() => togglePlayerSelection(player.team_id, player.id)}
+                                className="rounded border-gray-300 cursor-pointer"
+                              />
+                              <span className="text-sm font-medium flex-1 min-w-0">
+                                {player?.first_name || 'Unknown'} {player?.last_name || 'Player'}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedMatchData.teamB?.grade?.toLowerCase() !== 'ey' && players.length > 0 && (
+                    <div>
+                      <h4 className="font-medium mb-3 flex items-center gap-2">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        {selectedMatchData.teamB?.name || `Team ${selectedMatchData.team_b_id}`}
+                      </h4>
+                      <div className="grid grid-cols-1 gap-2">
+                        {players
+                          .filter(p => p && p.team_id === selectedMatchData.team_b_id)
+                          .map(player => (
+                            <div key={player.id} className="flex items-center gap-2 p-3 rounded-lg border hover:bg-green-50">
+                              <input
+                                type="checkbox"
+                                checked={selectedPlayers.teamB.includes(player.id)}
+                                onChange={() => togglePlayerSelection(player.team_id, player.id)}
+                                className="rounded border-gray-300 cursor-pointer"
+                              />
+                              <span className="text-sm font-medium flex-1 min-w-0">
+                                {player?.first_name || 'Unknown'} {player?.last_name || 'Player'}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              ) : (
+                // Normal Mode: Show existing player selection
+                players.length > 0 && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Team A Players */}
+                    <div>
+                      <h4 className="font-medium mb-3 flex items-center gap-2">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        {selectedMatchData.teamA?.name || `Team ${selectedMatchData.team_a_id}`}
+                      </h4>
+                      <div className="grid grid-cols-1 gap-2">
+                        {players
+                          .filter(p => p && p.team_id === selectedMatchData.team_a_id)
+                          .map(player => (
+                            <div key={player.id} className="flex items-center gap-2 p-3 rounded-lg border hover:bg-blue-50">
+                              <input
+                                type="checkbox"
+                                checked={selectedPlayers.teamA.includes(player.id)}
+                                onChange={() => togglePlayerSelection(player.team_id, player.id)}
+                                className="rounded border-gray-300 cursor-pointer"
+                              />
+                              <span className="text-sm font-medium flex-1 min-w-0">
+                                {player?.first_name || 'Unknown'} {player?.last_name || 'Player'}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+
+                    {/* Team B Players */}
+                    <div>
+                      <h4 className="font-medium mb-3 flex items-center gap-2">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        {selectedMatchData.teamB?.name || `Team ${selectedMatchData.team_b_id}`}
+                      </h4>
+                      <div className="grid grid-cols-1 gap-2">
+                        {players
+                          .filter(p => p && p.team_id === selectedMatchData.team_b_id)
+                          .map(player => (
+                            <div key={player.id} className="flex items-center gap-2 p-3 rounded-lg border hover:bg-green-50">
+                              <input
+                                type="checkbox"
+                                checked={selectedPlayers.teamB.includes(player.id)}
+                                onChange={() => togglePlayerSelection(player.team_id, player.id)}
+                                className="rounded border-gray-300 cursor-pointer"
+                              />
+                              <span className="text-sm font-medium flex-1 min-w-0">
+                                {player?.first_name || 'Unknown'} {player?.last_name || 'Player'}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  </div>
+                )
+              )}
 
               <div className="flex justify-end gap-3 mt-6">
                 <Button
                   variant="outline"
-                  onClick={() => setShowPlayerSelector(false)}
+                  onClick={() => {
+                    setShowPlayerSelector(false);
+                    setEyPlayerNames({});
+                  }}
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handlePlayerSelection}
-                  disabled={selectedPlayers.teamA.length === 0 && selectedPlayers.teamB.length === 0}
+                  disabled={
+                    isCreatingPlayers ||
+                    (isEYMatch
+                      ? (eyPlayerNames[selectedMatchData.team_a_id] || []).filter(p => p.firstName.trim() && p.lastName.trim()).length === 0 &&
+                        (eyPlayerNames[selectedMatchData.team_b_id] || []).filter(p => p.firstName.trim() && p.lastName.trim()).length === 0 &&
+                        selectedPlayers.teamA.length === 0 && selectedPlayers.teamB.length === 0
+                      : selectedPlayers.teamA.length === 0 && selectedPlayers.teamB.length === 0)
+                  }
                 >
-                  Confirm Selection ({selectedPlayers.teamA.length + selectedPlayers.teamB.length} players)
+                  {isCreatingPlayers ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Creating Entries...
+                    </div>
+                  ) : isEYMatch ? (
+                    `Confirm (${[
+                      ...(eyPlayerNames[selectedMatchData.team_a_id] || []),
+                      ...(eyPlayerNames[selectedMatchData.team_b_id] || [])
+                    ].filter(p => p.firstName.trim() && p.lastName.trim()).length + selectedPlayers.teamA.length + selectedPlayers.teamB.length} players)`
+                  ) : (
+                    `Confirm Selection (${selectedPlayers.teamA.length + selectedPlayers.teamB.length} players)`
+                  )}
                 </Button>
               </div>
             </CardContent>
@@ -2303,14 +3004,28 @@ export default function RecordPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`text-lg font-bold ${match.winner_id === match.team_a_id ? 'text-green-600' : 'text-gray-900'}`}>
-                          {match.team_a_score !== undefined ? match.team_a_score : '-'}
-                        </span>
+                        <div className="flex flex-col items-center">
+                          <span className={`text-lg font-bold ${match.winner_id === match.team_a_id ? 'text-green-600' : 'text-gray-900'}`}>
+                            {match.team_a_score !== undefined ? match.team_a_score : '-'}
+                          </span>
+                          {match.sport_type === 'football' && match.penalty_score && (
+                            <span className="text-xs text-gray-500 mt-1">
+                              ({match.penalty_score.team_a})
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`text-lg font-bold ${match.winner_id === match.team_b_id ? 'text-green-600' : 'text-gray-900'}`}>
-                          {match.team_b_score !== undefined ? match.team_b_score : '-'}
-                        </span>
+                        <div className="flex flex-col items-center">
+                          <span className={`text-lg font-bold ${match.winner_id === match.team_b_id ? 'text-green-600' : 'text-gray-900'}`}>
+                            {match.team_b_score !== undefined ? match.team_b_score : '-'}
+                          </span>
+                          {match.sport_type === 'football' && match.penalty_score && (
+                            <span className="text-xs text-gray-500 mt-1">
+                              ({match.penalty_score.team_b})
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         {match.winner_id ? (
@@ -2338,3 +3053,4 @@ export default function RecordPage() {
     </div>
   );
 }
+

@@ -12,7 +12,7 @@ import { createMultipleBasketballScores } from '@/actions/livescore/basketball-u
 import { useRealtimeBasketballScores } from '@/hooks/useRealtimeBasketballScores';
 import { useMutationQueue } from '@/hooks/useMutationQueue';
 
-interface Team {
+interface Team{
   id: number;
   name: string;
   grade: string;
