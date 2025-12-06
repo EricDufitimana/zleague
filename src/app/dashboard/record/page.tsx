@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Trophy, Calendar, Users, Target, CheckCircle, AlertCircle, Clock, BarChart3, Loader2, Play } from "lucide-react";
+import { Trophy, Calendar, Users, Target, CheckCircle, AlertCircle, Clock, BarChart3, Loader2, Play, Plus, X } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface Championship {
@@ -97,6 +97,14 @@ export default function RecordPage() {
   }>({
     teamA: { team_id: 0, goals: 0, assists: 0 },
     teamB: { team_id: 0, goals: 0, assists: 0 }
+  });
+  
+  const [volleyballScores, setVolleyballScores] = useState<{
+    teamA: { team_id: number; sets: Array<{ setNumber: number; points: number }> };
+    teamB: { team_id: number; sets: Array<{ setNumber: number; points: number }> };
+  }>({
+    teamA: { team_id: 0, sets: [{ setNumber: 1, points: 0 }, { setNumber: 2, points: 0 }, { setNumber: 3, points: 0 }] },
+    teamB: { team_id: 0, sets: [{ setNumber: 1, points: 0 }, { setNumber: 2, points: 0 }, { setNumber: 3, points: 0 }] }
   });
   
   const [individualStats, setIndividualStats] = useState<{
@@ -252,6 +260,14 @@ export default function RecordPage() {
           teamA: { team_id: match.team_a_id, points: 0, rebounds: 0, assists: 0 },
           teamB: { team_id: match.team_b_id, points: 0, rebounds: 0, assists: 0 }
         });
+        setFootballScores({
+          teamA: { team_id: match.team_a_id, goals: 0, assists: 0 },
+          teamB: { team_id: match.team_b_id, goals: 0, assists: 0 }
+        });
+        setVolleyballScores({
+          teamA: { team_id: match.team_a_id, sets: [{ setNumber: 1, points: 0 }, { setNumber: 2, points: 0 }, { setNumber: 3, points: 0 }] },
+          teamB: { team_id: match.team_b_id, sets: [{ setNumber: 1, points: 0 }, { setNumber: 2, points: 0 }, { setNumber: 3, points: 0 }] }
+        });
         setWinningTeam("");
         setIndividualStats({ teamA: [], teamB: [] });
         setPenaltyScores(null);
@@ -405,6 +421,12 @@ export default function RecordPage() {
                 team_a_score = teamAScore?.goals || 0;
                 team_b_score = teamBScore?.goals || 0;
               }
+            } else if (match.sport_type === 'volleyball') {
+              // For volleyball, use team_a_score and team_b_score directly from match (sets won)
+              // These are already set in the match by the API when volleyball scores are recorded
+              const matchWithScores = match as Match & { team_a_score?: number; team_b_score?: number };
+              team_a_score = matchWithScores.team_a_score || 0;
+              team_b_score = matchWithScores.team_b_score || 0;
             }
 
             // Include penalty_score from match data if it exists
@@ -616,6 +638,52 @@ export default function RecordPage() {
                 teamA: teamAStats.map((stat: { player_id: number; goals: number; assists: number }) => stat.player_id),
                 teamB: teamBStats.map((stat: { player_id: number; goals: number; assists: number }) => stat.player_id)
               });
+            }
+          }
+        }
+      }
+      
+      // Fetch existing volleyball scores if it's a volleyball match
+      if (selectedMatchData?.sport_type === 'volleyball') {
+        const scoresResponse = await fetch(`/api/volleyball-scores?match_id=${matchId}`);
+        if (scoresResponse.ok) {
+          const scoresData = await scoresResponse.json();
+          console.log('🏐 Existing volleyball scores data:', scoresData);
+          
+          if (scoresData && scoresData.scores && scoresData.scores.length > 0) {
+            const teamAScore = scoresData.scores.find((score: any) => score.team_id === selectedMatchData?.team_a_id);
+            const teamBScore = scoresData.scores.find((score: any) => score.team_id === selectedMatchData?.team_b_id);
+            
+            if (teamAScore) {
+              // Handle sets JSONB format
+              let sets: Array<{ setNumber: number; points: number }> = [];
+              if (teamAScore.sets && Array.isArray(teamAScore.sets)) {
+                sets = teamAScore.sets;
+              }
+              
+              setVolleyballScores(prev => ({
+                ...prev,
+                teamA: {
+                  team_id: teamAScore.team_id,
+                  sets: sets.length > 0 ? sets : [{ setNumber: 1, points: 0 }, { setNumber: 2, points: 0 }, { setNumber: 3, points: 0 }]
+                }
+              }));
+            }
+            
+            if (teamBScore) {
+              // Handle sets JSONB format
+              let sets: Array<{ setNumber: number; points: number }> = [];
+              if (teamBScore.sets && Array.isArray(teamBScore.sets)) {
+                sets = teamBScore.sets;
+              }
+              
+              setVolleyballScores(prev => ({
+                ...prev,
+                teamB: {
+                  team_id: teamBScore.team_id,
+                  sets: sets.length > 0 ? sets : [{ setNumber: 1, points: 0 }, { setNumber: 2, points: 0 }, { setNumber: 3, points: 0 }]
+                }
+              }));
             }
           }
         }
@@ -854,6 +922,28 @@ export default function RecordPage() {
     return teamAGoalsMatch && teamBGoalsMatch && teamAAssistsMatch && teamBAssistsMatch;
   };
 
+  const validateVolleyballStatistics = () => {
+    // Check each set - winner must have at least 25 points and win by 2
+    for (const teamASet of volleyballScores.teamA.sets) {
+      const teamBSet = volleyballScores.teamB.sets.find(s => s.setNumber === teamASet.setNumber);
+      if (!teamBSet) continue;
+
+      if (teamASet.points > 0 || teamBSet.points > 0) {
+        // If scores are entered, check if valid
+        const winner = teamASet.points > teamBSet.points ? teamASet.points : teamBSet.points;
+        const loser = teamASet.points > teamBSet.points ? teamBSet.points : teamASet.points;
+        const pointDiff = Math.abs(teamASet.points - teamBSet.points);
+
+        // Winner must have at least 25 points and win by at least 2 points
+        if (winner < 25 || pointDiff < 2) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  };
+
   const handleSubmit = async () => {
     if (!selectedMatchData) {
       setMessage({ type: "error", text: "Please select a match" });
@@ -923,6 +1013,26 @@ export default function RecordPage() {
       }
     }
 
+    if (selectedMatchData.sport_type === 'volleyball') {
+      // Check if at least one set has scores
+      const hasScores = volleyballScores.teamA.sets.some(s => s.points > 0) || 
+                        volleyballScores.teamB.sets.some(s => s.points > 0);
+      
+      if (!hasScores) {
+        setMessage({ type: "error", text: "Please enter scores for at least one set" });
+        return;
+      }
+      
+      // Validate that sets are won correctly (25 points, win by 2)
+      if (!validateVolleyballStatistics()) {
+        setMessage({ 
+          type: "error", 
+          text: "Each set must be won with at least 25 points and by a margin of at least 2 points. Please check your scores." 
+        });
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     setMessage(null);
 
@@ -937,6 +1047,21 @@ export default function RecordPage() {
       } else if (selectedMatchData.sport_type === 'football') {
         teamAScore = footballScores.teamA.goals;
         teamBScore = footballScores.teamB.goals;
+      } else if (selectedMatchData.sport_type === 'volleyball') {
+        // For volleyball, count sets won (team with higher score in each set)
+        let teamASetsWon = 0;
+        let teamBSetsWon = 0;
+        
+        for (const teamASet of volleyballScores.teamA.sets) {
+          const teamBSet = volleyballScores.teamB.sets.find(s => s.setNumber === teamASet.setNumber);
+          if (teamBSet) {
+            if (teamASet.points > teamBSet.points) teamASetsWon++;
+            else if (teamBSet.points > teamASet.points) teamBSetsWon++;
+          }
+        }
+        
+        teamAScore = teamASetsWon;
+        teamBScore = teamBSetsWon;
       }
 
       // Prepare penalty score data if scores are tied and penalty scores exist
@@ -1073,6 +1198,36 @@ export default function RecordPage() {
         // For 0-0 matches with penalties, we don't need to record individual scores
       }
 
+      // If volleyball, record set scores
+      if (selectedMatchData.sport_type === 'volleyball') {
+        // Store volleyball set scores with JSONB format
+        const volleyballScoresData = [
+          {
+            match_id: selectedMatchData.id,
+            team_id: selectedMatchData.team_a_id,
+            sets: volleyballScores.teamA.sets
+          },
+          {
+            match_id: selectedMatchData.id,
+            team_id: selectedMatchData.team_b_id,
+            sets: volleyballScores.teamB.sets
+          }
+        ];
+
+        const scoresResponse = await fetch('/api/volleyball-scores', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            match_id: selectedMatchData.id,
+            scores: volleyballScoresData
+          })
+        });
+
+        if (!scoresResponse.ok) {
+          throw new Error('Failed to record volleyball scores');
+        }
+      }
+
       setMessage({ 
         type: "success", 
         text: selectedMatchData.status === 'played' 
@@ -1094,6 +1249,11 @@ export default function RecordPage() {
         teamB: { team_id: 0, goals: 0, assists: 0 }
       });
       
+      setVolleyballScores({
+        teamA: { team_id: 0, sets: [{ setNumber: 1, points: 0 }, { setNumber: 2, points: 0 }, { setNumber: 3, points: 0 }] },
+        teamB: { team_id: 0, sets: [{ setNumber: 1, points: 0 }, { setNumber: 2, points: 0 }, { setNumber: 3, points: 0 }] }
+      });
+      
       setFootballIndividualStats({
         teamA: [],
         teamB: []
@@ -1103,6 +1263,8 @@ export default function RecordPage() {
         teamA: [],
         teamB: []
       });
+      
+      setPenaltyScores(null);
 
       // Refresh all matches and scores in background
       const refreshAllMatches = async () => {
@@ -2539,6 +2701,187 @@ export default function RecordPage() {
                     </div>
                   </div>
                 )}
+                  </section>
+                )}
+
+                {/* Volleyball Statistics */}
+                {selectedMatchData.sport_type === 'volleyball' && (
+                  <section className="rounded-lg border bg-gradient-to-b from-green-50/60 to-white p-4 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-semibold text-green-900">Volleyball Statistics</h3>
+                        <p className="text-xs text-green-700/80">Record scores for each set (25 points to win a set)</p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const nextSetNumber = Math.max(...volleyballScores.teamA.sets.map(s => s.setNumber), ...volleyballScores.teamB.sets.map(s => s.setNumber)) + 1;
+                          setVolleyballScores(prev => ({
+                            teamA: {
+                              ...prev.teamA,
+                              sets: [...prev.teamA.sets, { setNumber: nextSetNumber, points: 0 }]
+                            },
+                            teamB: {
+                              ...prev.teamB,
+                              sets: [...prev.teamB.sets, { setNumber: nextSetNumber, points: 0 }]
+                            }
+                          }));
+                        }}
+                        className="flex items-center gap-2"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add Set
+                      </Button>
+                    </div>
+
+                    {/* Team A Sets */}
+                    <div className="rounded-md border bg-gray-50/40 p-4 space-y-4">
+                      <div className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                        {selectedMatchData.teamA.name}
+                        <Badge variant="outline" className={getGradeBadgeColor(selectedMatchData.teamA.grade)}>{selectedMatchData.teamA.grade}</Badge>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        {volleyballScores.teamA.sets.map((set, index) => (
+                          <div key={set.setNumber} className="flex items-end gap-2">
+                            <div className="flex-1">
+                              <Label htmlFor={`team-a-set-${set.setNumber}`}>Set {set.setNumber}</Label>
+                              <Input
+                                id={`team-a-set-${set.setNumber}`}
+                                type="number"
+                                min="0"
+                                max="25"
+                                value={set.points}
+                                onChange={(e) => {
+                                  const value = parseInt(e.target.value) || 0;
+                                  setVolleyballScores(prev => ({
+                                    ...prev,
+                                    teamA: {
+                                      ...prev.teamA,
+                                      sets: prev.teamA.sets.map(s => 
+                                        s.setNumber === set.setNumber ? { ...s, points: value } : s
+                                      )
+                                    }
+                                  }));
+                                }}
+                                className="text-center text-lg font-semibold"
+                              />
+                            </div>
+                            {volleyballScores.teamA.sets.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setVolleyballScores(prev => ({
+                                    teamA: {
+                                      ...prev.teamA,
+                                      sets: prev.teamA.sets.filter(s => s.setNumber !== set.setNumber)
+                                    },
+                                    teamB: {
+                                      ...prev.teamB,
+                                      sets: prev.teamB.sets.filter(s => s.setNumber !== set.setNumber)
+                                    }
+                                  }));
+                                }}
+                                className="h-10 w-10 p-0 text-red-500 hover:text-red-700"
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Team B Sets */}
+                    <div className="rounded-md border bg-gray-50/40 p-4 space-y-4">
+                      <div className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                        {selectedMatchData.teamB.name}
+                        <Badge variant="outline" className={getGradeBadgeColor(selectedMatchData.teamB.grade)}>{selectedMatchData.teamB.grade}</Badge>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        {volleyballScores.teamB.sets.map((set) => (
+                          <div key={set.setNumber} className="flex items-end gap-2">
+                            <div className="flex-1">
+                              <Label htmlFor={`team-b-set-${set.setNumber}`}>Set {set.setNumber}</Label>
+                              <Input
+                                id={`team-b-set-${set.setNumber}`}
+                                type="number"
+                                min="0"
+                                max="25"
+                                value={set.points}
+                                onChange={(e) => {
+                                  const value = parseInt(e.target.value) || 0;
+                                  setVolleyballScores(prev => ({
+                                    ...prev,
+                                    teamB: {
+                                      ...prev.teamB,
+                                      sets: prev.teamB.sets.map(s => 
+                                        s.setNumber === set.setNumber ? { ...s, points: value } : s
+                                      )
+                                    }
+                                  }));
+                                }}
+                                className="text-center text-lg font-semibold"
+                              />
+                            </div>
+                            {volleyballScores.teamB.sets.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setVolleyballScores(prev => ({
+                                    teamA: {
+                                      ...prev.teamA,
+                                      sets: prev.teamA.sets.filter(s => s.setNumber !== set.setNumber)
+                                    },
+                                    teamB: {
+                                      ...prev.teamB,
+                                      sets: prev.teamB.sets.filter(s => s.setNumber !== set.setNumber)
+                                    }
+                                  }));
+                                }}
+                                className="h-10 w-10 p-0 text-red-500 hover:text-red-700"
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Set Winners Summary */}
+                    <div className="bg-green-100 p-3 rounded-lg">
+                      <div className="space-y-2">
+                        {volleyballScores.teamA.sets.map((set) => {
+                          const teamBSet = volleyballScores.teamB.sets.find(s => s.setNumber === set.setNumber);
+                          if (!teamBSet) return null;
+                          
+                          const teamAWon = set.points > teamBSet.points;
+                          const teamBWon = teamBSet.points > set.points;
+                          const isValid = set.points > 0 && teamBSet.points > 0 && 
+                                        (set.points >= 25 || teamBSet.points >= 25) &&
+                                        Math.abs(set.points - teamBSet.points) >= 2;
+                          
+                          return (
+                            <div key={set.setNumber} className="flex items-center justify-between text-sm">
+                              <span className="font-medium text-gray-700">Set {set.setNumber} Winner:</span>
+                              <span className="text-gray-600">
+                                {teamAWon ? selectedMatchData.teamA.name : 
+                                 teamBWon ? selectedMatchData.teamB.name : 
+                                 'Not determined'}
+                                {isValid ? ' ✓' : 
+                                 set.points > 0 && teamBSet.points > 0 ? ' (Need 25+ with 2 point lead)' : ''}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </section>
                 )}
 

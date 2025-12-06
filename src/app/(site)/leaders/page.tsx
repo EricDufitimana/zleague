@@ -317,30 +317,34 @@ export default function LeadersPage() {
             </div>
           </div>
           
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Search by player name or team..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-white"
-            />
-          </div>
         </div>
 
         {/* Leaderboard Table */}
         <Card className="border-0 bg-white/50 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <span className="text-2xl">
-                {selectedSport === "football" && "⚽"}
-                {selectedSport === "basketball" && "🏀"}
-                {selectedSport === "volleyball" && "🏐"}
-              </span>
-              Top {categories.find(c => c.value === selectedCategory)?.label} Leaders
-            </CardTitle>
+            <div className="flex items-center justify-between gap-4">
+              <CardTitle className="flex items-center gap-2">
+                <span className="text-2xl">
+                  {selectedSport === "football" && "⚽"}
+                  {selectedSport === "basketball" && "🏀"}
+                  {selectedSport === "volleyball" && "🏐"}
+                </span>
+                Top {categories.find(c => c.value === selectedCategory)?.label} Leaders
+              </CardTitle>
+              <div className="relative w-full max-w-xs">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Search by player name or team..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value)
+                    setCurrentPage(1)
+                  }}
+                  className="pl-10 bg-white"
+                />
+              </div>
+            </div>
             {selectedSport === "basketball" && (
               <Alert className="mt-4 bg-blue-50 border-blue-200">
                 <AlertDescription className="text-sm text-gray-700">
