@@ -4,11 +4,23 @@ import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Search } from "lucide-react"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 // Types for different leaderboard entries
 type FootballPlayer = {
@@ -68,6 +80,9 @@ export default function LeadersPage() {
   const [allLeaders, setAllLeaders] = useState<LeaderPlayer[]>([])
   const [championship, setChampionship] = useState<{ id: number; name: string } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 20
 
   // Reset category when sport changes
   useEffect(() => {
@@ -105,34 +120,43 @@ export default function LeadersPage() {
     fetchLeaders()
   }, [selectedSport, selectedGender])
 
-  // Filter and sort leaders client-side based on selected category
-  const leaders = useMemo(() => {
+  // Filter and sort leaders client-side based on selected category and search
+  const filteredAndSortedLeaders = useMemo(() => {
     if (allLeaders.length === 0) return []
 
-    const sorted = [...allLeaders]
+    let filtered = [...allLeaders]
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      filtered = filtered.filter(player => 
+        player.name.toLowerCase().includes(query) ||
+        player.team.toLowerCase().includes(query)
+      )
+    }
 
     // Sort based on selected category
     if (selectedSport === 'football') {
       if (selectedCategory === 'goals') {
-        sorted.sort((a, b) => {
+        filtered.sort((a, b) => {
           const aPlayer = a as FootballPlayer
           const bPlayer = b as FootballPlayer
           return bPlayer.goals - aPlayer.goals || bPlayer.assists - aPlayer.assists
         })
       } else if (selectedCategory === 'assists') {
-        sorted.sort((a, b) => {
+        filtered.sort((a, b) => {
           const aPlayer = a as FootballPlayer
           const bPlayer = b as FootballPlayer
           return bPlayer.assists - aPlayer.assists || bPlayer.goals - aPlayer.goals
         })
       } else if (selectedCategory === 'saves') {
-        sorted.sort((a, b) => {
+        filtered.sort((a, b) => {
           const aPlayer = a as FootballPlayer
           const bPlayer = b as FootballPlayer
           return bPlayer.saves - aPlayer.saves || bPlayer.goals - aPlayer.goals
         })
       } else if (selectedCategory === 'shots_on_target') {
-        sorted.sort((a, b) => {
+        filtered.sort((a, b) => {
           const aPlayer = a as FootballPlayer
           const bPlayer = b as FootballPlayer
           return bPlayer.shotsOnTarget - aPlayer.shotsOnTarget || bPlayer.goals - aPlayer.goals
@@ -140,25 +164,25 @@ export default function LeadersPage() {
       }
     } else if (selectedSport === 'basketball') {
       if (selectedCategory === 'points') {
-        sorted.sort((a, b) => {
+        filtered.sort((a, b) => {
           const aPlayer = a as BasketballPlayer
           const bPlayer = b as BasketballPlayer
           return bPlayer.points - aPlayer.points || bPlayer.assists - aPlayer.assists
         })
       } else if (selectedCategory === 'rebounds') {
-        sorted.sort((a, b) => {
+        filtered.sort((a, b) => {
           const aPlayer = a as BasketballPlayer
           const bPlayer = b as BasketballPlayer
           return bPlayer.rebounds - aPlayer.rebounds || bPlayer.points - aPlayer.points
         })
       } else if (selectedCategory === 'assists') {
-        sorted.sort((a, b) => {
+        filtered.sort((a, b) => {
           const aPlayer = a as BasketballPlayer
           const bPlayer = b as BasketballPlayer
           return bPlayer.assists - aPlayer.assists || bPlayer.points - aPlayer.points
         })
       } else if (selectedCategory === 'three_points_made') {
-        sorted.sort((a, b) => {
+        filtered.sort((a, b) => {
           const aPlayer = a as BasketballPlayer
           const bPlayer = b as BasketballPlayer
           return bPlayer.threePointsMade - aPlayer.threePointsMade || bPlayer.points - aPlayer.points
@@ -166,12 +190,27 @@ export default function LeadersPage() {
       }
     }
 
-    // Re-rank after sorting and take top 10
-    return sorted.slice(0, 10).map((player, index) => ({
+    // Re-rank after sorting
+    return filtered.map((player, index) => ({
       ...player,
       rank: index + 1
     }))
-  }, [allLeaders, selectedCategory, selectedSport])
+  }, [allLeaders, selectedCategory, selectedSport, searchQuery])
+
+  // Paginate the filtered and sorted leaders
+  const leaders = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const endIndex = startIndex + itemsPerPage
+    return filteredAndSortedLeaders.slice(startIndex, endIndex)
+  }, [filteredAndSortedLeaders, currentPage])
+
+  // Calculate total pages
+  const totalPages = Math.ceil(filteredAndSortedLeaders.length / itemsPerPage)
+
+  // Reset to page 1 when search, sport, category, or gender changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, selectedSport, selectedCategory, selectedGender])
 
   const getCategories = (sport: string) => {
     switch (sport) {
@@ -233,47 +272,61 @@ export default function LeadersPage() {
         </div>
 
         {/* Filters */}
-        <div className="mb-8 flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Sport</label>
-            <Select value={selectedSport} onValueChange={setSelectedSport}>
-              <SelectTrigger className="bg-white">
-                <SelectValue placeholder="Select sport" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="football">⚽ Football</SelectItem>
-                <SelectItem value="basketball">🏀 Basketball</SelectItem>
-                <SelectItem value="volleyball">🏐 Volleyball</SelectItem>
-              </SelectContent>
-            </Select>
+        <div className="mb-8 space-y-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Sport</label>
+              <Select value={selectedSport} onValueChange={setSelectedSport}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Select sport" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="football">⚽ Football</SelectItem>
+                  <SelectItem value="basketball">🏀 Basketball</SelectItem>
+                  <SelectItem value="volleyball">🏐 Volleyball</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Category</label>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.value} value={category.value}>
+                      {category.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Gender</label>
+              <Select value={selectedGender} onValueChange={setSelectedGender}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div className="flex-1">
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Category</label>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="bg-white">
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.value} value={category.value}>
-                    {category.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex-1">
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Gender</label>
-            <Select value={selectedGender} onValueChange={setSelectedGender}>
-              <SelectTrigger className="bg-white">
-                <SelectValue placeholder="Select gender" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="male">Male</SelectItem>
-                <SelectItem value="female">Female</SelectItem>
-              </SelectContent>
-            </Select>
+          
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Search by player name or team..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-white"
+            />
           </div>
         </div>
 
@@ -504,11 +557,90 @@ export default function LeadersPage() {
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">🏆</div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">No data available</h3>
-                <p className="text-gray-600">No statistics recorded for this category yet</p>
+                <p className="text-gray-600">
+                  {searchQuery.trim() 
+                    ? "No players found matching your search" 
+                    : "No statistics recorded for this category yet"}
+                </p>
               </div>
             )}
           </CardContent>
         </Card>
+
+        {/* Pagination */}
+        {filteredAndSortedLeaders.length > 0 && totalPages > 1 && (
+          <div className="mt-6 flex justify-center">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      if (currentPage > 1) setCurrentPage(currentPage - 1)
+                    }}
+                    className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+                
+                {/* Page Numbers */}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum
+                  if (totalPages <= 5) {
+                    pageNum = i + 1
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i
+                  } else {
+                    pageNum = currentPage - 2 + i
+                  }
+                  
+                  return (
+                    <PaginationItem key={pageNum}>
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          setCurrentPage(pageNum)
+                        }}
+                        isActive={currentPage === pageNum}
+                        size="icon"
+                        className="cursor-pointer"
+                      >
+                        {pageNum}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )
+                })}
+                
+                {totalPages > 5 && currentPage < totalPages - 2 && (
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                )}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      if (currentPage < totalPages) setCurrentPage(currentPage + 1)
+                    }}
+                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
+
+        {/* Results Info */}
+        {filteredAndSortedLeaders.length > 0 && (
+          <div className="mt-4 text-center text-sm text-gray-600">
+            Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredAndSortedLeaders.length)} of {filteredAndSortedLeaders.length} players
+          </div>
+        )}
       </main>
     </div>
   )
