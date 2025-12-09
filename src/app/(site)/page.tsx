@@ -390,6 +390,12 @@ export default function ScoresPage() {
       console.log('✅ Match passed all filters')
       return true
     })
+    .sort((a, b) => {
+      // Sort by date (newest first) - use match_time if available, otherwise created_at
+      const dateA = new Date(a.match_time || a.created_at).getTime()
+      const dateB = new Date(b.match_time || b.created_at).getTime()
+      return dateB - dateA // Newest first
+    })
     .map(convertToMatchCard)
 
   // Log final results
@@ -411,17 +417,40 @@ export default function ScoresPage() {
 
   // Group matches by week when "all" is selected
   const groupedMatches = selectedDate === "all" ? 
-    filteredMatches.reduce((acc, match) => {
-      const originalMatch = matches.find(m => m.id.toString() === match.id)
-      if (!originalMatch) return acc
+    (() => {
+      const grouped = filteredMatches.reduce((acc, match) => {
+        const originalMatch = matches.find(m => m.id.toString() === match.id)
+        if (!originalMatch) return acc
+        
+        // Use match_time if available, otherwise fall back to created_at
+        const dateToUse = originalMatch.match_time || originalMatch.created_at
+        const weekLabel = getWeekLabel(dateToUse)
+        if (!acc[weekLabel]) acc[weekLabel] = []
+        acc[weekLabel].push(match)
+        return acc
+      }, {} as Record<string, typeof filteredMatches>)
       
-      // Use match_time if available, otherwise fall back to created_at
-      const dateToUse = originalMatch.match_time || originalMatch.created_at
-      const weekLabel = getWeekLabel(dateToUse)
-      if (!acc[weekLabel]) acc[weekLabel] = []
-      acc[weekLabel].push(match)
-      return acc
-    }, {} as Record<string, typeof filteredMatches>) : null
+      // Sort matches within each week group by date (newest first)
+      const weekOrder = ["This Week", "Last Week", "2 Weeks Ago", "Older"]
+      const sortedGrouped: Record<string, typeof filteredMatches> = {}
+      
+      weekOrder.forEach(weekLabel => {
+        if (grouped[weekLabel]) {
+          // Sort matches within this week by date (newest first)
+          sortedGrouped[weekLabel] = grouped[weekLabel].sort((a, b) => {
+            const matchA = matches.find(m => m.id.toString() === a.id)
+            const matchB = matches.find(m => m.id.toString() === b.id)
+            if (!matchA || !matchB) return 0
+            
+            const dateA = new Date(matchA.match_time || matchA.created_at).getTime()
+            const dateB = new Date(matchB.match_time || matchB.created_at).getTime()
+            return dateB - dateA // Newest first
+          })
+        }
+      })
+      
+      return sortedGrouped
+    })() : null
 
   // Handle match click to show stats
   const handleMatchClick = (matchId: string) => {
@@ -523,26 +552,29 @@ export default function ScoresPage() {
             selectedDate === "all" && groupedMatches ? (
               // Grouped matches by week
               <div className="space-y-6">
-                {Object.entries(groupedMatches).map(([weekLabel, matches]) => (
-                  matches.length > 0 && (
-                    <section key={weekLabel} className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <div className="h-[1px] w-6 bg-[#E67514]/30" />
-                        <h2 className="text-sm font-medium uppercase tracking-wider text-[#E67514]/80">{weekLabel}</h2>
-                        <div className="flex-1 h-[1px] bg-gray-200" />
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {matches.map((match) => (
-                          <MatchCard 
-                            key={match.id} 
-                            match={match}
-                            onClick={() => handleMatchClick(match.id)}
-                          />
-                        ))}
-                      </div>
-                    </section>
-                  )
-                ))}
+                {["This Week", "Last Week", "2 Weeks Ago", "Older"]
+                  .filter(weekLabel => groupedMatches[weekLabel] && groupedMatches[weekLabel].length > 0)
+                  .map((weekLabel) => {
+                    const weekMatches = groupedMatches[weekLabel]
+                    return (
+                      <section key={weekLabel} className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-[1px] w-6 bg-[#E67514]/30" />
+                          <h2 className="text-sm font-medium uppercase tracking-wider text-[#E67514]/80">{weekLabel}</h2>
+                          <div className="flex-1 h-[1px] bg-gray-200" />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {weekMatches.map((match) => (
+                            <MatchCard 
+                              key={match.id} 
+                              match={match}
+                              onClick={() => handleMatchClick(match.id)}
+                            />
+                          ))}
+                        </div>
+                      </section>
+                    )
+                  })}
               </div>
             ) : (
               // Regular matches (not grouped)
