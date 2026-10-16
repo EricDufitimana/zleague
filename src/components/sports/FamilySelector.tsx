@@ -7,41 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Users, Check, X } from 'lucide-react';
 
-// Families organized by grade
-const FAMILIES_BY_GRADE = {
-  'ey': [
-    'Family_1',
-    'Family_2', 
-    'Family_3',
-    'Family_4',
-    'Family_5',
-    'Family_6'
-  ],
-  's4': [
-    'Thomas Edison',
-    'Rosalie Gicanda',
-    'Lance Reddick',
-    'Niyitegeka Felestin',
-    'Irena Sendler',
-    'ADA loveloce'
-  ],
-  's5': [
-    'Pelé (Edson Arantes Do Nascimento)',
-    'Ubald Rugirangoga',
-    'Alfred Nobel',
-    'Toni Morrison',
-    'Ruth Bader Ginsberg',
-    'Charles Babbage'
-  ],
-  's6': [
-    'KATHERINE JOHNSON',
-    'YVAN BURAVAN', 
-    'Chinua Achebe',
-    'RUGANZU NDOLI 2',
-    'AOUA KEITA',
-    'Fannie Lou Hamer'
-  ]
-};
+import {
+  FAMILIES_BY_GRADE,
+  SELECTABLE_GRADES,
+  GRADE_LABELS,
+  type TeamGrade,
+} from '@/lib/grades';
 
 interface FamilySelectorProps {
   selectedFamilies: string[];
@@ -60,8 +31,12 @@ export function FamilySelector({
 }: FamilySelectorProps) {
   const [selectAll, setSelectAll] = useState(false);
 
-  // Get all families from all grades
-  const allFamilies = Object.values(FAMILIES_BY_GRADE).flat();
+  // Only grades that currently have families are offered; alumni have graduated out.
+  const gradesToShow = SELECTABLE_GRADES
+    .map((grade) => [grade, FAMILIES_BY_GRADE[grade]] as [TeamGrade, string[]])
+    .filter(([, families]) => families.length > 0);
+
+  const allFamilies = gradesToShow.flatMap(([, families]) => families);
 
   const handleFamilyToggle = (family: string) => {
     if (disabled) return;
@@ -125,11 +100,11 @@ export function FamilySelector({
 
       {/* All Families with Grade Indicators */}
       <div className="space-y-4">
-        {Object.entries(FAMILIES_BY_GRADE).map(([grade, families]) => (
+        {gradesToShow.map(([grade, families]) => (
           <div key={grade} className="space-y-2">
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="text-xs font-medium">
-                {grade.toUpperCase()}
+                {GRADE_LABELS[grade]}
               </Badge>
               <span className="text-sm text-muted-foreground">
                 {families.length} families

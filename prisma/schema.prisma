@@ -64,6 +64,7 @@ enum TeamGrade {
   s4
   s5
   s6
+  alumni
 
   @@map("grade")
   @@schema("public")
@@ -100,6 +101,7 @@ enum GradeType {
   Ishami
   Ijabo
   Ingabo
+  Ingabe
 
   @@map("grade_type")
   @@schema("public")

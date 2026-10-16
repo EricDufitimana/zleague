@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Helper function to map team grade to player grade enum
+// Maps a team grade to the players.grade (grade_type) value.
+// These pairings match the 544 player rows already in the database:
+// EY -> Ingabe, S4 -> Ingabo, S5 -> Ijabo, S6 -> Ishami. Alumni keep Ishami.
 function mapTeamGradeToPlayerGrade(teamGrade: string): string | null {
   const gradeMap: { [key: string]: string } = {
-    'ey': 'Ishami',
-    's4': 'Ijabo',
-    's5': 'Ingabo',
-    's6': 'Ingabo'
+    'ey': 'Ingabe',
+    's4': 'Ingabo',
+    's5': 'Ijabo',
+    's6': 'Ishami',
+    'alumni': 'Ishami'
   };
   return gradeMap[teamGrade.toLowerCase()] || null;
 }

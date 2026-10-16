@@ -1,0 +1,54 @@
+-- Rollback: restore teams.grade to its pre-promotion value.
+-- Generated 2026-10-15T14:55:16.335Z
+BEGIN;
+UPDATE teams SET grade = 'ey'::public.grade WHERE id = 70;
+UPDATE teams SET grade = 'ey'::public.grade WHERE id = 71;
+UPDATE teams SET grade = 'ey'::public.grade WHERE id = 72;
+UPDATE teams SET grade = 'ey'::public.grade WHERE id = 73;
+UPDATE teams SET grade = 'ey'::public.grade WHERE id = 74;
+UPDATE teams SET grade = 'ey'::public.grade WHERE id = 75;
+UPDATE teams SET grade = 's4'::public.grade WHERE id = 76;
+UPDATE teams SET grade = 's4'::public.grade WHERE id = 77;
+UPDATE teams SET grade = 's4'::public.grade WHERE id = 78;
+UPDATE teams SET grade = 's4'::public.grade WHERE id = 79;
+UPDATE teams SET grade = 's4'::public.grade WHERE id = 80;
+UPDATE teams SET grade = 's4'::public.grade WHERE id = 81;
+UPDATE teams SET grade = 's5'::public.grade WHERE id = 82;
+UPDATE teams SET grade = 's5'::public.grade WHERE id = 83;
+UPDATE teams SET grade = 's5'::public.grade WHERE id = 84;
+UPDATE teams SET grade = 's5'::public.grade WHERE id = 85;
+UPDATE teams SET grade = 's5'::public.grade WHERE id = 86;
+UPDATE teams SET grade = 's5'::public.grade WHERE id = 87;
+UPDATE teams SET grade = 's6'::public.grade WHERE id = 88;
+UPDATE teams SET grade = 's6'::public.grade WHERE id = 89;
+UPDATE teams SET grade = 's6'::public.grade WHERE id = 90;
+UPDATE teams SET grade = 's6'::public.grade WHERE id = 91;
+UPDATE teams SET grade = 's6'::public.grade WHERE id = 92;
+UPDATE teams SET grade = 's6'::public.grade WHERE id = 93;
+UPDATE teams SET grade = 'ey'::public.grade WHERE id = 166;
+UPDATE teams SET grade = 'ey'::public.grade WHERE id = 167;
+UPDATE teams SET grade = 'ey'::public.grade WHERE id = 168;
+UPDATE teams SET grade = 'ey'::public.grade WHERE id = 169;
+UPDATE teams SET grade = 'ey'::public.grade WHERE id = 170;
+UPDATE teams SET grade = 'ey'::public.grade WHERE id = 171;
+UPDATE teams SET grade = 's4'::public.grade WHERE id = 172;
+UPDATE teams SET grade = 's4'::public.grade WHERE id = 173;
+UPDATE teams SET grade = 's4'::public.grade WHERE id = 174;
+UPDATE teams SET grade = 's4'::public.grade WHERE id = 175;
+UPDATE teams SET grade = 's4'::public.grade WHERE id = 176;
+UPDATE teams SET grade = 's4'::public.grade WHERE id = 177;
+UPDATE teams SET grade = 's5'::public.grade WHERE id = 178;
+UPDATE teams SET grade = 's5'::public.grade WHERE id = 179;
+UPDATE teams SET grade = 's5'::public.grade WHERE id = 180;
+UPDATE teams SET grade = 's5'::public.grade WHERE id = 181;
+UPDATE teams SET grade = 's5'::public.grade WHERE id = 182;
+UPDATE teams SET grade = 's5'::public.grade WHERE id = 183;
+UPDATE teams SET grade = 's6'::public.grade WHERE id = 184;
+UPDATE teams SET grade = 's6'::public.grade WHERE id = 185;
+UPDATE teams SET grade = 's6'::public.grade WHERE id = 186;
+UPDATE teams SET grade = 's6'::public.grade WHERE id = 187;
+UPDATE teams SET grade = 's6'::public.grade WHERE id = 188;
+UPDATE teams SET grade = 's6'::public.grade WHERE id = 189;
+COMMIT;
+-- Note: the enum value 'alumni' is intentionally NOT removed; PostgreSQL
+-- cannot drop an enum value. It is harmless once unused.

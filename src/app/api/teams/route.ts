@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { TEAM_GRADES, assignGender as assignGenderForFamily, isTeamGrade } from '@/lib/grades';
 
 // Helper function to normalize gender values (boys/girls -> male/female)
 function normalizeGender(gender: string | undefined | null): string | null {
@@ -10,32 +11,6 @@ function normalizeGender(gender: string | undefined | null): string | null {
   if (lowerGender === 'girls' || lowerGender === 'female') return 'female';
   
   return null;
-}
-
-// Helper function to auto-assign gender based on family name and grade
-function assignGender(familyName: string, grade: string): string {
-  const maleTeams: { [key: string]: string[] } = {
-    'ey': ['Family 3', 'Family 4'],
-    's4': ['Thomas Edison', 'Lance Reddick'],
-    's5': ['Alfred Nobel', 'Pelé (Edson Arantes Do Nascimento)'],
-    's6': ['RUGANZU NDOLI 2', 'Chinua Achebe']
-  };
-
-  const femaleTeams: { [key: string]: string[] } = {
-    'ey': ['Family 1', 'Family 2', 'Family 5', 'Family 6'],
-    's4': ['Niyitegeka Felestin', 'Rosalie Gicanda', 'Irena Sendler', 'ADA loveloce'],
-    's5': ['Ubald Rugirangoga', 'Charles Babbage', 'Toni Morrison', 'Ruth Bader Ginsberg'],
-    's6': ['YVAN BURAVAN', 'KATHERINE JOHNSON', 'AOUA KEITA', 'Fannie Lou Hamer']
-  };
-
-  if (maleTeams[grade]?.includes(familyName)) {
-    return 'male';
-  } else if (femaleTeams[grade]?.includes(familyName)) {
-    return 'female';
-  }
-  
-  // Default fallback
-  return 'male';
 }
 
 export async function POST(request: NextRequest) {
@@ -104,10 +79,10 @@ export async function POST(request: NextRequest) {
           );
         }
         
-        if (!team.grade || !['ey', 's4', 's5', 's6'].includes(team.grade)) {
+        if (!team.grade || !isTeamGrade(team.grade)) {
           console.log(`❌ Team ${i + 1} validation failed: Invalid grade ${team.grade}`);
           return NextResponse.json(
-            { error: `Grade must be one of: ey, s4, s5, s6 for team ${team.name}` },
+            { error: `Grade must be one of: ${TEAM_GRADES.join(', ')} for team ${team.name}` },
             { status: 400 }
           );
         }
@@ -116,7 +91,7 @@ export async function POST(request: NextRequest) {
         const normalizedFamilyName = normalizeFamilyName(team.name);
         console.log(`📝 Team ${i + 1} name normalization: ${team.name} → ${normalizedFamilyName}`);
 
-        const assignedGender = team.gender || assignGender(normalizedFamilyName, team.grade);
+        const assignedGender = team.gender || assignGenderForFamily(normalizedFamilyName);
         const normalizedGender = normalizeGender(assignedGender);
         console.log(`🎭 Team ${i + 1} gender: ${team.gender || 'auto'} → ${assignedGender} → ${normalizedGender}`);
 
@@ -188,10 +163,10 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (!grade || !['ey', 's4', 's5', 's6'].includes(grade)) {
+      if (!grade || !isTeamGrade(grade)) {
         console.log('❌ Single team validation failed: Invalid grade', grade);
         return NextResponse.json(
-          { error: 'Grade is required and must be one of: ey, s4, s5, s6' },
+          { error: `Grade is required and must be one of: ${TEAM_GRADES.join(', ')}` },
           { status: 400 }
         );
       }
@@ -205,7 +180,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Auto-assign gender based on family name and grade, or use provided gender
-      const assignedGender = gender || assignGender(name, grade);
+      const assignedGender = gender || assignGenderForFamily(name);
       const normalizedGender = normalizeGender(assignedGender);
       console.log(`🎭 Single team gender: ${gender || 'auto'} → ${assignedGender} → ${normalizedGender}`);
       

@@ -16,6 +16,7 @@ import { toast } from 'react-hot-toast';
 import { Badge } from '@/components/ui/badge';
 import { SportsHeader } from "@/components/sports/sports-header";
 import { FamilySelector } from '@/components/sports/FamilySelector';
+import { getFamilyGrade, gradeLabel, TEAM_GRADES, GRADE_LABELS } from '@/lib/grades';
 
 interface Championship {
   id: number;
@@ -189,27 +190,10 @@ export default function ChampionshipTeamsPage() {
 
     setIsLoading(true);
     try {
-      // Helper function to get grade for a family
-      const getFamilyGrade = (family: string): string => {
-        const familiesByGrade = {
-          'ey': ['Family_1', 'Family_2', 'Family_3', 'Family_4', 'Family_5', 'Family_6'],
-          's4': ['Thomas Edison', 'Rosalie Gicanda', 'Lance Reddick', 'Niyitegeka Felestin', 'Irena Sendler', 'ADA loveloce'],
-          's5': ['Pelé (Edson Arantes Do Nascimento)', 'Ubald Rugirangoga', 'Alfred Nobel', 'Toni Morrison', 'Ruth Bader Ginsberg', 'Charles Babbage'],
-          's6': ['KATHERINE JOHNSON', 'YVAN BURAVAN', 'Chinua Achebe', 'RUGANZU NDOLI 2', 'AOUA KEITA', 'Fannie Lou Hamer']
-        };
-        
-        for (const [grade, families] of Object.entries(familiesByGrade)) {
-          if (families.includes(family)) {
-            return grade;
-          }
-        }
-        return 'ey'; // Default fallback
-      };
-
       // Create teams array with proper grades
       const teams = selectedFamilies.map(family => ({
         name: family,
-        grade: getFamilyGrade(family)
+        grade: getFamilyGrade(family) ?? 'ey'
         // Gender will be automatically assigned by the API based on family name and grade
       }));
 
@@ -629,10 +613,11 @@ export default function ChampionshipTeamsPage() {
                   <SelectValue placeholder="Select grade" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ey">EY</SelectItem>
-                  <SelectItem value="s4">S4</SelectItem>
-                  <SelectItem value="s5">S5</SelectItem>
-                  <SelectItem value="s6">S6</SelectItem>
+                  {TEAM_GRADES.map((grade) => (
+                    <SelectItem key={grade} value={grade}>
+                      {GRADE_LABELS[grade]}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -745,7 +730,7 @@ export default function ChampionshipTeamsPage() {
                       {playersByTeam[selectedTeamForPlayers.id].length} players
                     </span>
                     <Badge variant="outline">
-                      {selectedTeamForPlayers.grade.toUpperCase()} - {selectedTeamForPlayers.gender}
+                      {gradeLabel(selectedTeamForPlayers.grade)} - {selectedTeamForPlayers.gender}
                     </Badge>
                   </div>
                   

@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Trophy, Calendar, Users, Target, CheckCircle, AlertCircle, Clock, BarChart3, Loader2, Play, Plus, X } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { gradeBadgeClasses, isTeamStatsOnlyGrade } from '@/lib/grades';
 
 interface Championship {
   id: number;
@@ -712,7 +713,7 @@ export default function RecordPage() {
   };
 
   // ✅ Check if teams are EY grade
-  const isEYMatch = selectedMatchData?.teamA?.grade?.toLowerCase() === 'ey' || selectedMatchData?.teamB?.grade?.toLowerCase() === 'ey';
+  const isEYMatch = isTeamStatsOnlyGrade(selectedMatchData?.teamA?.grade) || isTeamStatsOnlyGrade(selectedMatchData?.teamB?.grade);
 
   const handlePlayerSelection = async () => {
     try {
@@ -1321,15 +1322,7 @@ export default function RecordPage() {
   };
 
   // get the grade badge color
-  const getGradeBadgeColor = (grade: string) => {
-    switch (grade) {
-      case 'ey': return 'bg-grade-1/50 text-grade-1/900 border-grade-1/300';
-      case 's5': return 'bg-grade-2/50 text-grade-2/900 border-grade-2/300';
-      case 's6': return 'bg-grade-3/50 text-grade-3/900 border-grade-3/300';
-      case 's4': return 'bg-grade-4/50 text-grade-4/900 border-grade-4/300';
-      default: return 'bg-gray-50/50 text-gray-900 border-gray-300';
-    }
-  };
+  const getGradeBadgeColor = (grade: string) => gradeBadgeClasses(grade);
 
   return (
     <div className="space-y-6 px-4 lg:px-6">
@@ -2967,7 +2960,7 @@ export default function RecordPage() {
               {isEYMatch ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Team A EY - Existing Players + New Name Inputs */}
-                  {selectedMatchData.teamA?.grade?.toLowerCase() === 'ey' && (
+                  {isTeamStatsOnlyGrade(selectedMatchData.teamA?.grade) && (
                     <div>
                       <h4 className="font-medium mb-3 flex items-center gap-2">
                         <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
@@ -3059,7 +3052,7 @@ export default function RecordPage() {
                   )}
 
                   {/* Team B EY - Existing Players + New Name Inputs */}
-                  {selectedMatchData.teamB?.grade?.toLowerCase() === 'ey' && (
+                  {isTeamStatsOnlyGrade(selectedMatchData.teamB?.grade) && (
                     <div>
                       <h4 className="font-medium mb-3 flex items-center gap-2">
                         <div className="w-3 h-3 bg-green-500 rounded-full"></div>
@@ -3151,7 +3144,7 @@ export default function RecordPage() {
                   )}
 
                   {/* Show existing players for non-EY teams */}
-                  {selectedMatchData.teamA?.grade?.toLowerCase() !== 'ey' && players.length > 0 && (
+                  {!isTeamStatsOnlyGrade(selectedMatchData.teamA?.grade) && players.length > 0 && (
                     <div>
                       <h4 className="font-medium mb-3 flex items-center gap-2">
                         <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
@@ -3177,7 +3170,7 @@ export default function RecordPage() {
                     </div>
                   )}
 
-                  {selectedMatchData.teamB?.grade?.toLowerCase() !== 'ey' && players.length > 0 && (
+                  {!isTeamStatsOnlyGrade(selectedMatchData.teamB?.grade) && players.length > 0 && (
                     <div>
                       <h4 className="font-medium mb-3 flex items-center gap-2">
                         <div className="w-3 h-3 bg-green-500 rounded-full"></div>
