@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Trophy, Shuffle, Play, RotateCcw, Check, X, Loader2, ArrowLeft, Users, Shield, Trash2, Maximize2, Volume2, VolumeX } from 'lucide-react';
-import { ImprovedWheel } from '@/components/shared/ImprovedWheel';
+import { ImprovedWheel, type WheelHandle } from '@/components/shared/ImprovedWheel';
 import '@/styles/fireworks.css';
 
 interface Championship {
@@ -64,15 +64,58 @@ export default function MatchPage() {
   const [currentPairIndex, setCurrentPairIndex] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(true);
   
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
-  const animationRef = useRef<number | null>(null);
-  
-  // Wheel physics
-  const friction = 0.991;
-  let angVel = 0;
-  let ang = 0;
-  const TAU = 2 * Math.PI;
+  // The wheel owns its own canvas and animation; we drive it through this handle.
+  const wheelRef = useRef<WheelHandle>(null);
+  const dialogWheelRef = useRef<WheelHandle>(null);
+
+  const spinAnyWheel = () => {
+    const handle = dialogWheelRef.current ?? wheelRef.current;
+    handle?.spin();
+  };
+
+  const resetWheelRotation = () => {
+    wheelRef.current?.reset();
+    dialogWheelRef.current?.reset();
+  };
+
+  // The presentation wheel fills whatever space the fullscreen layout leaves it.
+  // A callback ref rather than useRef: the dialog's content is portalled, so the
+  // node does not exist yet on the render that opens it, and an effect keyed on
+  // `isEnlargedView` would find a null ref and never retry.
+  const [enlargedWheelBox, setEnlargedWheelBox] = useState<HTMLDivElement | null>(null);
+  const enlargedWheelBoxRef = useCallback((node: HTMLDivElement | null) => {
+    setEnlargedWheelBox(node);
+  }, []);
+  const [enlargedWheelSize, setEnlargedWheelSize] = useState(520);
+
+  useEffect(() => {
+    if (!enlargedWheelBox) return;
+
+    const measure = () => {
+      const { width, height } = enlargedWheelBox.getBoundingClientRect();
+      // A measurement can land before layout, so fall back to the viewport
+      // rather than leaving the wheel stuck at its default size.
+      const available = Math.min(
+        width || window.innerWidth * 0.6,
+        height || window.innerHeight * 0.6
+      );
+      // Square, with a little breathing room, and never smaller than usable.
+      setEnlargedWheelSize(Math.max(240, Math.floor(available - 16)));
+    };
+
+    measure();
+
+    let observer: ResizeObserver | undefined;
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(measure);
+      observer.observe(enlargedWheelBox);
+    }
+    window.addEventListener('resize', measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [enlargedWheelBox]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -103,23 +146,6 @@ export default function MatchPage() {
   }, [championshipId]);
 
   useEffect(() => {
-    if (canvasRef.current) {
-      // Use available teams for the wheel; if none, fall back to all teams so the wheel remains visible
-      const wheelTeams = getWheelTeams();
-      if (wheelTeams.length > 0) {
-        initWheel();
-      } else {
-        // Clear the wheel when no teams are available
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
-      }
-    }
-  }, [availableTeams, teams]);
-
-  useEffect(() => {
     if (teams.length > 0) {
       updateAvailableTeams();
       setupBasketballPairs(teams);
@@ -135,11 +161,7 @@ export default function MatchPage() {
       setSpinCount(0);
       setPendingMatchup(null);
       
-      // Reset wheel rotation
-      if (canvasRef.current) {
-        canvasRef.current.style.transform = 'rotate(0rad)';
-      }
-      ang = 0;
+      resetWheelRotation();
       
       // Update available teams for the new sport
       updateAvailableTeams();
@@ -272,152 +294,6 @@ export default function MatchPage() {
     }
   };
 
-  const initWheel = () => {
-    if (!canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    ctxRef.current = ctx;
-    
-    // Set canvas size
-    canvas.width = 400;
-    canvas.height = 400;
-    
-    // Draw initial wheel
-    drawWheel();
-  };
-
-  const drawWheel = () => {
-    const wheelTeams = getWheelTeams();
-    if (!ctxRef.current || wheelTeams.length === 0) return;
-    
-    const ctx = ctxRef.current;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const dia = canvas.width;
-    const rad = dia / 2;
-    const PI = Math.PI;
-    const TAU = 2 * PI;
-    const arc = TAU / wheelTeams.length;
-    
-    // Clear canvas
-    ctx.clearRect(0, 0, dia, dia);
-    
-    // Draw sectors with only green, orange, and brown colors
-    const colors = [
-      '#22c55e', // bg-green-500
-      '#16a34a', // bg-green-600
-      '#15803d', // bg-green-700
-      '#f97316', // bg-orange-500
-      '#ea580c', // bg-orange-600
-      '#dc2626', // bg-orange-700
-      '#a16207', // bg-amber-600
-      '#92400e', // bg-amber-700
-      '#78350f', // bg-amber-800
-      '#92400e', // bg-amber-700
-      '#a16207', // bg-amber-600
-      '#d97706', // bg-amber-500
-      '#22c55e', // bg-green-500
-      '#16a34a', // bg-green-600
-      '#15803d'  // bg-green-700
-    ];
-    
-    wheelTeams.forEach((team, i) => {
-      const color = colors[i % colors.length];
-      
-      // Draw sector
-      ctx.save();
-      ctx.beginPath();
-      ctx.fillStyle = color;
-      ctx.moveTo(rad, rad);
-      ctx.arc(rad, rad, rad, arc * i, arc * (i + 1));
-      ctx.lineTo(rad, rad);
-      ctx.fill();
-      
-      // Draw text
-      ctx.translate(rad, rad);
-      ctx.rotate(arc * i + arc / 2);
-      ctx.textAlign = 'right';
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 14px sans-serif';
-      ctx.fillText(team.name, rad - 15, 5);
-      ctx.restore();
-    });
-  };
-
-
-
-  const frame = () => {
-    if (!angVel) return;
-    
-    angVel *= friction;
-    
-    // Continuously track which team is under the pointer while spinning
-    const wheelTeams = getWheelTeams();
-    if (wheelTeams.length > 0) {
-      // Convert current angle to degrees
-      const currentAngleDegrees = (ang * 180 / Math.PI) % 360;
-      
-      // Calculate which sector the pointer is pointing to
-      // The wheel drawing uses: arc * i where arc = 2π / wheelTeams.length
-      // So sector 0 is from 0° to 45°, sector 1 is from 45° to 90°, etc.
-      const anglePerSector = 360 / wheelTeams.length;
-      
-      // The pointer is at the top (0°), so we need to find which sector
-      // is currently positioned at the top after the wheel has rotated
-      // Since the wheel rotates clockwise, we need to find which original sector
-      // is now at the top position
-      
-      // Method: Find which sector contains the current rotation angle
-      // But we need to account for the fact that the pointer is fixed at the top
-      let sectorIndex = Math.floor(currentAngleDegrees / anglePerSector);
-      
-      // Ensure the index is within bounds
-      sectorIndex = sectorIndex % wheelTeams.length;
-      if (sectorIndex < 0) sectorIndex += wheelTeams.length;
-      
-      const passingTeam = wheelTeams[sectorIndex];
-      if (passingTeam && passingTeam.id !== currentPointerTeam?.id) {
-        console.log('Team change:', {
-          angle: currentAngleDegrees.toFixed(1),
-          sectorIndex,
-          teamName: passingTeam.name,
-          totalTeams: wheelTeams.length,
-          calculation: `${currentAngleDegrees.toFixed(1)} / ${anglePerSector} = ${sectorIndex}`
-        });
-        setCurrentPointerTeam(passingTeam);
-      }
-    }
-    
-    if (angVel < 0.002) {
-      angVel = 0;
-      setIsSpinning(false);
-      
-      // Set the final selected team when wheel stops
-      setSelectedTeam(currentPointerTeam);
-      
-      // Update pair index after second team selection in basketball
-      if (selectedSportType === 'basketball' && spinCount === 1 && predefinedPairs.length > 0) {
-        setCurrentPairIndex(prev => prev + 1);
-      }
-    }
-    
-    ang += angVel;
-    ang %= TAU;
-    
-    if (canvasRef.current) {
-      canvasRef.current.style.transform = `rotate(${ang}rad)`;
-    }
-    
-    if (angVel > 0) {
-      animationRef.current = requestAnimationFrame(frame);
-    }
-  }
-
-
   const spinWheel = () => {
     // Don't allow spinning if gender or sport type is not selected
     if (selectedGender === 'all' || selectedSportType === 'all') return;
@@ -459,11 +335,8 @@ export default function MatchPage() {
       return;
     }
     
-    setIsSpinning(true);
-    
-    // The ImprovedWheel component handles its own spinning logic
-    // We just need to trigger it by calling the wheel's spin function
-    // This will be handled by the ImprovedWheel component's onClick
+    // onSpinStart flips isSpinning once the animation actually begins.
+    spinAnyWheel();
   };
 
   const confirmMatchup = async () => {
@@ -508,11 +381,7 @@ export default function MatchPage() {
             await fetchExistingMatches(championshipId, teams);
           }
           
-          // Reset wheel
-          if (canvasRef.current) {
-            canvasRef.current.style.transform = 'rotate(0rad)';
-          }
-          ang = 0;
+          resetWheelRotation();
         } else {
           const errorData = await response.json();
           console.error('Error creating match:', errorData);
@@ -560,19 +429,11 @@ export default function MatchPage() {
       setCurrentPairIndex(prev => prev + 1);
     }
     
-    // Reset wheel
-    if (canvasRef.current) {
-      canvasRef.current.style.transform = 'rotate(0rad)';
-    }
-    ang = 0;
+    resetWheelRotation();
   };
 
   const resetWheel = () => {
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-    }
-    angVel = 0;
-    ang = 0;
+    resetWheelRotation();
     setMatchups([]);
     setCurrentMatchup(null);
     setSelectedTeam(null);
@@ -584,9 +445,6 @@ export default function MatchPage() {
       fetchExistingMatches(championshipId, teams);
     } else {
       setAvailableTeams(teams);
-    }
-    if (canvasRef.current) {
-      canvasRef.current.style.transform = 'rotate(0rad)';
     }
   };
 
@@ -678,15 +536,6 @@ export default function MatchPage() {
     const prevIndex = currentIndex <= 0 ? currentSportMatchups.length - 1 : currentIndex - 1;
     setCurrentMatchup(currentSportMatchups[prevIndex]);
   };
-
-  // Cleanup animation on unmount
-  useEffect(() => {
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    };
-  }, []);
 
   // Show loading state while data is being fetched
   if (isLoading) {
@@ -857,10 +706,14 @@ export default function MatchPage() {
                     
                     {/* Improved Wheel Component */}
                     <ImprovedWheel
+                      ref={wheelRef}
                       teams={getWheelTeams()}
-                      isSpinning={isSpinning}
                       disabled={selectedGender === 'all' || selectedSportType === 'all'}
                       soundEnabled={soundEnabled}
+                      onSpinStart={() => {
+                        setIsSpinning(true);
+                        setSelectedTeam(null);
+                      }}
                       onSelectWinner={(winner) => {
                         // Just set the selected team - let user manually choose to set 1st or 2nd team
                         setSelectedTeam(winner);
@@ -886,8 +739,20 @@ export default function MatchPage() {
                       }}
                     />
                     
-                    {/* Reset button under the wheel */}
+                    {/* Spin / reset controls under the wheel */}
                     <div className="mt-4 flex items-center justify-center gap-3">
+                      <Button
+                        onClick={spinWheel}
+                        size="sm"
+                        disabled={
+                          isSpinning ||
+                          selectedGender === 'all' ||
+                          selectedSportType === 'all' ||
+                          getWheelTeams().length < 2
+                        }
+                      >
+                        {isSpinning ? 'Spinning…' : 'Spin'}
+                      </Button>
                       <Button onClick={resetWheel} variant="outline" size="sm">
                         <RotateCcw className="w-4 h-4 mr-2" />
                         Reset
@@ -1063,9 +928,12 @@ export default function MatchPage() {
 
       {/* Enlarged View Dialog for Presentation */}
       <Dialog open={isEnlargedView} onOpenChange={setIsEnlargedView}>
-        <DialogContent className="max-w-8xl w-[90vw] max-h-[95vh] p-6">
-          <DialogHeader>
-            <DialogTitle className="flex justify-center gap-4 align-center">
+        <DialogContent
+          showCloseButton={false}
+          className="inset-0 top-0 left-0 h-dvh w-screen max-w-none translate-x-0 translate-y-0 flex flex-col gap-0 rounded-none border-0 p-0 sm:max-w-none"
+        >
+          <DialogHeader className="shrink-0 border-b bg-white px-6 py-3">
+            <DialogTitle className="flex flex-wrap items-center justify-center gap-4">
               <p className="text-xl font-bold text-center">Match Selection - Presentation View</p>
               <div className="flex justify-center gap-4">
                 <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
@@ -1084,28 +952,43 @@ export default function MatchPage() {
                   ) : (
                     <VolumeX className="h-4 w-4" />
                   )}
-                  
+                </button>
+                <button
+                  onClick={() => setIsEnlargedView(false)}
+                  className="flex items-center gap-2 rounded-full bg-gray-900 px-3 py-1 text-sm font-medium text-white transition-colors hover:bg-gray-700"
+                  title="Exit presentation view"
+                >
+                  <X className="h-4 w-4" />
+                  Exit
                 </button>
               </div> 
             </DialogTitle>
         
           </DialogHeader>
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
+          <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 overflow-auto p-6 lg:grid-cols-3">
             {/* Enlarged Wheel */}
-            <div className="lg:col-span-2 flex flex-col items-center justify-center">
+            <div className="flex min-h-0 flex-col items-center justify-center lg:col-span-2">
               {getWheelTeams().length >= 1 ? (
-                <div className="flex flex-col items-center w-full">
+                <div className="flex h-full min-h-0 w-full flex-col items-center">
                   {/* Instruction text above the wheel */}
                   
                   
                   {/* Enlarged Wheel Component */}
+                  <div
+                    ref={enlargedWheelBoxRef}
+                    className="flex min-h-0 w-full flex-1 items-center justify-center"
+                  >
                   <ImprovedWheel
+                    ref={dialogWheelRef}
                     teams={getWheelTeams()}
-                    isSpinning={isSpinning}
-                    size={520}
+                    size={enlargedWheelSize}
                     largeText={true}
                     soundEnabled={soundEnabled}
+                    onSpinStart={() => {
+                      setIsSpinning(true);
+                      setSelectedTeam(null);
+                    }}
                     onSelectWinner={(winner) => {
                       setSelectedTeam(winner);
                       setWinnerTeam(winner);
@@ -1132,9 +1015,22 @@ export default function MatchPage() {
                     }}
                   />
                   
-                  {/* Reset button under the wheel */}
-                  <div className="mt-6 flex items-center justify-center gap-3">
-                    <Button onClick={resetWheel} variant="outline" size="sm">
+                  </div>
+
+                  {/* Spin / reset controls under the wheel */}
+                  <div className="mt-4 flex shrink-0 items-center justify-center gap-3">
+                    <Button
+                      onClick={spinWheel}
+                      disabled={
+                        isSpinning ||
+                        selectedGender === 'all' ||
+                        selectedSportType === 'all' ||
+                        getWheelTeams().length < 2
+                      }
+                    >
+                      {isSpinning ? 'Spinning…' : 'Spin'}
+                    </Button>
+                    <Button onClick={resetWheel} variant="outline">
                       <RotateCcw className="w-4 h-4 mr-2" />
                       Reset
                     </Button>
@@ -1153,7 +1049,7 @@ export default function MatchPage() {
             </div>
 
             {/* Enlarged Team Selection Cards */}
-            <div className="flex flex-col gap-3">
+            <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">
               {/* Team Cards */}
               <div className="space-y-2">
                 <Card className="bg-white border border-gray-200 shadow-sm">
