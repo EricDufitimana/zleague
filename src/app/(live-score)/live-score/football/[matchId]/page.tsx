@@ -5,10 +5,11 @@ import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Trophy, Users, Clock, Target, CheckCircle, Loader2, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Users, CheckCircle, Loader2, RotateCcw } from 'lucide-react';
 import { createMultipleFootballScores } from '@/actions/livescore/football-update';
 import { useRealtimeFootballScores } from '@/hooks/useRealtimeFootballScores';
 import { useUpdateFootballScore } from '@/hooks/useUpdateFootballScore';
+import { toast } from 'sonner';
 
 interface Team {
   id: number;
@@ -125,14 +126,13 @@ export default function FootballLiveScorePage() {
     }
   }, [realtimeScores, match]);
   
-  // Use realtime match scores if available, otherwise calculate from player stats
-  const teamAScore = realtimeMatchScores.teamA || playerStats
-    .filter(stat => stat.player_id && players.find(p => p.id === stat.player_id)?.team_id === match?.team_a_id)
-    .reduce((total, stat) => total + stat.goals, 0);
-
-  const teamBScore = realtimeMatchScores.teamB || playerStats
-    .filter(stat => stat.player_id && players.find(p => p.id === stat.player_id)?.team_id === match?.team_b_id)
-    .reduce((total, stat) => total + stat.goals, 0);
+  // updateFootballScore recomputes both team totals and writes them to
+  // matches.team_a_score / team_b_score, so the realtime match row is the
+  // authoritative score. The previous `||` fallback recalculated locally
+  // whenever the stored score was 0 - i.e. at every genuine 0-0 - and that
+  // local sum silently dropped any scorer missing from the `players` list.
+  const teamAScore = realtimeMatchScores.teamA;
+  const teamBScore = realtimeMatchScores.teamB;
 
   const fetchMatchData = useCallback(async () => {
     try {
@@ -312,7 +312,7 @@ export default function FootballLiveScorePage() {
 
   const undoLastUpdate = async () => {
     if (updateHistory.length === 0) {
-      alert('Nothing to undo!');
+      toast.error('Nothing to undo.');
       return;
     }
 
@@ -369,6 +369,13 @@ export default function FootballLiveScorePage() {
   };
 
   const handleEndMatch = async () => {
+    // An in-flight update has not reached matches.team_a_score yet, so ending
+    // now would freeze a stale scoreline.
+    if (updateScoreMutation.isPending || isUndoing) {
+      toast.error('Still saving the last update. Try again in a moment.');
+      return;
+    }
+
     try {
       setIsEndingMatch(true);
       
@@ -398,6 +405,7 @@ export default function FootballLiveScorePage() {
       router.push('/dashboard/record');
     } catch (error) {
       console.error('Error ending match:', error);
+      toast.error('Could not end the match. Check your connection and try again.');
       setIsEndingMatch(false);
     }
   };

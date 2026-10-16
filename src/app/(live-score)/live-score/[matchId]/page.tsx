@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Trophy, Users, Clock, Target, CheckCircle, Loader2, RotateCcw, Wifi, WifiOff } from 'lucide-react';
+import { ArrowLeft, Users, CheckCircle, Loader2, RotateCcw, Wifi, WifiOff } from 'lucide-react';
 import { createMultipleBasketballScores } from '@/actions/livescore/basketball-update';
 import { useRealtimeBasketballScores } from '@/hooks/useRealtimeBasketballScores';
 import { useMutationQueue } from '@/hooks/useMutationQueue';
+import { isTeamStatsOnlyGrade } from '@/lib/grades';
+import { toast } from 'sonner';
 
 interface Team{
   id: number;
@@ -133,8 +135,10 @@ export default function LiveScorePage() {
   // Store jersey numbers for players: { playerId: jerseyNumber }
   const [jerseyNumbers, setJerseyNumbers] = useState<{ [playerId: number]: string }>({});
   
-  // Track duplicate jersey numbers: { playerId: true } if duplicate
-  const [duplicateJerseys, setDuplicateJerseys] = useState<{ [playerId: number]: boolean }>({});
+  // Duplicate jersey numbers are derived from the jersey map and the selection,
+  // so they are computed rather than stored. Previously three places wrote this
+  // state - toggling a player, editing a number, and a recalculating effect -
+  // and the effect simply overwrote whatever the other two had just set.
   
   // Quick search by jersey number
   const [jerseySearch, setJerseySearch] = useState<{ teamA: string; teamB: string }>({ teamA: '', teamB: '' });
@@ -175,9 +179,9 @@ export default function LiveScorePage() {
   });
 
   // ✅ Fetch players with React Query
-  const { data: players = [], isLoading: isLoadingPlayers } = useQuery({
+  const { data: players = [], isLoading: isLoadingPlayers } = useQuery<Player[]>({
     queryKey: ['players', match?.team_a_id, match?.team_b_id],
-    queryFn: async () => {
+    queryFn: async (): Promise<Player[]> => {
       if (!match?.team_a_id || !match?.team_b_id) return [];
       
       const response = await fetch(`/api/players?team_a_id=${match.team_a_id}&team_b_id=${match.team_b_id}`);
@@ -192,13 +196,13 @@ export default function LiveScorePage() {
   });
 
   // ✅ Use realtime hook - this now returns React Query data
-  const { scores, matchScores, isLoading: isLoadingScores } = useRealtimeBasketballScores(matchId);
+  const { scores, isLoading: isLoadingScores } = useRealtimeBasketballScores(matchId);
   
   // ✅ Use React Query mutation hook for score updates
   const { queueUpdate, queueLength, isProcessing } = useMutationQueue(matchId);
 
   // ✅ Check if teams are EY grade
-  const isEYMatch = match?.teamA?.grade?.toLowerCase() === 'ey' || match?.teamB?.grade?.toLowerCase() === 'ey';
+  const isEYMatch = isTeamStatsOnlyGrade(match?.teamA?.grade) || isTeamStatsOnlyGrade(match?.teamB?.grade);
 
   // ✅ Derive playerStats from scores (no local state needed)
   const playerStats: PlayerStats[] = scores
@@ -232,14 +236,23 @@ export default function LiveScorePage() {
     }
   }, [scores, match]); // Removed selectedPlayers from deps to prevent loops
 
-  // ✅ Calculate team scores from playerStats
-  const teamAScore = playerStats
-    .filter(stat => players.find(p => p.id === stat.player_id)?.team_id === match?.team_a_id)
-    .reduce((total, stat) => total + stat.points, 0);
+  // Team totals come straight off the score rows, which already carry team_id.
+  // Joining through `players` instead meant any scorer missing from that list -
+  // a stale fetch, or an EY player created moments ago - silently contributed 0,
+  // and handleEndMatch persists these numbers as the final score.
+  const teamTotal = (teamId?: number) =>
+    teamId == null
+      ? 0
+      : scores
+          .filter((score: any) => Number(score.team_id) === Number(teamId))
+          .reduce((total: number, score: any) => total + Number(score.points || 0), 0);
 
-  const teamBScore = playerStats
-    .filter(stat => players.find(p => p.id === stat.player_id)?.team_id === match?.team_b_id)
-    .reduce((total, stat) => total + stat.points, 0);
+  const teamAScore = teamTotal(match?.team_a_id);
+  const teamBScore = teamTotal(match?.team_b_id);
+
+  // Anything still queued (or offline) has not reached the database yet, so the
+  // totals above are ahead of what ending the match would save.
+  const hasUnsyncedWork = queueLength > 0 || isProcessing || !isOnline;
 
 
     const updatePlayerStats = async (
@@ -329,6 +342,17 @@ export default function LiveScorePage() {
   };
 
   const handleEndMatch = async () => {
+    // The queue drains one update at a time and survives going offline, so
+    // ending here would write a final score missing every pending tap.
+    if (hasUnsyncedWork) {
+      toast.error(
+        !isOnline
+          ? 'You are offline - reconnect so the remaining updates can save before ending the match.'
+          : `Still saving ${queueLength} update${queueLength === 1 ? '' : 's'}. Wait for "Synced" before ending the match.`
+      );
+      return;
+    }
+
     try {
       setIsEndingMatch(true);
       
@@ -358,6 +382,7 @@ export default function LiveScorePage() {
       router.push('/dashboard/record');
     } catch (error) {
       console.error('Error ending match:', error);
+      toast.error('Could not end the match. Check your connection and try again.');
       setIsEndingMatch(false);
     }
   };
@@ -465,7 +490,7 @@ export default function LiveScorePage() {
       }
     } catch (error) {
       console.error('Error creating player score entries:', error);
-      alert(error instanceof Error ? error.message : 'Failed to create players');
+      toast.error(error instanceof Error ? error.message : 'Failed to create players');
       // Don't close modal on error so user can fix
     } finally {
       setIsCreatingPlayers(false);
@@ -473,108 +498,29 @@ export default function LiveScorePage() {
   };
 
   const togglePlayerSelection = (teamId: number, playerId: number) => {
-    setSelectedPlayers(prev => {
-      const teamKey = teamId === match?.team_a_id ? 'teamA' : 'teamB';
-      const currentSelected = prev[teamKey];
-      
-      if (currentSelected.includes(playerId)) {
-        // Remove player, their jersey number, and duplicate flag
-        setJerseyNumbers(prevJerseys => {
-          const newJerseys = { ...prevJerseys };
-          const removedJersey = newJerseys[playerId]?.trim().toUpperCase();
-          delete newJerseys[playerId];
-          
-          // Re-check duplicates for remaining players if we removed a jersey
-          if (removedJersey) {
-            const remainingPlayers = currentSelected.filter(id => id !== playerId);
-            remainingPlayers.forEach(otherPlayerId => {
-              const otherJersey = newJerseys[otherPlayerId]?.trim().toUpperCase();
-              if (otherJersey === removedJersey) {
-                // Check if this player still has a duplicate
-                const stillDuplicate = remainingPlayers.some(checkPlayerId => {
-                  if (checkPlayerId === otherPlayerId) return false;
-                  return newJerseys[checkPlayerId]?.trim().toUpperCase() === otherJersey;
-                });
-                
-                setDuplicateJerseys(prev => ({
-                  ...prev,
-                  [otherPlayerId]: stillDuplicate
-                }));
-              }
-            });
-          }
-          
-          return newJerseys;
-        });
-        
-        setDuplicateJerseys(prev => {
-          const newDups = { ...prev };
-          delete newDups[playerId];
-          return newDups;
-        });
-        
-        return {
-          ...prev,
-          [teamKey]: currentSelected.filter(id => id !== playerId)
-        };
-      } else {
-        return {
-          ...prev,
-          [teamKey]: [...currentSelected, playerId]
-        };
-      }
-    });
+    const teamKey = teamId === match?.team_a_id ? 'teamA' : 'teamB';
+    const isSelected = selectedPlayers[teamKey].includes(playerId);
+
+    setSelectedPlayers(prev => ({
+      ...prev,
+      [teamKey]: isSelected
+        ? prev[teamKey].filter(id => id !== playerId)
+        : [...prev[teamKey], playerId],
+    }));
+
+    // Deselecting a player drops their jersey number with them.
+    if (isSelected) {
+      setJerseyNumbers(prev => {
+        if (!(playerId in prev)) return prev;
+        const next = { ...prev };
+        delete next[playerId];
+        return next;
+      });
+    }
   };
 
-  const updateJerseyNumber = (playerId: number, jerseyNumber: string, teamId: number) => {
-    // Find the team key
-    const teamKey = teamId === match?.team_a_id ? 'teamA' : 'teamB';
-    const selectedTeamPlayers = selectedPlayers[teamKey];
-    
-    // Calculate what the updated jerseys will be
-    const updatedJerseys = {
-      ...jerseyNumbers,
-      [playerId]: jerseyNumber
-    };
-    
-    // Check for duplicates within the same team after update
-    const newDuplicateJerseys: { [playerId: number]: boolean } = {};
-    
-    selectedTeamPlayers.forEach(currentPlayerId => {
-      const currentJersey = updatedJerseys[currentPlayerId]?.trim().toUpperCase();
-      if (!currentJersey) {
-        // No jersey number, no duplicate
-        return;
-      }
-      
-      // Check if any other player on the same team has this jersey number
-      const hasDuplicate = selectedTeamPlayers.some(otherPlayerId => {
-        if (otherPlayerId === currentPlayerId) return false; // Don't check against self
-        const otherJersey = updatedJerseys[otherPlayerId]?.trim().toUpperCase();
-        return otherJersey && otherJersey === currentJersey;
-      });
-      
-      if (hasDuplicate) {
-        newDuplicateJerseys[currentPlayerId] = true;
-      }
-    });
-    
-    // Update jersey numbers (this will trigger the useEffect to save to localStorage)
-    setJerseyNumbers(updatedJerseys);
-    
-    // Update duplicate tracking
-    setDuplicateJerseys(prev => {
-      const updated = { ...prev };
-      // Update duplicates for all players on this team
-      selectedTeamPlayers.forEach(id => {
-        if (newDuplicateJerseys[id]) {
-          updated[id] = true;
-        } else {
-          delete updated[id];
-        }
-      });
-      return updated;
-    });
+  const updateJerseyNumber = (playerId: number, jerseyNumber: string) => {
+    setJerseyNumbers(prev => ({ ...prev, [playerId]: jerseyNumber }));
   };
 
   const getFilteredTeamPlayers = (teamId: number) => {
@@ -600,40 +546,26 @@ export default function LiveScorePage() {
     return filtered;
   };
 
-  // ✅ Recalculate duplicates when jersey numbers or selected players change
-  useEffect(() => {
-    if (!match) return;
-    
-    const newDuplicateJerseys: { [playerId: number]: boolean } = {};
-    
-    selectedPlayers.teamA.forEach(playerId => {
-      const jersey = jerseyNumbers[playerId]?.trim().toUpperCase();
-      if (jersey) {
-        const hasDuplicate = selectedPlayers.teamA.some(otherId => {
-          if (otherId === playerId) return false;
-          return jerseyNumbers[otherId]?.trim().toUpperCase() === jersey;
-        });
-        if (hasDuplicate) {
-          newDuplicateJerseys[playerId] = true;
-        }
-      }
+  // A jersey clashes only with another jersey on the same team.
+  const duplicateJerseys = useMemo(() => {
+    const duplicates: { [playerId: number]: boolean } = {};
+
+    (['teamA', 'teamB'] as const).forEach(teamKey => {
+      const ids = selectedPlayers[teamKey];
+      ids.forEach(playerId => {
+        const jersey = jerseyNumbers[playerId]?.trim().toUpperCase();
+        if (!jersey) return;
+        const clashes = ids.some(
+          otherId =>
+            otherId !== playerId &&
+            jerseyNumbers[otherId]?.trim().toUpperCase() === jersey
+        );
+        if (clashes) duplicates[playerId] = true;
+      });
     });
-    
-    selectedPlayers.teamB.forEach(playerId => {
-      const jersey = jerseyNumbers[playerId]?.trim().toUpperCase();
-      if (jersey) {
-        const hasDuplicate = selectedPlayers.teamB.some(otherId => {
-          if (otherId === playerId) return false;
-          return jerseyNumbers[otherId]?.trim().toUpperCase() === jersey;
-        });
-        if (hasDuplicate) {
-          newDuplicateJerseys[playerId] = true;
-        }
-      }
-    });
-    
-    setDuplicateJerseys(newDuplicateJerseys);
-  }, [jerseyNumbers, selectedPlayers, match]);
+
+    return duplicates;
+  }, [jerseyNumbers, selectedPlayers]);
 
   const isLoading = isLoadingMatch || isLoadingPlayers || isLoadingScores;
 
@@ -1201,7 +1133,7 @@ export default function LiveScorePage() {
                 {isEYMatch ? (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Team A EY - Existing Players + New Name Inputs */}
-                    {match.teamA?.grade?.toLowerCase() === 'ey' && (
+                    {isTeamStatsOnlyGrade(match.teamA?.grade) && (
                       <div>
                         <h4 className="font-medium mb-3 flex items-center gap-2">
                           <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
@@ -1232,7 +1164,7 @@ export default function LiveScorePage() {
                                           type="text"
                                           placeholder="#"
                                           value={jerseyNumbers[player.id] || ''}
-                                          onChange={(e) => updateJerseyNumber(player.id, e.target.value, player.team_id)}
+                                          onChange={(e) => updateJerseyNumber(player.id, e.target.value)}
                                           className={`w-16 h-8 text-sm text-center ${duplicateJerseys[player.id] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                                           maxLength={3}
                                           onClick={(e) => e.stopPropagation()}
@@ -1309,7 +1241,7 @@ export default function LiveScorePage() {
                     )}
 
                     {/* Team B EY - Existing Players + New Name Inputs */}
-                    {match.teamB?.grade?.toLowerCase() === 'ey' && (
+                    {isTeamStatsOnlyGrade(match.teamB?.grade) && (
                       <div>
                         <h4 className="font-medium mb-3 flex items-center gap-2">
                           <div className="w-3 h-3 bg-green-500 rounded-full"></div>
@@ -1340,7 +1272,7 @@ export default function LiveScorePage() {
                                           type="text"
                                           placeholder="#"
                                           value={jerseyNumbers[player.id] || ''}
-                                          onChange={(e) => updateJerseyNumber(player.id, e.target.value, player.team_id)}
+                                          onChange={(e) => updateJerseyNumber(player.id, e.target.value)}
                                           className={`w-16 h-8 text-sm text-center ${duplicateJerseys[player.id] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                                           maxLength={3}
                                           onClick={(e) => e.stopPropagation()}
@@ -1417,7 +1349,7 @@ export default function LiveScorePage() {
                     )}
 
                     {/* Show existing players for non-EY teams */}
-                    {match.teamA?.grade?.toLowerCase() !== 'ey' && players.length > 0 && (
+                    {!isTeamStatsOnlyGrade(match.teamA?.grade) && players.length > 0 && (
                       <div>
                         <h4 className="font-medium mb-3 flex items-center gap-2">
                           <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
@@ -1443,7 +1375,7 @@ export default function LiveScorePage() {
                                       type="text"
                                       placeholder="#"
                                       value={jerseyNumbers[player.id] || ''}
-                                      onChange={(e) => updateJerseyNumber(player.id, e.target.value, player.team_id)}
+                                      onChange={(e) => updateJerseyNumber(player.id, e.target.value)}
                                       className={`w-16 h-8 text-sm text-center ${duplicateJerseys[player.id] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                                       maxLength={3}
                                       onClick={(e) => e.stopPropagation()}
@@ -1459,7 +1391,7 @@ export default function LiveScorePage() {
                       </div>
                     )}
 
-                    {match.teamB?.grade?.toLowerCase() !== 'ey' && players.length > 0 && (
+                    {!isTeamStatsOnlyGrade(match.teamB?.grade) && players.length > 0 && (
                       <div>
                         <h4 className="font-medium mb-3 flex items-center gap-2">
                           <div className="w-3 h-3 bg-green-500 rounded-full"></div>
@@ -1485,7 +1417,7 @@ export default function LiveScorePage() {
                                       type="text"
                                       placeholder="#"
                                       value={jerseyNumbers[player.id] || ''}
-                                      onChange={(e) => updateJerseyNumber(player.id, e.target.value, player.team_id)}
+                                      onChange={(e) => updateJerseyNumber(player.id, e.target.value)}
                                       className={`w-16 h-8 text-sm text-center ${duplicateJerseys[player.id] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                                       maxLength={3}
                                       onClick={(e) => e.stopPropagation()}
@@ -1531,7 +1463,7 @@ export default function LiveScorePage() {
                                       type="text"
                                       placeholder="#"
                                       value={jerseyNumbers[player.id] || ''}
-                                      onChange={(e) => updateJerseyNumber(player.id, e.target.value, player.team_id)}
+                                      onChange={(e) => updateJerseyNumber(player.id, e.target.value)}
                                       className={`w-16 h-8 text-sm text-center ${duplicateJerseys[player.id] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                                       maxLength={3}
                                       onClick={(e) => e.stopPropagation()}
@@ -1572,7 +1504,7 @@ export default function LiveScorePage() {
                                       type="text"
                                       placeholder="#"
                                       value={jerseyNumbers[player.id] || ''}
-                                      onChange={(e) => updateJerseyNumber(player.id, e.target.value, player.team_id)}
+                                      onChange={(e) => updateJerseyNumber(player.id, e.target.value)}
                                       className={`w-16 h-8 text-sm text-center ${duplicateJerseys[player.id] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                                       maxLength={3}
                                       onClick={(e) => e.stopPropagation()}
