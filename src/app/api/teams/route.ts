@@ -1,6 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { TEAM_GRADES, assignGender as assignGenderForFamily, isTeamGrade } from '@/lib/grades';
+import { TEAM_GRADES, isTeamGrade } from '@/lib/grades';
+
+/**
+ * Looks up the families table, which replaced the hardcoded family lists and
+ * the family_type enum. Returns a name -> { grade, gender } map so a caller can
+ * fill in whatever the request left out.
+ */
+async function loadFamilies() {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+  const { data, error } = await supabase.from('families').select('name, grade, gender');
+  if (error) {
+    console.error('Failed to load families:', error);
+    return new Map<string, { grade: string; gender: string }>();
+  }
+  // Compare loosely so 'Family_1' and 'Family 1' resolve to the same family.
+  const key = (name: string) => name.trim().replace(/_/g, ' ').toLowerCase();
+  return new Map<string, { grade: string; gender: string }>(
+    (data ?? []).map(f => [key(f.name), { grade: f.grade, gender: f.gender }])
+  );
+}
+
+const familyKey = (name: string) => name.trim().replace(/_/g, ' ').toLowerCase();
 
 // Helper function to normalize gender values (boys/girls -> male/female)
 function normalizeGender(gender: string | undefined | null): string | null {
@@ -34,6 +58,10 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
     console.log('✅ Supabase client created successfully');
+
+    // Families drive the default grade/gender for a team when the request does
+    // not spell them out. Loaded once per request rather than per team.
+    const families = await loadFamilies();
 
     // Check if this is a bulk creation request
     if (teams && Array.isArray(teams)) {
@@ -79,6 +107,10 @@ export async function POST(request: NextRequest) {
           );
         }
         
+        const known = families.get(familyKey(String(team.name)));
+
+        if (!team.grade && known) team.grade = known.grade;
+
         if (!team.grade || !isTeamGrade(team.grade)) {
           console.log(`❌ Team ${i + 1} validation failed: Invalid grade ${team.grade}`);
           return NextResponse.json(
@@ -91,7 +123,7 @@ export async function POST(request: NextRequest) {
         const normalizedFamilyName = normalizeFamilyName(team.name);
         console.log(`📝 Team ${i + 1} name normalization: ${team.name} → ${normalizedFamilyName}`);
 
-        const assignedGender = team.gender || assignGenderForFamily(normalizedFamilyName);
+        const assignedGender = team.gender || known?.gender;
         const normalizedGender = normalizeGender(assignedGender);
         console.log(`🎭 Team ${i + 1} gender: ${team.gender || 'auto'} → ${assignedGender} → ${normalizedGender}`);
 
@@ -180,7 +212,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Auto-assign gender based on family name and grade, or use provided gender
-      const assignedGender = gender || assignGenderForFamily(name);
+      const assignedGender = gender || families.get(familyKey(String(name)))?.gender;
       const normalizedGender = normalizeGender(assignedGender);
       console.log(`🎭 Single team gender: ${gender || 'auto'} → ${assignedGender} → ${normalizedGender}`);
       

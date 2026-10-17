@@ -31,6 +31,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         return "Schedule | Champions League";
       case 'record':
         return "Record Results | Champions League";
+      case 'families':
+        return "Families | Champions League";
       case 'users':
         return "Users | Champions League";
       case 'settings':

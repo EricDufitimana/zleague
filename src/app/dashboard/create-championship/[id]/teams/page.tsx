@@ -16,7 +16,7 @@ import { toast } from 'react-hot-toast';
 import { Badge } from '@/components/ui/badge';
 import { SportsHeader } from "@/components/sports/sports-header";
 import { FamilySelector } from '@/components/sports/FamilySelector';
-import { getFamilyGrade, gradeLabel, TEAM_GRADES, GRADE_LABELS } from '@/lib/grades';
+import { fetchFamilies, gradeLabel, TEAM_GRADES, GRADE_LABELS, type Family } from '@/lib/grades';
 
 interface Championship {
   id: number;
@@ -48,6 +48,9 @@ export default function ChampionshipTeamsPage() {
   const championshipId = params.id as string;
   
   const [championship, setChampionship] = useState<Championship | null>(null);
+  // Families are managed in the database now, not hardcoded.
+  const [families, setFamilies] = useState<Family[]>([]);
+  const [isLoadingFamilies, setIsLoadingFamilies] = useState(true);
   const [teams, setTeams] = useState<Team[]>([]);
   const [playersByTeam, setPlayersByTeam] = useState<{ [teamId: number]: Player[] }>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -72,6 +75,18 @@ export default function ChampionshipTeamsPage() {
   const [editTeamName, setEditTeamName] = useState('');
   const [editTeamGrade, setEditTeamGrade] = useState('');
   const [editTeamGender, setEditTeamGender] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchFamilies()
+      .then(list => { if (!cancelled) setFamilies(list); })
+      .catch(error => {
+        console.error('Failed to load families:', error);
+        toast.error('Could not load families. Add them under Dashboard → Families.');
+      })
+      .finally(() => { if (!cancelled) setIsLoadingFamilies(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (championshipId) {
@@ -190,11 +205,11 @@ export default function ChampionshipTeamsPage() {
 
     setIsLoading(true);
     try {
-      // Create teams array with proper grades
+      // Grade and gender both come from the families table; the API fills in
+      // anything omitted, so a family only needs to be named once.
       const teams = selectedFamilies.map(family => ({
         name: family,
-        grade: getFamilyGrade(family) ?? 'ey'
-        // Gender will be automatically assigned by the API based on family name and grade
+        grade: families.find(f => f.name === family)?.grade,
       }));
 
       const response = await fetch('/api/teams', {
@@ -450,11 +465,12 @@ export default function ChampionshipTeamsPage() {
               </DialogHeader>
               <div className="grid gap-6 py-4">
                 <FamilySelector
+                  families={families}
                   selectedFamilies={selectedFamilies}
                   onFamiliesChange={setSelectedFamilies}
                   playersByFamily={playersByFamily}
                   disabled={isLoading}
-                  isLoading={isLoadingPlayers}
+                  isLoading={isLoadingPlayers || isLoadingFamilies}
                 />
               </div>
               <DialogFooter>

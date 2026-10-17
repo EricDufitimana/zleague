@@ -8,7 +8,8 @@ import {
   BarChart3,
   Settings,
   Home,
-  Users
+  Users,
+  UsersRound
 } from "lucide-react"
 
 import { NavMain } from "@/components/navigation/nav-main"
@@ -52,6 +53,11 @@ const navMainData = [
     title: "Record Results",
     url: "/dashboard/record",
     icon: BarChart3,
+  },
+  {
+    title: "Families",
+    url: "/dashboard/families",
+    icon: UsersRound,
   },
 ]
 

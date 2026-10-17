@@ -8,13 +8,14 @@ import { Badge } from '@/components/ui/badge';
 import { Users, Check, X } from 'lucide-react';
 
 import {
-  FAMILIES_BY_GRADE,
-  SELECTABLE_GRADES,
   GRADE_LABELS,
-  type TeamGrade,
+  SELECTABLE_GRADES,
+  type Family,
 } from '@/lib/grades';
 
 interface FamilySelectorProps {
+  /** Families to offer, loaded from /api/families by the parent. */
+  families: Family[];
   selectedFamilies: string[];
   onFamiliesChange: (families: string[]) => void;
   playersByFamily?: { [family: string]: number };
@@ -23,6 +24,7 @@ interface FamilySelectorProps {
 }
 
 export function FamilySelector({ 
+  families,
   selectedFamilies, 
   onFamiliesChange, 
   playersByFamily = {},
@@ -31,12 +33,13 @@ export function FamilySelector({
 }: FamilySelectorProps) {
   const [selectAll, setSelectAll] = useState(false);
 
-  // Only grades that currently have families are offered; alumni have graduated out.
+  // Families come from the database (see /dashboard/families); only grades that
+  // currently have one are offered, and alumni have graduated out.
   const gradesToShow = SELECTABLE_GRADES
-    .map((grade) => [grade, FAMILIES_BY_GRADE[grade]] as [TeamGrade, string[]])
-    .filter(([, families]) => families.length > 0);
+    .map(grade => [grade, families.filter(f => f.grade === grade)] as const)
+    .filter(([, list]) => list.length > 0);
 
-  const allFamilies = gradesToShow.flatMap(([, families]) => families);
+  const allFamilies = gradesToShow.flatMap(([, list]) => list.map(f => f.name));
 
   const handleFamilyToggle = (family: string) => {
     if (disabled) return;
@@ -99,20 +102,30 @@ export function FamilySelector({
       </div>
 
       {/* All Families with Grade Indicators */}
+      {gradesToShow.length === 0 && !isLoading && (
+        <div className="rounded-lg border border-dashed p-6 text-center">
+          <p className="text-sm font-medium">No families configured yet</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Add them under Dashboard → Families.
+          </p>
+        </div>
+      )}
+
       <div className="space-y-4">
-        {gradesToShow.map(([grade, families]) => (
+        {gradesToShow.map(([grade, list]) => (
           <div key={grade} className="space-y-2">
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="text-xs font-medium">
                 {GRADE_LABELS[grade]}
               </Badge>
               <span className="text-sm text-muted-foreground">
-                {families.length} families
+                {list.length} families
               </span>
             </div>
             
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-              {families.map((family) => {
+              {list.map((entry) => {
+                const family = entry.name;
                 const isSelected = selectedFamilies.includes(family);
                 const playerCount = playersByFamily[family] || 0;
                 

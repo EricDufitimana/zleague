@@ -1,17 +1,28 @@
 /**
- * Single source of truth for team grades and the families that sit in them.
+ * Grade ladder and presentation helpers.
  *
- * Families are cohorts that move up one grade each year, so at the start of a
- * season every family shifts: ey -> s4 -> s5 -> s6 -> alumni. When that happens,
- * promote `teams.grade` in the database (ongoing championships only, so past
- * results keep the grades they were played at) and move the family lists in
- * FAMILIES_BY_GRADE down one level here. Nothing else should hardcode this map.
+ * Families themselves are NOT listed here any more. They live in the `families`
+ * table and are managed from /dashboard/families, so they can be renamed, added
+ * and retired without a code change or a Postgres enum migration. Fetch them
+ * from /api/families (or `fetchFamilies` below) instead of hardcoding names.
  *
- * Last promotion: 2026-10-15 (Zleague-2026).
+ * The grade ladder stays in code because it is structural: the bracket stages,
+ * the promotion order and the badge colours all depend on it.
  */
 
 export const TEAM_GRADES = ['ey', 's4', 's5', 's6', 'alumni'] as const;
 export type TeamGrade = (typeof TEAM_GRADES)[number];
+
+export type Gender = 'male' | 'female';
+
+export interface Family {
+  id: number;
+  name: string;
+  grade: TeamGrade;
+  gender: Gender;
+  is_active: boolean;
+  sort_order: number;
+}
 
 export const GRADE_LABELS: Record<TeamGrade, string> = {
   ey: 'EY',
@@ -21,7 +32,10 @@ export const GRADE_LABELS: Record<TeamGrade, string> = {
   alumni: 'Alumni',
 };
 
-/** The grade a family is promoted into. `alumni` is terminal. */
+/**
+ * The grade a family is promoted into at the start of a season. `alumni` is
+ * terminal. Promotion is now a single UPDATE over the families table.
+ */
 export const NEXT_GRADE: Record<TeamGrade, TeamGrade | null> = {
   ey: 's4',
   s4: 's5',
@@ -30,73 +44,8 @@ export const NEXT_GRADE: Record<TeamGrade, TeamGrade | null> = {
   alumni: null,
 };
 
-/**
- * Families per grade. `ey` is empty until the next intake is enrolled.
- * Names match `teams.name` in the database exactly - do not reformat them.
- */
-export const FAMILIES_BY_GRADE: Record<TeamGrade, string[]> = {
-  ey: [],
-  s4: ['Family_1', 'Family_2', 'Family_3', 'Family_4', 'Family_5', 'Family_6'],
-  s5: [
-    'Thomas Edison',
-    'Rosalie Gicanda',
-    'Lance Reddick',
-    'Niyitegeka Felestin',
-    'Irena Sendler',
-    'ADA loveloce',
-  ],
-  s6: [
-    'Pelé (Edson Arantes Do Nascimento)',
-    'Ubald Rugirangoga',
-    'Alfred Nobel',
-    'Toni Morrison',
-    'Ruth Bader Ginsberg',
-    'Charles Babbage',
-  ],
-  alumni: [
-    'KATHERINE JOHNSON',
-    'YVAN BURAVAN',
-    'Chinua Achebe',
-    'RUGANZU NDOLI 2',
-    'AOUA KEITA',
-    'Fannie Lou Hamer',
-  ],
-};
-
-/**
- * Gender is a property of the family, not of the grade, so it survives promotion.
- * Anything not listed here falls back to 'male', matching the previous behaviour.
- */
-const FEMALE_FAMILIES = new Set([
-  'Family_1',
-  'Family_2',
-  'Family_5',
-  'Family_6',
-  'Niyitegeka Felestin',
-  'Rosalie Gicanda',
-  'Irena Sendler',
-  'ADA loveloce',
-  'Ubald Rugirangoga',
-  'Charles Babbage',
-  'Toni Morrison',
-  'Ruth Bader Ginsberg',
-  'YVAN BURAVAN',
-  'KATHERINE JOHNSON',
-  'AOUA KEITA',
-  'Fannie Lou Hamer',
-]);
-
-/** Families that are shown in the team builder - alumni have graduated out. */
+/** Grades offered when building teams - alumni have graduated out. */
 export const SELECTABLE_GRADES: TeamGrade[] = ['ey', 's4', 's5', 's6'];
-
-/** Accepts the loose spellings that have accumulated in the data ("Family 1" vs "Family_1"). */
-function canonicalFamily(family: string): string {
-  const normalized = family.trim().replace(/_/g, ' ').toLowerCase();
-  for (const name of Object.values(FAMILIES_BY_GRADE).flat()) {
-    if (name.replace(/_/g, ' ').toLowerCase() === normalized) return name;
-  }
-  return family.trim();
-}
 
 export function isTeamGrade(value: string): value is TeamGrade {
   return (TEAM_GRADES as readonly string[]).includes(value.toLowerCase());
@@ -106,19 +55,6 @@ export function gradeLabel(grade?: string | null): string {
   if (!grade) return 'Unknown';
   const key = grade.toLowerCase();
   return isTeamGrade(key) ? GRADE_LABELS[key] : grade.toUpperCase();
-}
-
-/** The grade a family currently belongs to, or null when it is not a known family. */
-export function getFamilyGrade(family: string): TeamGrade | null {
-  const canonical = canonicalFamily(family);
-  for (const grade of TEAM_GRADES) {
-    if (FAMILIES_BY_GRADE[grade].includes(canonical)) return grade;
-  }
-  return null;
-}
-
-export function assignGender(family: string): 'male' | 'female' {
-  return FEMALE_FAMILIES.has(canonicalFamily(family)) ? 'female' : 'male';
 }
 
 /**
@@ -145,4 +81,28 @@ export function gradeBadgeClasses(grade?: string | null): string {
     default:
       return 'bg-gray-50 text-gray-900 border-gray-300';
   }
+}
+
+/** Fetches families from the API. Pass includeInactive for management screens. */
+export async function fetchFamilies(options?: {
+  includeInactive?: boolean;
+  grade?: TeamGrade;
+}): Promise<Family[]> {
+  const params = new URLSearchParams();
+  if (options?.includeInactive) params.set('include_inactive', 'true');
+  if (options?.grade) params.set('grade', options.grade);
+
+  const query = params.toString();
+  const response = await fetch(`/api/families${query ? `?${query}` : ''}`);
+  if (!response.ok) throw new Error('Failed to load families');
+
+  const data = await response.json();
+  return (data.families ?? []) as Family[];
+}
+
+/** Groups families by grade, in ladder order. */
+export function groupByGrade(families: Family[]): Array<[TeamGrade, Family[]]> {
+  return TEAM_GRADES.map(
+    grade => [grade, families.filter(f => f.grade === grade)] as [TeamGrade, Family[]]
+  ).filter(([, list]) => list.length > 0);
 }

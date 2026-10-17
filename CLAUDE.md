@@ -29,23 +29,36 @@ Known drift between `schema.prisma` and the live database:
 
 - `matches.penalty_score` and `users.role` are read in app code but absent from the schema.
 - `volleyball_scores` exists only as a Supabase table, queried through the REST client.
-- `teams.name` is declared as `FamilyType` but is really a text column holding display
-  names (`'Lance Reddick'`, not `Lance_Solomon_Reddick`). Only the Supabase REST path
-  touches it, so this never surfaces.
+- `players.grade` uses a `grade_type` enum whose labels include `Ingabe`, a typo-looking
+  fourth value that the data genuinely uses for EY players.
 
-### Grades and the yearly promotion
+### Families
 
-Families are cohorts that move up one grade each year: `ey → s4 → s5 → s6 → alumni`.
-**`src/lib/grades.ts` is the single source of truth** for the grade list, the families in
-each grade, per-family gender, labels and badge colours. It used to be copy-pasted across
-`api/teams`, `FamilySelector` and the create-championship page, which is how the three
-drifted apart; keep it in one place.
+Families are **data, not code**. They live in the `families` table (name, grade, gender,
+`is_active`, `sort_order`) and are managed from `/dashboard/families`. Do not hardcode
+family names anywhere — fetch them from `/api/families` (or `fetchFamilies()` in
+`src/lib/grades.ts`).
 
-To run a promotion: add any new enum value in its own statement (PostgreSQL cannot use a
-freshly added enum label in the transaction that added it), promote `teams.grade` with a
-single `CASE` update scoped to **ongoing** championships so ended ones keep the grades their
-games were played at, then shift the family lists in `grades.ts` down one level. See
-`prisma/sql/2026-10-15-promote-grades.sql` for the applied example.
+`teams.name` and `players.family` are `text` columns with foreign keys onto
+`families.name` using **`ON UPDATE CASCADE`**, so renaming a family rewrites every team
+and player row that referenced it in the same statement — that is the whole mechanism
+behind the rename feature, and there is no follow-up write to do. `ON DELETE` is
+`RESTRICT`: a family still in use cannot be deleted, only deactivated, which is what keeps
+finished championships readable. Both columns used to be the `family_type` enum, which is
+why renaming previously needed `ALTER TYPE`. That enum still exists, unused, so
+`prisma/sql/2026-10-17-families-table.rollback.sql` stays viable.
+
+`src/lib/grades.ts` now holds only the structural parts: the grade ladder, labels,
+`NEXT_GRADE`, badge colours and the EY team-stats-only rule.
+
+### The yearly promotion
+
+Families move up one grade each year: `ey → s4 → s5 → s6 → alumni`. Promotion is now two
+updates — `families.grade` (the roster going forward) and `teams.grade` scoped to
+**ongoing** championships, so ended ones keep the grades their games were played at. See
+`prisma/sql/2026-10-15-promote-grades.sql` for the applied example; note the `grade` enum
+needs any new value added in its own statement, because PostgreSQL cannot use a freshly
+added enum label in the transaction that added it.
 
 `players.grade` (`grade_type`: Ishami/Ijabo/Ingabo/**Ingabe**) is a separate taxonomy that
 is display-only and is *not* promoted. Its real pairing is S6→Ishami, S5→Ijabo, S4→Ingabo,
@@ -58,7 +71,7 @@ Prisma, TanStack Query, Tailwind v4 with shadcn/ui ("new-york", `@/components/ui
 `output: "standalone"` in `next.config.ts`. Path alias `@/*` → `src/*`.
 
 Domain: an inter-family school sports championship (ZLeague). Championships contain teams
-(one per `FamilyType` × `TeamGrade` × gender), matches are played in basketball, football
+(one per family × `TeamGrade` × gender), matches are played in basketball, football
 or volleyball, and winners advance through gender-specific bracket stages
 (`BoysStages`: preliminary → semi-finals → finals; `GirlsStages` adds quarter-finals).
 
