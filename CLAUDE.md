@@ -112,11 +112,18 @@ Three Supabase client factories exist and are not interchangeable:
 ### Route groups
 
 - `src/app/(site)/` — public pages (`/`, `/bracket`, `/leaders`, `/predictors`) under
-  `Navbar`; the layout is a client component that sets the page title from the pathname.
+  the shared `DesignLabShell` in public mode, fixed to the Studio theme with real
+  data. Layout/page metadata owns titles. `/tests` uses the same design in lab
+  mode with preview data and alternate palettes; public predictions use the
+  separate `LeaguePredictions` component for authenticated submissions.
 - `src/app/(live-score)/live-score/[matchId]` (basketball) and
   `.../live-score/football/[matchId]` — the live scoring consoles.
-- `src/app/dashboard/` — admin area behind the middleware gate, wrapped in the
-  shadcn `SidebarProvider` + `SportsSidebar` + `SportsHeader` shell.
+- `src/app/dashboard/` — admin area behind the middleware gate, wrapped in
+  `components/operations/DashboardShell`. Its shared championship selection is
+  carried in URLs/sessionStorage. Overview shows pending work; Match center
+  (`/dashboard/schedule`) combines fixture views and scheduling. Record links
+  carry `match_id` and reuse the championship query without prefetching every
+  match’s player statistics. See `docs/studio-workspace.md`.
 - `src/app/api/` — REST handlers; `src/actions/` — `"use server"` mutations.
 
 ### Live scoring: optimistic queue + Realtime, and how they interact
@@ -145,7 +152,8 @@ not absolute values.
 next stage from `TOURNAMENT_STATUSES` (male vs female ladders differ), then finds or
 creates the next-round match and links it via `next_match_id`, counting existing feeders so
 each next-round match takes exactly two and finals stay singular. The public bracket page
-renders this with `@sportsgram/brackets`.
+uses the shared Studio group tables and knockout cards. Boys’ groups are loaded
+from `/api/groups`; finalizing the groups seeds the semifinals.
 
 ### UI conventions
 

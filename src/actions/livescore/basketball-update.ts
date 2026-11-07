@@ -1,5 +1,6 @@
 "use server";
 import { prisma } from "@/lib/prisma";
+import { requireEditableMatch } from '@/lib/match-write-guard';
 
 function serializeBigInt(obj: any) {
   return JSON.parse(
@@ -17,6 +18,7 @@ export async function createMultipleBasketballScores(
   }>
 ) {
   try {
+    await requireEditableMatch(matchId);
     console.log('🏀 createMultipleBasketballScores called with:', {
       matchId,
       playersCount: players.length,
@@ -30,8 +32,6 @@ export async function createMultipleBasketballScores(
       points: 0,
       rebounds: 0,
       assists: 0,
-      three_points_made: 0,
-      three_points_attempted: 0,
       created_at: new Date(),
     }));
 
@@ -68,10 +68,10 @@ export async function updateBasketballScore(
   points: number,
   rebounds: number,
   assists: number,
-  threePointsMade: number,
-  threePointsAttempted: number
 ) {
   try {
+    const editable = await requireEditableMatch(matchId);
+    if (editable.status === 'played') throw new Error('This match is finished. Edit its result from Record Results.');
     console.log('🏀 updateBasketballScore called with:', {
       matchId,
       teamId,
@@ -79,8 +79,6 @@ export async function updateBasketballScore(
       points,
       rebounds,
       assists,
-      threePointsMade,
-      threePointsAttempted
     });
 
     const currentScore = await prisma.basketball_scores.findFirst({
@@ -101,19 +99,13 @@ export async function updateBasketballScore(
     const newPoints = Number(currentScore.points) + points;
     const newRebounds = Number(currentScore.rebounds) + rebounds;
     const newAssists = Number(currentScore.assists) + assists;
-    const newThreePointsMade = Number(currentScore.three_points_made) + threePointsMade;
-    const newThreePointsAttempted = Number(currentScore.three_points_attempted) + threePointsAttempted;
 
     console.log('🏀 Updating player stats:', {
       current: {
         points: currentScore.points,
         rebounds: currentScore.rebounds,
         assists: currentScore.assists,
-        three_points_made: currentScore.three_points_made,
-        three_points_attempted: currentScore.three_points_attempted
       },
-      increment: { points, rebounds, assists, threePointsMade, threePointsAttempted },
-      new: { newPoints, newRebounds, newAssists, newThreePointsMade, newThreePointsAttempted }
     });
 
     const updateResult = await prisma.basketball_scores.updateMany({
@@ -126,8 +118,6 @@ export async function updateBasketballScore(
         points: newPoints,
         rebounds: newRebounds,
         assists: newAssists,
-        three_points_made: newThreePointsMade,
-        three_points_attempted: newThreePointsAttempted,
       },
     });
 

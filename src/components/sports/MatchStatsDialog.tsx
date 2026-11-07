@@ -21,8 +21,6 @@ interface PlayerStat {
   points?: number
   rebounds?: number
   assists?: number
-  three_points_made?: number
-  three_points_attempted?: number
   // Football stats
   goals?: number
   shots_on_target?: number
@@ -109,8 +107,6 @@ export function MatchStatsDialog({
             points: score.points || 0,
             rebounds: score.rebounds || 0,
             assists: score.assists || 0,
-            three_points_made: score.three_points_made || 0,
-            three_points_attempted: score.three_points_attempted || 0,
           })
           team.total_score += score.points || 0
         } else {
@@ -173,7 +169,7 @@ export function MatchStatsDialog({
                 </div>
                 <div className="flex items-center gap-1">
                   <Trophy className="h-3 w-3" />
-                  <span>{player.three_points_made}/{player.three_points_attempted} 3PT</span>
+
                 </div>
               </div>
             </div>

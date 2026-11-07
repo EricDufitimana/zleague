@@ -1,29 +1,5 @@
-"use client"
-
-import { usePathname } from "next/navigation"
-import Head from "../head"
-import { Navbar } from "@/components/navigation/Navbar"
-
-export default function SiteLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  const pathname = usePathname()
-  
-  const getTitle = () => {
-    if (pathname === "/") return "Champions League"
-    else if (pathname?.includes("/predictors")) return "Predict Winners | Champions League"
-    else if (pathname?.includes("/bracket")) return "Tournament Bracket | Champions League"
-    else if (pathname?.includes("/dashboard")) return "Dashboard | Champions League"
-    else if (pathname?.includes("/leaders")) return "Leaders | Champions League"
-    else return "Champions League"
-  }
-
-  return <>
-    {Head(getTitle())}
-    <Navbar />
-    {children}
-  </>
-}
-
+import type { Metadata } from 'next';
+import { DesignLabShell } from '@/components/design-tests/DesignLabShell';
+import { leagueFonts } from '@/lib/league-fonts';
+export const metadata: Metadata = { title: { default: 'ZLeague — ASYV Champions League', template: '%s — ZLeague' }, description: 'Follow your family’s matches, results and road to the championship.' };
+export default function SiteLayout({ children }: { children: React.ReactNode }) { return <DesignLabShell mode="public" fontClassName={leagueFonts}>{children}</DesignLabShell>; }

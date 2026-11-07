@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireEditableMatch } from '@/lib/match-write-guard';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,6 +23,11 @@ export async function POST(request: NextRequest) {
     );
 
     console.log('Supabase client created, checking for existing scores...');
+    await requireEditableMatch(match_id);
+    // Retain historical three-point fields without collecting new tracking data.
+    const { data: previousScores, error: previousError } = await supabase.from('basketball_scores')
+      .select('team_id,player_id,three_points_made,three_points_attempted').eq('match_id', match_id);
+    if (previousError) throw new Error(previousError.message);
 
     // Delete existing scores for this match (to allow updates)
     const { error: deleteError } = await supabase
@@ -47,8 +53,8 @@ export async function POST(request: NextRequest) {
         points: score.points,
         rebounds: score.rebounds,
         assists: score.assists,
-        three_points_made: score.three_points_made || 0,
-        three_points_attempted: score.three_points_attempted || 0,
+        three_points_made: previousScores?.find(old => old.team_id === score.team_id && old.player_id === (score.player_id || null))?.three_points_made || 0,
+        three_points_attempted: previousScores?.find(old => old.team_id === score.team_id && old.player_id === (score.player_id || null))?.three_points_attempted || 0,
         player_id: score.player_id || null,
         created_at: new Date().toISOString()
       })))

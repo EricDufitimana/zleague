@@ -9,12 +9,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Trophy, Plus, Loader2, Users, Calendar, ArrowRight, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { SportsHeader } from "@/components/sports/sports-header";
 import { deleteChampionship } from "@/actions/championships/deleteChampionship";
 import { updateChampionship } from "@/actions/championships/updateChampionship";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+import { useQueryClient } from '@tanstack/react-query';
 
 interface Championship {
   id: number;
@@ -25,6 +27,7 @@ interface Championship {
 }
 
 export default function CreateChampionshipPage() {
+  const cache = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [name, setName] = useState('');
@@ -116,6 +119,7 @@ export default function CreateChampionshipPage() {
       if (response.ok) {
         const data = await response.json();
         setChampionships(data);
+        await cache.invalidateQueries({ queryKey: ['admin-championships'] });
       } else {
         console.error('Failed to fetch championships');
       }
@@ -145,8 +149,8 @@ export default function CreateChampionshipPage() {
         setIsDialogOpen(false);
         setName('');
         toast.success("Championship Created Successfully")
-        // Refresh the championships list
-        fetchChampionships();
+        await fetchChampionships();
+        if (data.championship?.id) router.push(`/dashboard/create-championship/${data.championship.id}/teams`);
       } else {
         const errorData = await response.json();
         console.error('Error creating championship:', errorData);
@@ -178,7 +182,7 @@ export default function CreateChampionshipPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Championships</h1>
-          <p className="text-muted-foreground">Create and manage your tournaments</p>
+          <p className="text-muted-foreground">Start a season, manage its teams, or revisit a past championship.</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -194,9 +198,10 @@ export default function CreateChampionshipPage() {
                 Create New Championship
               </DialogTitle>
               <DialogDescription>
-                Enter the name for your new championship. You can add teams and players later.
+                Name the championship. Next, you’ll add its teams and create the draw.
               </DialogDescription>
             </DialogHeader>
+            <p className="op-champ-warning">Starting a new championship ends the current championship. Its teams, fixtures and results stay in the archive.</p>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="name" className="text-right">
@@ -356,6 +361,8 @@ export default function CreateChampionshipPage() {
             <Card 
               key={championship.id}
               className="@container/card cursor-pointer hover:shadow-md transition-shadow group"
+              role="button" tabIndex={0} aria-label={`Manage ${championship.name} teams`}
+              onKeyDown={event => { if (event.target === event.currentTarget && ['Enter', ' '].includes(event.key)) { event.preventDefault(); handleChampionshipClick(championship.id); } }}
               onClick={() => handleChampionshipClick(championship.id)}
             >
               <CardHeader className="pb-3">
@@ -389,7 +396,8 @@ export default function CreateChampionshipPage() {
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          className="h-8 w-8 p-0 hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="h-8 w-8 p-0 hover:bg-muted opacity-100"
+                          aria-label={`Options for ${championship.name}`}
                           onClick={(e) => e.stopPropagation()}
                         >
                           <MoreVertical className="size-4" />

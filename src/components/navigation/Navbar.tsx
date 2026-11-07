@@ -12,7 +12,7 @@ import { useSession } from "@/hooks/useSession"
 
 const getNavigationItems = (isAdmin: boolean) => [
   { href: "/", label: "Scores" },
-  { href: "/bracket", label: "Bracket" },
+  { href: "/bracket", label: "Groups & Bracket" },
   { href: "/leaders", label: "Leaders" },
   { href: "/predictors", label: "Predict & Winners" },
 ]
@@ -106,4 +106,4 @@ export function Navbar() {
       </div>
     </nav>
   )
-} 
+}

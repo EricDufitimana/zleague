@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardAction, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,6 +12,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Trophy, Calendar, Users, Target, CheckCircle, AlertCircle, Clock, BarChart3, Loader2, Play, Plus, X } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { gradeBadgeClasses, isTeamStatsOnlyGrade } from '@/lib/grades';
+
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import { ArrowUpRight } from 'lucide-react';
+import { OperationsHeading, useDashboard, useAdminMatches } from '@/components/operations/DashboardShell';
 
 interface Championship {
   id: number;
@@ -41,19 +47,11 @@ interface Match {
   championship: Championship;
 }
 
-interface MatchWithScores extends Match {
-  team_a_score?: number;
-  team_b_score?: number;
-  penalty_score?: { team_a: number; team_b: number } | null;
-}
-
 interface BasketballScore {
   team_id: number;
   points: number;
   rebounds: number;
   assists: number;
-  three_points_made?: number;
-  three_points_attempted?: number;
   player_id?: number;
 }
 
@@ -74,12 +72,17 @@ interface Player {
 }
 
 export default function RecordPage() {
-  const [championships, setChampionships] = useState<Championship[]>([]);
+  const dashboard = useDashboard();
+  const matchQuery = useAdminMatches(false);
+  const recordQuery = useSearchParams();
+  const cache = useQueryClient();
+  const consumedMatch = useRef('');
+  const loadVersion = useRef(0);
+  const [loadingExisting, setLoadingExisting] = useState(false);
+  const [existingError, setExistingError] = useState('');
   const [selectedChampionship, setSelectedChampionship] = useState<string>("");
   const [allMatches, setAllMatches] = useState<Match[]>([]); // Store all matches from all championships
-  const [allMatchesWithScores, setAllMatchesWithScores] = useState<MatchWithScores[]>([]); // Store all matches with scores
   const [matches, setMatches] = useState<Match[]>([]); // Filtered matches based on selected championship
-  const [matchesWithScores, setMatchesWithScores] = useState<MatchWithScores[]>([]); // Filtered matches with scores
   const [selectedMatch, setSelectedMatch] = useState<string>("");
   const [selectedMatchData, setSelectedMatchData] = useState<Match | null>(null);
   const [winningTeam, setWinningTeam] = useState<string>("");
@@ -109,8 +112,8 @@ export default function RecordPage() {
   });
   
   const [individualStats, setIndividualStats] = useState<{
-    teamA: Array<{ player_id: number; points: number; rebounds: number; assists: number; three_points_made: number; three_points_attempted: number }>;
-    teamB: Array<{ player_id: number; points: number; rebounds: number; assists: number; three_points_made: number; three_points_attempted: number }>;
+    teamA: Array<{ player_id: number; points: number; rebounds: number; assists: number }>;
+    teamB: Array<{ player_id: number; points: number; rebounds: number; assists: number }>;
   }>({
     teamA: [],
     teamB: []
@@ -141,7 +144,6 @@ export default function RecordPage() {
   }>({});
   const [isCreatingPlayers, setIsCreatingPlayers] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isLoadingPlayers, setIsLoadingPlayers] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [validationErrors, setValidationErrors] = useState<{
@@ -168,55 +170,21 @@ export default function RecordPage() {
     teamBAssistsFootball: false
   });
 
-  const [isFetchingMatches, setIsFetchingMatches] = useState(false);
-  const [isFetchingChampionships, setIsFetchingChampionships] = useState(false);
-  const [isLoadingAllMatches, setIsLoadingAllMatches] = useState(false);
+  const isFetchingMatches = matchQuery.isPending;
   
-  // Fetch championships on component mount
+  // Reuse the workspace selection and fetch only this championship.
   useEffect(() => {
-    // Only fetch on client side
-    if (typeof window !== 'undefined') {
-      setIsFetchingChampionships(true);
-      fetchChampionships();
-      setIsFetchingChampionships(false);
-    }
-  }, []);
-
-  // Load all matches in the background when championships are loaded
+    setSelectedChampionship(dashboard.championship ? String(dashboard.championship.id) : '');
+  }, [dashboard.championship?.id]);
   useEffect(() => {
-    const loadAllMatches = async () => {
-      if (championships.length > 0 && allMatches.length === 0) {
-        console.log('🔄 Loading all matches in background...');
-        setIsLoadingAllMatches(true);
-        try {
-          // Fetch all matches without championship filter
-          const response = await fetch('/api/matches');
-          if (response.ok) {
-            const responseData = await response.json();
-            const data = responseData.matches || [];
-            
-            // Filter out matches with null team IDs
-            const validMatches = data.filter((match: Match) => 
-              match.team_a_id !== null && match.team_b_id !== null
-            );
-            
-            console.log('✅ All matches loaded in background:', validMatches.length);
-            setAllMatches(validMatches);
-            
-            // Pre-fetch scores for all matches and store in allMatchesWithScores
-            const matchesWithScoresData = await fetchAllMatchScores(validMatches);
-            setAllMatchesWithScores(matchesWithScoresData);
-          }
-        } catch (error) {
-          console.error('💥 Error loading all matches:', error);
-        } finally {
-          setIsLoadingAllMatches(false);
-        }
-      }
-    };
-    
-    loadAllMatches();
-  }, [championships]);
+    setAllMatches((matchQuery.data || []).filter(m => m.team_a_id && m.team_b_id && m.teamA && m.teamB) as unknown as Match[]);
+  }, [matchQuery.data]);
+  useEffect(() => { setSelectedMatch(''); setSelectedMatchData(null); }, [selectedChampionship]);
+  useEffect(() => {
+    const id = recordQuery.get('match_id');
+    const key = `${selectedChampionship}:${id}`;
+    if (id && consumedMatch.current !== key && matches.some(m => String(m.id) === id)) { consumedMatch.current = key; setSelectedMatch(id); }
+  }, [recordQuery, selectedChampionship, matches]);
 
   // Filter matches when championship changes (no fetching, just filtering)
   useEffect(() => {
@@ -230,27 +198,22 @@ export default function RecordPage() {
       console.log('✅ Filtered matches:', filtered.length);
       setMatches(filtered);
       
-      // Filter matchesWithScores for selected championship
-      const filteredWithScores = allMatchesWithScores.filter(
-        match => match.championship_id.toString() === selectedChampionship
-      );
-      setMatchesWithScores(filteredWithScores);
     } else if (selectedChampionship && allMatches.length === 0) {
       // If matches haven't loaded yet, show empty
       console.log('⏳ Waiting for matches to load...');
       setMatches([]);
-      setMatchesWithScores([]);
     } else {
       console.log('🧹 Clearing matches data (no championship selected)');
       setMatches([]);
-      setMatchesWithScores([]);
       setSelectedMatch("");
       setSelectedMatchData(null);
     }
-  }, [selectedChampionship, allMatches, allMatchesWithScores]);
+  }, [selectedChampionship, allMatches]);
 
-  // Update selected match data when match selection changes
+  // Ignore responses for a fixture that is no longer selected.
   useEffect(() => {
+    const version = ++loadVersion.current;
+    setLoadingExisting(false); setExistingError(''); setPlayers([]);
     if (selectedMatch && matches.length > 0) {
       const match = matches.find(m => m.id.toString() === selectedMatch);
       if (match) {
@@ -277,11 +240,11 @@ export default function RecordPage() {
         setEyPlayerNames({}); // Reset EY player names
         
         // Fetch players for both teams
-        fetchPlayers(match.team_a_id, match.team_b_id);
+        fetchPlayers(match.team_a_id, match.team_b_id, version);
         
         // If match is already played, load existing data
-        if (match.status === 'played') {
-          loadExistingMatchData(match.id);
+        if (match.status === 'played' || match.status === 'live') {
+          loadExistingMatchData(match.id, match, version);
         }
       }
     } else {
@@ -293,169 +256,17 @@ export default function RecordPage() {
     }
   }, [selectedMatch, matches]);
 
-  const fetchChampionships = async () => {
-    try {
-      console.log('🏆 Fetching championships...');
-      
-      const response = await fetch('/api/championships');
-      console.log('📡 Championships API Response status:', response.status);
-      console.log('📡 Championships API Response ok:', response.ok);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('🏆 Championships data received:', data);
-        console.log('🏆 Total championships:', data?.length || 0);
-        
-        if (data && Array.isArray(data)) {
-          data.forEach((championship: Championship, index: number) => {
-            console.log(`🏆 Championship ${index + 1}:`, {
-              id: championship.id,
-              name: championship.name,
-              status: championship.status
-            });
-          });
-        }
-        
-        setChampionships(data);
-      } else {
-        console.error('❌ Championships API request failed with status:', response.status);
-        const errorText = await response.text();
-        console.error('❌ Championships error response body:', errorText);
-      }
-    } catch (error) {
-      console.error('💥 Error fetching championships:', error);
-      console.error('💥 Championships error details:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : 'No stack trace'
-      });
-    }
-  };
-
-  const fetchMatches = async (championshipId: string) => {
-    try {
-      console.log('🔍 Fetching matches for championship ID:', championshipId);
-      
-      const response = await fetch(`/api/matches?championship_id=${championshipId}`);
-      console.log('📡 API Response status:', response.status);
-      console.log('📡 API Response ok:', response.ok);
-      
-      if (response.ok) {
-        const responseData = await response.json();
-        const data = responseData.matches || [];
-        console.log('📊 Raw matches data received:', responseData);
-        console.log('📊 Total matches received:', data?.length || 0);
-        
-        // Log each match status for debugging
-        if (data && Array.isArray(data)) {
-          data.forEach((match: Match, index: number) => {
-            console.log(`🏀 Match ${index + 1}:`, {
-              id: match.id,
-              teamA: match.teamA?.name,
-              teamB: match.teamB?.name,
-              status: match.status,
-              sport_type: match.sport_type,
-              championship_id: match.championship_id
-            });
-          });
-        }
-        
-        // Filter out matches with null team IDs
-        const validMatches = data.filter((match: Match) => 
-          match.team_a_id !== null && match.team_b_id !== null
-        );
-        
-        console.log('✅ All matches loaded:', data);
-        console.log('✅ Total matches:', data.length);
-        console.log('✅ Valid matches (with teams):', validMatches.length);
-        console.log('🚫 Filtered out matches with null team IDs:', data.length - validMatches.length);
-        
-        setMatches(validMatches);
-        // Fetch scores for all matches
-        await fetchAllMatchScores(validMatches);
-      } else {
-        console.error('❌ API request failed with status:', response.status);
-        const errorText = await response.text();
-        console.error('❌ Error response body:', errorText);
-      }
-    } catch (error) {
-      console.error('💥 Error fetching matches:', error);
-      console.error('💥 Error details:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : 'No stack trace'
-      });
-    }
-  };
-
-  const fetchAllMatchScores = async (matchesData: Match[]): Promise<MatchWithScores[]> => {
-    try {
-      const matchesWithScoresData: MatchWithScores[] = await Promise.all(
-        matchesData.map(async (match) => {
-          if (match.status !== 'played') {
-            return { ...match, team_a_score: undefined, team_b_score: undefined, penalty_score: null };
-          }
-
-          try {
-            let team_a_score = 0;
-            let team_b_score = 0;
-
-            if (match.sport_type === 'basketball') {
-              const response = await fetch(`/api/basketball-scores?match_id=${match.id}`);
-              if (response.ok) {
-                const responseData = await response.json();
-                const scores = responseData.scores || [];
-                // Filter team scores (not player scores) and sum points
-                const teamScores = scores.filter((s: any) => !s.player_id);
-                const teamAScore = teamScores.find((s: any) => s.team_id === match.team_a_id);
-                const teamBScore = teamScores.find((s: any) => s.team_id === match.team_b_id);
-                team_a_score = teamAScore?.points || 0;
-                team_b_score = teamBScore?.points || 0;
-              }
-            } else if (match.sport_type === 'football') {
-              const response = await fetch(`/api/football-scores?match_id=${match.id}`);
-              if (response.ok) {
-                const responseData = await response.json();
-                const scores = responseData.scores || [];
-                // Filter team scores (not player scores) and sum goals
-                const teamScores = scores.filter((s: any) => !s.player_id);
-                const teamAScore = teamScores.find((s: any) => s.team_id === match.team_a_id);
-                const teamBScore = teamScores.find((s: any) => s.team_id === match.team_b_id);
-                team_a_score = teamAScore?.goals || 0;
-                team_b_score = teamBScore?.goals || 0;
-              }
-            } else if (match.sport_type === 'volleyball') {
-              // For volleyball, use team_a_score and team_b_score directly from match (sets won)
-              // These are already set in the match by the API when volleyball scores are recorded
-              const matchWithScores = match as Match & { team_a_score?: number; team_b_score?: number };
-              team_a_score = matchWithScores.team_a_score || 0;
-              team_b_score = matchWithScores.team_b_score || 0;
-            }
-
-            // Include penalty_score from match data if it exists
-            const penaltyScore = (match as any).penalty_score || null;
-            return { ...match, team_a_score, team_b_score, penalty_score: penaltyScore };
-          } catch (error) {
-            console.error(`Error fetching scores for match ${match.id}:`, error);
-            return { ...match, team_a_score: undefined, team_b_score: undefined, penalty_score: null };
-          }
-        })
-      );
-
-      return matchesWithScoresData;
-    } catch (error) {
-      console.error('Error fetching all match scores:', error);
-      return [];
-    }
-  };
-
-  const fetchPlayers = async (teamAId: number, teamBId: number) => {
+  const fetchPlayers = async (teamAId: number, teamBId: number, version = loadVersion.current) => {
     setIsLoadingPlayers(true);
     try {
       console.log('🎯 Fetching players for teams:', { teamAId, teamBId });
       const response = await fetch(`/api/players?team_a_id=${teamAId}&team_b_id=${teamBId}`);
+      if (version !== loadVersion.current) return;
       console.log('📡 Players API Response status:', response.status);
       
       if (response.ok) {
         const data = await response.json();
+        if (version !== loadVersion.current) return;
         console.log('👥 Players data received:', data);
         console.log('👥 Total players:', data?.length || 0);
         
@@ -463,29 +274,7 @@ export default function RecordPage() {
         const playersArray = Array.isArray(data) ? data : [];
         setPlayers(playersArray);
         
-        // Initialize individual stats for each player
-        const teamAPlayers = playersArray.filter((p: Player) => p.team_id === teamAId);
-        const teamBPlayers = playersArray.filter((p: Player) => p.team_id === teamBId);
-        
-        console.log('👥 Team A players:', teamAPlayers.length);
-        console.log('👥 Team B players:', teamBPlayers.length);
-        
-        setIndividualStats({
-          teamA: teamAPlayers.map((p: Player) => ({ player_id: p.id, points: 0, rebounds: 0, assists: 0, three_points_made: 0, three_points_attempted: 0 })),
-          teamB: teamBPlayers.map((p: Player) => ({ player_id: p.id, points: 0, rebounds: 0, assists: 0, three_points_made: 0, three_points_attempted: 0 }))
-        });
-        
-        // Initialize football individual stats for each player
-        setFootballIndividualStats({
-          teamA: teamAPlayers.map((p: Player) => ({ player_id: p.id, goals: 0, assists: 0, shots_on_target: 0, saves: 0 })),
-          teamB: teamBPlayers.map((p: Player) => ({ player_id: p.id, goals: 0, assists: 0, shots_on_target: 0, saves: 0 }))
-        });
-        
-        // Initialize selected players as empty
-        setSelectedPlayers({
-          teamA: [],
-          teamB: []
-        });
+        // Participant selection creates only the statistic fields that are needed.
       } else {
         console.error('❌ Players API request failed with status:', response.status);
         const errorText = await response.text();
@@ -493,6 +282,7 @@ export default function RecordPage() {
         setPlayers([]);
       }
     } catch (error) {
+      if (version !== loadVersion.current) return;
       console.error('💥 Error fetching players:', error);
       console.error('💥 Players error details:', {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -500,26 +290,33 @@ export default function RecordPage() {
       });
       setPlayers([]);
     } finally {
-      setIsLoadingPlayers(false);
+      if (version === loadVersion.current) setIsLoadingPlayers(false);
     }
   };
 
-  const loadExistingMatchData = async (matchId: number) => {
+  const loadExistingMatchData = async (matchId: number, match: Match, version: number) => {
+    const selectedMatchData = match;
+    setLoadingExisting(true); setExistingError('');
     try {
       console.log('🔄 Loading existing match data for match ID:', matchId);
       
       // Fetch existing basketball scores if it's a basketball match
       if (selectedMatchData?.sport_type === 'basketball') {
         const scoresResponse = await fetch(`/api/basketball-scores?match_id=${matchId}`);
+        if (!scoresResponse.ok) throw new Error('Could not load the saved statistics. Please retry before editing.');
         if (scoresResponse.ok) {
-          const scoresData = await scoresResponse.json();
+          const scorePayload = await scoresResponse.json();
+          if (version !== loadVersion.current) return;
+          const scoresData = Array.isArray(scorePayload) ? scorePayload : scorePayload.scores || [];
           console.log('📊 Existing basketball scores data:', scoresData);
           
+          if (!scoresData.length) throw new Error('No saved statistics were found for this result. Please retry before editing.');
           if (scoresData && scoresData.length > 0) {
             // Separate team and individual scores
             const teamScores = scoresData.filter((score: any) => !score.player_id);
             const individualScores = scoresData.filter((score: any) => score.player_id);
             
+            if (!teamScores.some((score: { team_id: number }) => score.team_id === match.team_a_id) || !teamScores.some((score: { team_id: number }) => score.team_id === match.team_b_id)) throw new Error('The saved team statistics are incomplete. Reload them before editing this result.');
             // Update team scores
             if (teamScores.length >= 2) {
               const teamAScore = teamScores.find((s: any) => s.team_id === selectedMatchData?.team_a_id);
@@ -551,7 +348,8 @@ export default function RecordPage() {
                   player_id: score.player_id,
                   points: score.points,
                   rebounds: score.rebounds,
-                  assists: score.assists
+                  assists: score.assists,
+                  shots_on_target: score.shots_on_target || 0, saves: score.saves || 0
                 }));
               
               const teamBStats = individualScores
@@ -560,7 +358,8 @@ export default function RecordPage() {
                   player_id: score.player_id,
                   points: score.points,
                   rebounds: score.rebounds,
-                  assists: score.assists
+                  assists: score.assists,
+                  shots_on_target: score.shots_on_target || 0, saves: score.saves || 0
                 }));
               
               setIndividualStats({
@@ -581,15 +380,20 @@ export default function RecordPage() {
       // Fetch existing football scores if it's a football match
       if (selectedMatchData?.sport_type === 'football') {
         const scoresResponse = await fetch(`/api/football-scores?match_id=${matchId}`);
+        if (!scoresResponse.ok) throw new Error('Could not load the saved statistics. Please retry before editing.');
         if (scoresResponse.ok) {
-          const scoresData = await scoresResponse.json();
+          const scorePayload = await scoresResponse.json();
+          if (version !== loadVersion.current) return;
+          const scoresData = Array.isArray(scorePayload) ? scorePayload : scorePayload.scores || [];
           console.log('⚽ Existing football scores data:', scoresData);
           
+          if (!scoresData.length) throw new Error('No saved statistics were found for this result. Please retry before editing.');
           if (scoresData && scoresData.length > 0) {
             // Separate team and individual scores
             const teamScores = scoresData.filter((score: any) => !score.player_id);
             const individualScores = scoresData.filter((score: any) => score.player_id);
             
+            if (!teamScores.some((score: { team_id: number }) => score.team_id === match.team_a_id) || !teamScores.some((score: { team_id: number }) => score.team_id === match.team_b_id)) throw new Error('The saved team statistics are incomplete. Reload them before editing this result.');
             // Update team scores
             if (teamScores.length >= 2) {
               const teamAScore = teamScores.find((s: any) => s.team_id === selectedMatchData?.team_a_id);
@@ -618,7 +422,8 @@ export default function RecordPage() {
                 .map((score: any) => ({
                   player_id: score.player_id,
                   goals: score.goals,
-                  assists: score.assists
+                  assists: score.assists,
+                  shots_on_target: score.shots_on_target || 0, saves: score.saves || 0
                 }));
               
               const teamBStats = individualScores
@@ -626,7 +431,8 @@ export default function RecordPage() {
                 .map((score: any) => ({
                   player_id: score.player_id,
                   goals: score.goals,
-                  assists: score.assists
+                  assists: score.assists,
+                  shots_on_target: score.shots_on_target || 0, saves: score.saves || 0
                 }));
               
               setFootballIndividualStats({
@@ -647,10 +453,13 @@ export default function RecordPage() {
       // Fetch existing volleyball scores if it's a volleyball match
       if (selectedMatchData?.sport_type === 'volleyball') {
         const scoresResponse = await fetch(`/api/volleyball-scores?match_id=${matchId}`);
+        if (!scoresResponse.ok) throw new Error('Could not load the saved statistics. Please retry before editing.');
         if (scoresResponse.ok) {
           const scoresData = await scoresResponse.json();
+          if (version !== loadVersion.current) return;
           console.log('🏐 Existing volleyball scores data:', scoresData);
           
+          if (!scoresData.scores?.some((score: { team_id: number }) => score.team_id === match.team_a_id) || !scoresData.scores?.some((score: { team_id: number }) => score.team_id === match.team_b_id)) throw new Error('The saved set scores are incomplete. Reload them before editing this result.');
           if (scoresData && scoresData.scores && scoresData.scores.length > 0) {
             const teamAScore = scoresData.scores.find((score: any) => score.team_id === selectedMatchData?.team_a_id);
             const teamBScore = scoresData.scores.find((score: any) => score.team_id === selectedMatchData?.team_b_id);
@@ -708,8 +517,10 @@ export default function RecordPage() {
       }
       
     } catch (error) {
+      if (version !== loadVersion.current) return;
+      setExistingError(error instanceof Error ? error.message : 'Saved statistics could not be loaded.');
       console.error('Error loading existing match data:', error);
-    }
+    } finally { if (version === loadVersion.current) setLoadingExisting(false); }
   };
 
   // ✅ Check if teams are EY grade
@@ -789,8 +600,8 @@ export default function RecordPage() {
       const allSelectedTeamA = selectedPlayers.teamA;
       const allSelectedTeamB = selectedPlayers.teamB;
       
-      const teamAPlayersToAdd = allSelectedTeamA.filter(id => !filteredStats.teamA.some(stat => stat.player_id === id));
-      const teamBPlayersToAdd = allSelectedTeamB.filter(id => !filteredStats.teamB.some(stat => stat.player_id === id));
+      const teamAPlayersToAdd = allSelectedTeamA.filter(id => !(selectedMatchData?.sport_type === 'football' ? footballIndividualStats.teamA : filteredStats.teamA).some(stat => stat.player_id === id));
+      const teamBPlayersToAdd = allSelectedTeamB.filter(id => !(selectedMatchData?.sport_type === 'football' ? footballIndividualStats.teamB : filteredStats.teamB).some(stat => stat.player_id === id));
       
       if (selectedMatchData?.sport_type === 'basketball') {
         setIndividualStats({
@@ -801,8 +612,6 @@ export default function RecordPage() {
               points: 0,
               rebounds: 0,
               assists: 0,
-              three_points_made: 0,
-              three_points_attempted: 0
             }))
           ],
           teamB: [
@@ -812,8 +621,6 @@ export default function RecordPage() {
               points: 0,
               rebounds: 0,
               assists: 0,
-              three_points_made: 0,
-              three_points_attempted: 0
             }))
           ]
         });
@@ -950,16 +757,26 @@ export default function RecordPage() {
       setMessage({ type: "error", text: "Please select a match" });
       return;
     }
+
+    if (selectedMatchData.sport_type === 'basketball' && basketballScores.teamA.points === basketballScores.teamB.points) {
+      setMessage({ type: 'error', text: 'Basketball cannot finish tied. Record the deciding overtime points.' });
+      return;
+    }
+    if (selectedMatchData.sport_type === 'football' && footballScores.teamA.goals === footballScores.teamB.goals &&
+      (!penaltyScores || penaltyScores.team_a === penaltyScores.team_b)) {
+      setMessage({ type: 'error', text: 'Enter a decisive penalty shootout score for a tied football match.' });
+      setShowPenaltyDialog(true);
+      return;
+    }
     
     // Check if we need a winning team selection
-    // If scores are 0-0 with penalties, winner will be determined by penalties
-    const isZeroZeroWithPenalties = selectedMatchData.sport_type === 'football' && 
-      footballScores.teamA.goals === 0 && 
-      footballScores.teamB.goals === 0 && 
+    // Any tied football score is decided by the shootout, including 1-1, 2-2, etc.
+    const isTiedWithPenalties = selectedMatchData.sport_type === 'football' &&
+      footballScores.teamA.goals === footballScores.teamB.goals &&
       penaltyScores && 
       (penaltyScores.team_a > 0 || penaltyScores.team_b > 0);
     
-    if (!winningTeam && !isZeroZeroWithPenalties) {
+    if (!winningTeam && !isTiedWithPenalties) {
       setMessage({ type: "error", text: "Please select a winning team" });
       return;
     }
@@ -1099,21 +916,24 @@ export default function RecordPage() {
         winner_id: finalWinnerId,
         status: 'played',
         team_a_score: teamAScore,
-        team_b_score: teamBScore
+        team_b_score: teamBScore,
+        penalty_score: penaltyScoreData
       };
       
       if (penaltyScoreData) {
         matchUpdateBody.penalty_score = penaltyScoreData;
       }
 
-      const matchUpdateResponse = await fetch('/api/matches', {
+      // Keep this match out of completed standings until every stat write succeeds.
+      const beginSaveResponse = await fetch('/api/matches', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(matchUpdateBody)
+        body: JSON.stringify({ match_id: selectedMatchData.id, status: 'live' })
       });
 
-      if (!matchUpdateResponse.ok) {
-        throw new Error('Failed to update match');
+      if (!beginSaveResponse.ok) {
+        const data = await beginSaveResponse.json();
+        throw new Error(data.error || 'Failed to begin saving the result');
       }
 
       // If basketball, record scores
@@ -1126,8 +946,6 @@ export default function RecordPage() {
             points: stat.points,
             rebounds: stat.rebounds,
             assists: stat.assists,
-            three_points_made: stat.three_points_made || 0,
-            three_points_attempted: stat.three_points_attempted || 0,
             player_id: stat.player_id
           })),
           ...individualStats.teamB.map(stat => ({
@@ -1136,8 +954,6 @@ export default function RecordPage() {
             points: stat.points,
             rebounds: stat.rebounds,
             assists: stat.assists,
-            three_points_made: stat.three_points_made || 0,
-            three_points_attempted: stat.three_points_attempted || 0,
             player_id: stat.player_id
           }))
         ];
@@ -1229,6 +1045,14 @@ export default function RecordPage() {
         }
       }
 
+      const matchUpdateResponse = await fetch('/api/matches', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(matchUpdateBody)
+      });
+      if (!matchUpdateResponse.ok) {
+        const data = await matchUpdateResponse.json();
+        throw new Error(data.error || 'Failed to finish recording the result');
+      }
+
       setMessage({ 
         type: "success", 
         text: selectedMatchData.status === 'played' 
@@ -1267,29 +1091,10 @@ export default function RecordPage() {
       
       setPenaltyScores(null);
 
-      // Refresh all matches and scores in background
-      const refreshAllMatches = async () => {
-        try {
-          const response = await fetch('/api/matches');
-          if (response.ok) {
-            const responseData = await response.json();
-            const data = responseData.matches || [];
-            const validMatches = data.filter((match: Match) => 
-              match.team_a_id !== null && match.team_b_id !== null
-            );
-            setAllMatches(validMatches);
-            
-            // Refresh scores for all matches
-            const matchesWithScoresData = await fetchAllMatchScores(validMatches);
-            setAllMatchesWithScores(matchesWithScoresData);
-          }
-        } catch (error) {
-          console.error('Error refreshing matches:', error);
-        }
-      };
-      
-      // Refresh in background (don't await)
-      refreshAllMatches();
+      await cache.invalidateQueries({ queryKey: ['admin-matches'] });
+      await cache.invalidateQueries({ queryKey: ['design-lab-matches'] });
+      await cache.invalidateQueries({ queryKey: ['design-lab-bracket'] });
+      await cache.invalidateQueries({ queryKey: ['design-lab-leaders'] });
 
     } catch (error) {
       setMessage({ 
@@ -1325,102 +1130,14 @@ export default function RecordPage() {
   const getGradeBadgeColor = (grade: string) => gradeBadgeClasses(grade);
 
   return (
-    <div className="space-y-6 px-4 lg:px-6">
-      {/* Header */}
-      <div className="">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-white/60 rounded-lg border">
-            <Trophy className="h-4 w-4 text-yellow-600" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold">Record Match Results</h1>
-            <p className="text-muted-foreground text-sm">Pick a match, set a winner, add the stats</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-gradient-to-b from-amber-50 to-white border-amber-100">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Championships</CardTitle>
-            <Trophy className="h-4 w-4 text-amber-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-black">{championships.length}</div>
-            <p className="text-xs text-muted-foreground">Available championships</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-b from-blue-50 to-white border-blue-100">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Matches</CardTitle>
-            <Target className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-black">{matches.length}</div>
-            <p className="text-xs text-muted-foreground">In selected championship</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-b from-lime-50 to-white border-lime-100">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Played Matches</CardTitle>
-            <CheckCircle className="h-4 w-4 text-emerald-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-black">
-              {matches.filter(m => m.status === 'played').length}
-            </div>
-            <p className="text-xs text-muted-foreground">Completed matches</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-b from-sky-50 to-white border-sky-100">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Matches</CardTitle>
-            <Clock className="h-4 w-4 text-sky-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-black">
-              {matches.filter(m => m.status === 'scheduled').length}
-            </div>
-            <p className="text-xs text-muted-foreground">Scheduled, not yet played</p>
-          </CardContent>
-        </Card>
-      </div>
-
+    <div className="space-y-6 op-record-page">
+      <OperationsHeading title="Record results" description="Choose the fixture, add the team totals and player stats, then save the result." />
+      <div className="op-record-steps" aria-label="Result recording steps"><span aria-current={!selectedMatchData ? "step" : undefined}><i>1</i>Choose a match</span><span aria-current={selectedMatchData ? "step" : undefined}><i>2</i>Scores & players</span><span><i>3</i>Review & save</span></div>
+      <div className="op-record-intro"><p>{selectedMatchData ? 'You’re recording this fixture. Check the scores and winner before saving.' : 'Find a fixture below, or choose one from the Match center to open it directly.'}</p><Link href={dashboard.href('/dashboard/schedule')}>Find a fixture <ArrowUpRight size={15} /></Link></div>
+      {matchQuery.isError && <div className="op-error" role="alert">Fixtures couldn’t load. <button onClick={() => matchQuery.refetch()}>Try again</button></div>}
+      {matchQuery.isPending && dashboard.championship && <p className="op-caption" role="status">Loading this championship’s fixtures…</p>}
       {/* Selection Section */}
-    <div className="flex gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="championship-select" className="text-sm font-medium">
-                Championship
-              </Label>
-              <Select value={selectedChampionship} onValueChange={setSelectedChampionship}>
-                <SelectTrigger id="championship-select">
-                  <SelectValue placeholder="Select a championship" />
-                </SelectTrigger>
-                <SelectContent>
-                  {championships.length == 0 && !isFetchingChampionships ?
-                  <SelectItem value="loading" disabled>
-                    <Loader2 className="size-4 animate-spin" />
-                  </SelectItem>
-                  :
-                  isFetchingChampionships ?
-                  <SelectItem value="loading" disabled>
-                    <Loader2 className="size-4 animate-spin" />
-                  </SelectItem>
-                  :
-                  championships.map((championship) => (
-                    <SelectItem key={championship.id} value={championship.id.toString()}>
-                      {championship.name} - {championship.status}
-                      </SelectItem>
-                    ))
-                  }
-                </SelectContent>
-              </Select>
-            </div>
-
+    <div className="op-record-select">
             {/* Match Selection */}
             {selectedChampionship && (
               <div className="space-y-2">
@@ -1520,9 +1237,13 @@ export default function RecordPage() {
               </div>
             )}
           </div>
+      {selectedMatchData && <div className="op-record-banner"><div><p>{selectedMatchData.sport_type} · {selectedMatchData.teamA?.gender === 'male' ? 'Boys' : 'Girls'} · {selectedMatchData.status === 'played' ? 'Editing a recorded result' : 'Recording a result'}</p><strong>{selectedMatchData.teamA?.name.replaceAll('_', ' ')} vs {selectedMatchData.teamB?.name.replaceAll('_', ' ')}</strong></div><Link href={dashboard.href('/dashboard/schedule')}>Back to fixtures</Link></div>}
+      {loadingExisting && <p className="op-caption" role="status">Restoring the saved scores and participants…</p>}
+      {existingError && selectedMatchData && <div className="op-error" role="alert">{existingError} <button className="underline" onClick={() => loadExistingMatchData(selectedMatchData.id, selectedMatchData, loadVersion.current)}>Retry loading saved result</button></div>}
       {/* Match Details and Recording Form */}
       {selectedMatchData && selectedMatchData.teamA && selectedMatchData.teamB && (
-        <div className="space-y-6">
+        <fieldset className="space-y-6" disabled={loadingExisting || !!existingError}>
+          <legend className="sr-only">Match result details</legend>
                 {/* Winner Selection */}
                 <section className="rounded-lg border  to-white p-4">
                 
@@ -1755,7 +1476,7 @@ export default function RecordPage() {
                           No players found for this team. Please add players to the team first.
                         </div>
                       ) : (
-                        individualStats.teamA.map((playerStat, index) => {
+                        (individualStats.teamA.length === 0 ? <p className="op-caption">Choose the participants to show their statistic fields.</p> : individualStats.teamA.map((playerStat, index) => {
                           const player = players.find(p => p.id === playerStat.player_id);
                           return (
                             <div key={playerStat.player_id} className="bg-white p-3 rounded border">
@@ -1764,7 +1485,7 @@ export default function RecordPage() {
                                   {player?.first_name} {player?.last_name}
                                 </span>
                               </div>
-                              <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+                              <div className="grid grid-cols-3 md:grid-cols-3 gap-2">
                                 <div>
                                   <Label className="text-xs">Points</Label>
                                   <Input
@@ -1823,46 +1544,12 @@ export default function RecordPage() {
                                     className="h-8 text-sm"
                                   />
                                 </div>
-                                <div>
-                                  <Label className="text-xs">3PT Made</Label>
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    value={playerStat.three_points_made}
-                                    onChange={(e) => {
-                                      const newValue = parseInt(e.target.value) || 0;
-                                      setIndividualStats(prev => ({
-                                        ...prev,
-                                        teamA: prev.teamA.map((stat, i) => 
-                                          i === index ? { ...stat, three_points_made: newValue } : stat
-                                        )
-                                      }));
-                                    }}
-                                    className="h-8 text-sm"
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-xs">3PT Att</Label>
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    value={playerStat.three_points_attempted}
-                                    onChange={(e) => {
-                                      const newValue = parseInt(e.target.value) || 0;
-                                      setIndividualStats(prev => ({
-                                        ...prev,
-                                        teamA: prev.teamA.map((stat, i) => 
-                                          i === index ? { ...stat, three_points_attempted: newValue } : stat
-                                        )
-                                      }));
-                                    }}
-                                    className="h-8 text-sm"
-                                  />
-                                </div>
+
+
                               </div>
                             </div>
                           );
-                        })
+                        }))
                       )}
                     </div>
                   </section>
@@ -2012,6 +1699,7 @@ export default function RecordPage() {
                         </Button>
                       </div>
                       
+                      {individualStats.teamB.length === 0 && <p className="op-caption">Choose the participants to show their statistic fields.</p>}
                       {individualStats.teamB.map((playerStat, index) => {
                         const player = players.find(p => p.id === playerStat.player_id);
                         return (
@@ -2021,7 +1709,7 @@ export default function RecordPage() {
                                 {player?.first_name} {player?.last_name}
                               </span>
                             </div>
-                            <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+                            <div className="grid grid-cols-3 md:grid-cols-3 gap-2">
                               <div>
                                 <Label className="text-xs">Points</Label>
                                 <Input
@@ -2073,42 +1761,8 @@ export default function RecordPage() {
                                   className="h-8 text-sm"
                                 />
                               </div>
-                              <div>
-                                <Label className="text-xs">3PT Made</Label>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={playerStat.three_points_made}
-                                  onChange={(e) => {
-                                    const newValue = parseInt(e.target.value) || 0;
-                                    setIndividualStats(prev => ({
-                                      ...prev,
-                                      teamB: prev.teamB.map((stat, i) => 
-                                        i === index ? { ...stat, three_points_made: newValue } : stat
-                                      )
-                                    }));
-                                  }}
-                                  className="h-8 text-sm"
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-xs">3PT Att</Label>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={playerStat.three_points_attempted}
-                                  onChange={(e) => {
-                                    const newValue = parseInt(e.target.value) || 0;
-                                    setIndividualStats(prev => ({
-                                      ...prev,
-                                      teamB: prev.teamB.map((stat, i) => 
-                                        i === index ? { ...stat, three_points_attempted: newValue } : stat
-                                      )
-                                    }));
-                                  }}
-                                  className="h-8 text-sm"
-                                />
-                              </div>
+
+
                             </div>
                           </div>
                         );
@@ -2390,7 +2044,7 @@ export default function RecordPage() {
                           No players found for this team. Please add players to the team first.
                         </div>
                       ) : (
-                        footballIndividualStats.teamA.map((playerStat, index) => {
+                        (footballIndividualStats.teamA.length === 0 ? <p className="op-caption">Choose the participants to show their statistic fields.</p> : footballIndividualStats.teamA.map((playerStat, index) => {
                           const player = players.find(p => p.id === playerStat.player_id);
                           return (
                             <div key={playerStat.player_id} className="bg-white p-3 rounded border">
@@ -2481,7 +2135,7 @@ export default function RecordPage() {
                               </div>
                             </div>
                           );
-                        })
+                        }))
                       )}
                     </div>
                   </div>
@@ -2597,6 +2251,7 @@ export default function RecordPage() {
                         </Button>
                       </div>
                       
+                      {footballIndividualStats.teamB.length === 0 && <p className="op-caption">Choose the participants to show their statistic fields.</p>}
                       {footballIndividualStats.teamB.map((playerStat, index) => {
                         const player = players.find(p => p.id === playerStat.player_id);
                         return (
@@ -2882,7 +2537,7 @@ export default function RecordPage() {
                 <div className="pt-2">
                   <Button 
                     onClick={handleSubmit} 
-                    disabled={isSubmitting || !winningTeam}
+                    disabled={isSubmitting || !winningTeam || loadingExisting || !!existingError}
                     className="w-full"
                     size="lg"
                   >
@@ -2899,7 +2554,7 @@ export default function RecordPage() {
                     )}
                   </Button>
                 </div>
-        </div>
+        </fieldset>
       )}
 
       {/* Message Display */}
@@ -2923,16 +2578,19 @@ export default function RecordPage() {
             <div className="text-gray-500">
               <Target className="h-12 w-12 mx-auto mb-4 text-gray-300" />
               <p className="text-lg font-medium">No matches available</p>
-              <p className="text-sm">All matches in this championship have been completed or are not yet scheduled.</p>
+              <p className="text-sm">Fixtures need both opponents before a result can be recorded. Check the draw or choose another championship.</p>
             </div>
           </CardContent>
         </Card>
       )}
 
       {/* Player Selection Modal */}
-      {showPlayerSelector && selectedMatchData && (isEYMatch || players.length > 0) && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+      {selectedMatchData && (isEYMatch || players.length > 0) && (
+        <Dialog open={showPlayerSelector} onOpenChange={open => { setShowPlayerSelector(open); if (!open) setEyPlayerNames({}); }}>
+          <DialogContent className="max-w-4xl p-0 max-h-[85dvh] overflow-y-auto" showCloseButton={false}>
+            <DialogTitle className="sr-only">Choose the players who participated</DialogTitle>
+            <DialogDescription className="sr-only">Select each participating player, then confirm the selection.</DialogDescription>
+          <Card className="w-full border-0 shadow-none">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>
@@ -2941,6 +2599,7 @@ export default function RecordPage() {
                 <Button
                   variant="ghost"
                   size="sm"
+                  aria-label="Close player selector"
                   onClick={() => {
                     setShowPlayerSelector(false);
                     setEyPlayerNames({});
@@ -3291,101 +2950,10 @@ export default function RecordPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
 
-      {/* Matches Table with Scores */}
-      {selectedChampionship && matchesWithScores.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              All Matches with Scores
-            </CardTitle>
-            <CardDescription>Complete list of matches in this championship with their scores</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Match</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Sport</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">Team A Score</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">Team B Score</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Winner</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {matchesWithScores.map((match) => (
-                    <tr key={match.id} className="border-b hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">{match.teamA?.name || 'Unknown'}</span>
-                            <Badge variant="outline" className="text-xs">{match.teamA?.grade || 'N/A'}</Badge>
-                          </div>
-                          <div className="text-xs text-gray-500">vs</div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">{match.teamB?.name || 'Unknown'}</span>
-                            <Badge variant="outline" className="text-xs">{match.teamB?.grade || 'N/A'}</Badge>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <span>{getSportIcon(match.sport_type)}</span>
-                          <span className="text-sm capitalize">{match.sport_type}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex flex-col items-center">
-                          <span className={`text-lg font-bold ${match.winner_id === match.team_a_id ? 'text-green-600' : 'text-gray-900'}`}>
-                            {match.team_a_score !== undefined ? match.team_a_score : '-'}
-                          </span>
-                          {match.sport_type === 'football' && match.penalty_score && (
-                            <span className="text-xs text-gray-500 mt-1">
-                              ({match.penalty_score.team_a})
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex flex-col items-center">
-                          <span className={`text-lg font-bold ${match.winner_id === match.team_b_id ? 'text-green-600' : 'text-gray-900'}`}>
-                            {match.team_b_score !== undefined ? match.team_b_score : '-'}
-                          </span>
-                          {match.sport_type === 'football' && match.penalty_score && (
-                            <span className="text-xs text-gray-500 mt-1">
-                              ({match.penalty_score.team_b})
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {match.winner_id ? (
-                          <div className="flex items-center gap-2">
-                            <Trophy className="h-4 w-4 text-yellow-500" />
-                            <span className="text-sm font-medium">
-                              {match.winner_id === match.team_a_id ? match.teamA?.name : match.teamB?.name}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-gray-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {getStatusBadge(match.status)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

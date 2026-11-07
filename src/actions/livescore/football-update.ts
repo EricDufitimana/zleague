@@ -1,5 +1,6 @@
 "use server";
 import { prisma } from "@/lib/prisma";
+import { requireEditableMatch } from '@/lib/match-write-guard';
 
 function serializeBigInt(obj: any) {
   return JSON.parse(
@@ -17,6 +18,7 @@ export async function createMultipleFootballScores(
   }>
 ) {
   try {
+    await requireEditableMatch(matchId);
     console.log('⚽ createMultipleFootballScores called with:', {
       matchId,
       playersCount: players.length,
@@ -68,6 +70,8 @@ export async function updateFootballScore(
   saves: number
 ) {
   try {
+    const editable = await requireEditableMatch(matchId);
+    if (editable.status === 'played') throw new Error('This match is finished. Edit its result from Record Results.');
     console.log('⚽ updateFootballScore called with:', {
       matchId,
       teamId,

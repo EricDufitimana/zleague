@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Trophy, Shuffle, Play, RotateCcw, Check, X, Loader2, ArrowLeft, Users, Shield, Trash2, Maximize2, Volume2, VolumeX } from 'lucide-react';
 import { ImprovedWheel, type WheelHandle } from '@/components/shared/ImprovedWheel';
 import '@/styles/fireworks.css';
+import { GroupStage } from '@/components/sports/GroupStage';
+import type { GroupSport } from '@/lib/group-stage';
 
 interface Championship {
   id: number;
@@ -42,7 +44,8 @@ export default function MatchPage() {
   const [championship, setChampionship] = useState<Championship | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedGender, setSelectedGender] = useState<string>('all');
+  const divisionQuery = useSearchParams();
+  const [selectedGender, setSelectedGender] = useState<string>(divisionQuery.get('division') === 'female' ? 'female' : 'male');
   const [selectedSportType, setSelectedSportType] = useState<string>('all');
   const [isSpinning, setIsSpinning] = useState(false);
   const [matchups, setMatchups] = useState<Matchup[]>([]);
@@ -140,7 +143,7 @@ export default function MatchPage() {
   useEffect(() => {
     if (championshipId) {
       // Reset gender and sport type when championship changes
-      setSelectedGender('all');
+      setSelectedGender(divisionQuery.get('division') === 'female' ? 'female' : 'male');
       setSelectedSportType('all');
     }
   }, [championshipId]);
@@ -551,6 +554,20 @@ export default function MatchPage() {
       </div>
     );
   }
+
+  if (selectedGender === 'male') return <div className="container mx-auto p-3">
+    <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <div><h1 className="text-2xl font-bold">Boys’ groups</h1><p className="text-sm text-muted-foreground">{championship?.name}</p></div>
+      <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setSelectedGender('female')}>Girls’ match draw</Button>
+        <Button variant="outline" onClick={() => router.push('/dashboard/schedule')}>Schedule fixtures</Button></div>
+    </div>
+    <div className="flex flex-wrap gap-2 mb-5" role="group" aria-label="Sport">
+      {(['football', 'basketball', 'volleyball'] as const).map(sport => <Button key={sport} variant={(selectedSportType === 'all' ? 'football' : selectedSportType) === sport ? 'default' : 'outline'}
+        aria-pressed={(selectedSportType === 'all' ? 'football' : selectedSportType) === sport} onClick={() => setSelectedSportType(sport)} className="capitalize">{sport}</Button>)}
+    </div>
+    <GroupStage championshipId={Number(championshipId)} sport={(selectedSportType === 'all' ? 'football' : selectedSportType) as GroupSport}
+      teams={teams.filter(team => team.gender === 'male')} editable />
+  </div>;
 
   return (
     <div className="container mx-auto p-3">

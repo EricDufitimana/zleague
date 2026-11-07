@@ -182,8 +182,7 @@ export default function FamiliesPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Families</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Rename, add or retire families. Renaming one updates every team and player that
-            references it.
+            Keep your family directory up to date. Add new families, update their details or retire families that no longer play.
           </p>
         </div>
         <Button onClick={() => setDraft({ ...EMPTY_DRAFT })}>
@@ -214,7 +213,7 @@ export default function FamiliesPage() {
               <Input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Search families…"
+                placeholder="Search families…" aria-label="Search families"
                 className="pl-8"
               />
             </div>

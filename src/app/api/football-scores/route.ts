@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireEditableMatch } from '@/lib/match-write-guard';
 
 export async function POST(request: NextRequest) {
   try {
@@ -7,6 +8,7 @@ export async function POST(request: NextRequest) {
     console.log('Recording football scores with data:', body);
     
     const { match_id, scores } = body;
+    await requireEditableMatch(match_id);
 
     if (!match_id || !scores || !Array.isArray(scores)) {
       console.log('Missing or invalid data:', { match_id, scores });

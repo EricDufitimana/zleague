@@ -42,7 +42,8 @@ export async function GET(request: Request) {
       const playerStats = new Map<string, any>();
 
       scores?.forEach((score: any) => {
-        const playerId = score.player_id.toString();
+        const playerId = score.player_id?.toString();
+        if (!playerId || !score.player || !score.team) return;
         
         // Only include scores from ongoing championships
         if (!score.match?.championship || score.match.championship.status !== 'ongoing') {
@@ -87,8 +88,6 @@ export async function GET(request: Request) {
           points,
           rebounds,
           assists,
-          three_points_made,
-          three_points_attempted,
           player:players(first_name, last_name),
           team:teams(name, gender),
           match:matches!match_id(
@@ -130,8 +129,6 @@ export async function GET(request: Request) {
             points: 0,
             rebounds: 0,
             assists: 0,
-            threePointsMade: 0,
-            threePointsAttempted: 0,
             gamesPlayed: 0,
           });
         }
@@ -140,8 +137,6 @@ export async function GET(request: Request) {
         stats.points += Number(score.points);
         stats.rebounds += Number(score.rebounds);
         stats.assists += Number(score.assists);
-        stats.threePointsMade += Number(score.three_points_made || 0);
-        stats.threePointsAttempted += Number(score.three_points_attempted || 0);
         stats.gamesPlayed += 1;
       });
 
@@ -165,10 +160,6 @@ export async function GET(request: Request) {
           ppg: (player.points / player.gamesPlayed).toFixed(1),
           rpg: (player.rebounds / player.gamesPlayed).toFixed(1),
           apg: (player.assists / player.gamesPlayed).toFixed(1),
-          threePointsPerGame: (player.threePointsMade / player.gamesPlayed).toFixed(1),
-          threePointPercentage: player.threePointsAttempted > 0 
-            ? ((player.threePointsMade / player.threePointsAttempted) * 100).toFixed(1)
-            : '0.0',
         };
       }
 

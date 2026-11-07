@@ -8,8 +8,6 @@ interface UpdateBasketballScoreParams {
   points: number;
   rebounds: number;
   assists: number;
-  threePointsMade: number;
-  threePointsAttempted: number;
 }
 
 interface ScoreData {
@@ -18,8 +16,6 @@ interface ScoreData {
   points: number;
   rebounds: number;
   assists: number;
-  three_points_made?: number;
-  three_points_attempted?: number;
 }
 
 interface MatchScoreData {
@@ -41,8 +37,6 @@ export function useUpdateBasketballScore(matchId: string) {
         params.points,
         params.rebounds,
         params.assists,
-        params.threePointsMade,
-        params.threePointsAttempted
       );
 
       if (!result.success) {
@@ -70,8 +64,6 @@ export function useUpdateBasketballScore(matchId: string) {
                 points: Number(score.points) + params.points,
                 rebounds: Number(score.rebounds) + params.rebounds,
                 assists: Number(score.assists) + params.assists,
-                three_points_made: (Number(score.three_points_made) || 0) + params.threePointsMade,
-                three_points_attempted: (Number(score.three_points_attempted) || 0) + params.threePointsAttempted,
               }
             : score
         )

@@ -115,6 +115,13 @@ export function MatchCard({ match, className, onClick }: MatchCardProps) {
         </div>
 
         {/* Status Badge */}
+        {match.status === 'final' && match.sport === 'football' && match.penaltyScore && match.homeTeam.score === match.awayTeam.score && (
+          <div className="mt-3 text-center">
+            <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-900 text-xs whitespace-normal">
+              {match.penaltyScore.team_a > match.penaltyScore.team_b ? match.homeTeam.name : match.awayTeam.name} won on penalties · {match.penaltyScore.team_a}–{match.penaltyScore.team_b}
+            </Badge>
+          </div>
+        )}
         <div className="flex justify-center mt-2">
           {match.status === "not_played" && match.time ? (
             <Badge 
@@ -138,4 +145,4 @@ export function MatchCard({ match, className, onClick }: MatchCardProps) {
       </CardContent>
     </Card>
   )
-} 
+}

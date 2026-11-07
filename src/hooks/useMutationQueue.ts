@@ -12,8 +12,6 @@ interface QueuedUpdate {
   points: number;
   rebounds: number;
   assists: number;
-  threePointsMade: number;
-  threePointsAttempted: number;
   timestamp: number;
   retryCount: number;
 }
@@ -25,8 +23,6 @@ interface PlayerScore {
   points: number;
   rebounds: number;
   assists: number;
-  three_points_made: number;
-  three_points_attempted: number;
   __optimistic_version?: number;
 }
 
@@ -123,8 +119,6 @@ export function useMutationQueue(matchId: string) {
                 points: updated[existingIndex].points + update.points,
                 rebounds: updated[existingIndex].rebounds + update.rebounds,
                 assists: updated[existingIndex].assists + update.assists,
-                three_points_made: updated[existingIndex].three_points_made + update.threePointsMade,
-                three_points_attempted: updated[existingIndex].three_points_attempted + update.threePointsAttempted,
                 __optimistic_version: currentVersion,
               };
               return updated;
@@ -138,8 +132,6 @@ export function useMutationQueue(matchId: string) {
                   points: update.points,
                   rebounds: update.rebounds,
                   assists: update.assists,
-                  three_points_made: update.threePointsMade,
-                  three_points_attempted: update.threePointsAttempted,
                   __optimistic_version: currentVersion,
                 },
               ];
@@ -215,8 +207,6 @@ export function useMutationQueue(matchId: string) {
         update.points,
         update.rebounds,
         update.assists,
-        update.threePointsMade,
-        update.threePointsAttempted
       );
 
       if (!result.success) {
@@ -289,8 +279,6 @@ export function useMutationQueue(matchId: string) {
     points: number;
     rebounds: number;
     assists: number;
-    threePointsMade: number;
-    threePointsAttempted: number;
   }): Promise<any> => {
     return new Promise((resolve, reject) => {
       const update: QueuedUpdate = {
@@ -332,8 +320,6 @@ export function useMutationQueue(matchId: string) {
               points: updated[existingIndex].points + params.points,
               rebounds: updated[existingIndex].rebounds + params.rebounds,
               assists: updated[existingIndex].assists + params.assists,
-              three_points_made: updated[existingIndex].three_points_made + params.threePointsMade,
-              three_points_attempted: updated[existingIndex].three_points_attempted + params.threePointsAttempted,
               __optimistic_version: currentVersion,
             };
             return updated;
@@ -347,8 +333,6 @@ export function useMutationQueue(matchId: string) {
                 points: params.points,
                 rebounds: params.rebounds,
                 assists: params.assists,
-                three_points_made: params.threePointsMade,
-                three_points_attempted: params.threePointsAttempted,
                 __optimistic_version: currentVersion,
               },
             ];

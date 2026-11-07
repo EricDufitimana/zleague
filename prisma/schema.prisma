@@ -26,6 +26,7 @@ model championships {
   // Relations
   matches matches[]
   teams   teams[]
+  groups  tournament_groups[]
 
   @@map("championships")
   @@schema("public")
@@ -54,6 +55,7 @@ model teams {
   winnerMatches    matches[]           @relation("WinnerMatches")
   basketballScores basketball_scores[]
   footballScores   football_scores[]
+  groupMemberships tournament_group_teams[]
 
   @@map("teams")
   @@schema("public")
@@ -206,6 +208,7 @@ model matches {
   next_match_id      BigInt? // Next match in tournament bracket
   boys_stage_groups  BoysStages? // Stage for boys tournament
   girls_stage_groups GirlsStages? // Stage for girls tournament
+  group_id           BigInt?
 
   // Relations
   championship           championships       @relation(fields: [championship_id], references: [id])
@@ -218,8 +221,38 @@ model matches {
   footballScores         football_scores[]
   predictions            predictions[]
   predictedWinnerMatches predictions[]       @relation("PredictedWinnerMatches")
+  group                  tournament_groups?  @relation(fields: [group_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([group_id], map: "matches_group_id_idx")
 
   @@map("matches")
+  @@schema("public")
+}
+
+model tournament_groups {
+  id                  BigInt    @id @default(autoincrement())
+  championship_id     BigInt
+  sport_type          SportType
+  name                String
+  finalized           Boolean   @default(false)
+  qualification_order BigInt[]
+
+  championship championships           @relation(fields: [championship_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  memberships  tournament_group_teams[]
+  matches      matches[]
+
+  @@unique([championship_id, sport_type, name])
+  @@schema("public")
+}
+
+model tournament_group_teams {
+  group_id BigInt
+  team_id  BigInt
+
+  group tournament_groups @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  team  teams             @relation(fields: [team_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@id([group_id, team_id])
   @@schema("public")
 }
 

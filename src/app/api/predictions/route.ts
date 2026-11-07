@@ -1,98 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/utils/supabase/server";
+import { createAdminClient, createClient as createSessionClient } from "@/utils/supabase/server";
 
 export async function POST(request: NextRequest) {
-  console.log('🎯 Prediction submission request received');
-  
   try {
-    const body = await request.json();
-    console.log('📦 Request body:', body);
-    
-    const { match_id, predicted_winner_id, user_id } = body;
-    console.log('🔍 Parsed data:', { match_id, predicted_winner_id, user_id });
-
-    if (!match_id || !predicted_winner_id || !user_id) {
-      console.log('❌ Validation failed: Missing required fields');
-      return NextResponse.json(
-        { error: 'Match ID, predicted winner ID, and user ID are required' },
-        { status: 400 }
-      );
-    }
-
-    console.log('✅ Validation passed');
-    console.log('🔧 Creating Supabase admin client...');
-    const supabase = createAdminClient();
-
-    // Check if user already has a prediction for this match
-    console.log(`🔍 Checking for existing prediction: match_id=${match_id}, user_id=${user_id}`);
-    const { data: existingPrediction, error: checkError } = await supabase
-      .from('predictions')
-      .select('id')
-      .eq('match_id', match_id)
-      .eq('user_id', user_id)
-      .single();
-
-    if (checkError && checkError.code !== 'PGRST116') {
-      console.error('❌ Error checking existing prediction:', checkError);
-      return NextResponse.json(
-        { error: 'Failed to check existing prediction' },
-        { status: 500 }
-      );
-    }
-
-    if (existingPrediction) {
-      console.log('⚠️ User already has a prediction for this match:', existingPrediction);
-      return NextResponse.json(
-        { error: 'You have already made a prediction for this match' },
-        { status: 400 }
-      );
-    }
-
-    console.log('✅ No existing prediction found, proceeding with insertion');
-    console.log('💾 Inserting new prediction...');
-    
-    // Insert new prediction
-    const { data: prediction, error: insertError } = await supabase
-      .from('predictions')
-      .insert({
-        match_id: parseInt(match_id),
-        predicted_winner_id: parseInt(predicted_winner_id),
-        user_id: parseInt(user_id),
-        is_correct: null // Will be updated when match result is known
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error('❌ Error creating prediction:', insertError);
-      console.error('❌ Error details:', {
-        message: insertError.message,
-        details: insertError.details,
-        hint: insertError.hint,
-        code: insertError.code
-      });
-      return NextResponse.json(
-        { error: 'Failed to create prediction' },
-        { status: 500 }
-      );
-    }
-
-    console.log('✅ Prediction created successfully:', prediction);
-    return NextResponse.json(
-      { 
-        message: 'Prediction submitted successfully',
-        prediction 
-      },
-      { status: 201 }
-    );
-  } catch (error) {
-    console.error('💥 Unexpected error in predictions POST:', error);
-    console.error('💥 Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-    return NextResponse.json(
-      { error: 'Failed to submit prediction' },
-      { status: 500 }
-    );
-  }
+    const session = await createSessionClient();
+    const { data: { user } } = await session.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Sign in before submitting a prediction.' }, { status: 401 });
+    const { match_id, predicted_winner_id } = await request.json();
+    const matchId = Number(match_id), winnerId = Number(predicted_winner_id);
+    if (!Number.isSafeInteger(matchId) || matchId <= 0 || !Number.isSafeInteger(winnerId) || winnerId <= 0) return NextResponse.json({ error: 'Choose a valid match and family.' }, { status: 400 });
+    const db = createAdminClient();
+    const { data: profile, error: profileError } = await db.from('users').select('id').eq('user_id', user.id).single();
+    if (profileError || !profile) return NextResponse.json({ error: 'Your league profile could not be found. Please sign in again.' }, { status: 403 });
+    const { data: match, error: matchError } = await db.from('matches').select('id,status,match_time,team_a_id,team_b_id,championship:championships(status)').eq('id', matchId).single();
+    if (matchError || !match) return NextResponse.json({ error: 'This match could not be found.' }, { status: 404 });
+    const championship = match.championship as unknown as { status: string } | null;
+    if (!['scheduled', 'not_yet_scheduled'].includes(match.status) || championship?.status !== 'ongoing' || (match.match_time && Date.parse(match.match_time) <= Date.now())) return NextResponse.json({ error: 'Predictions have closed for this match.' }, { status: 409 });
+    if (!match.team_a_id || !match.team_b_id || ![match.team_a_id, match.team_b_id].includes(winnerId)) return NextResponse.json({ error: 'Choose one of the families playing this match.' }, { status: 400 });
+    const { data: existing, error: lookupError } = await db.from('predictions').select('id').eq('match_id', matchId).eq('user_id', profile.id).limit(1);
+    if (lookupError) throw lookupError;
+    if (existing?.length) return NextResponse.json({ error: 'You already submitted a prediction for this match.' }, { status: 409 });
+    const { data: prediction, error } = await db.from('predictions').insert({ match_id: matchId, predicted_winner_id: winnerId, user_id: profile.id, is_correct: null }).select().single();
+    if (error?.code === '23505') return NextResponse.json({ error: 'You already submitted a prediction for this match.' }, { status: 409 });
+    if (error) throw error;
+    return NextResponse.json({ prediction }, { status: 201 });
+  } catch { return NextResponse.json({ error: 'Could not submit your prediction. Please try again.' }, { status: 500 }); }
 }
 
 export async function GET(request: NextRequest) {

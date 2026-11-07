@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { validateDecisiveResult } from '@/lib/group-stage';
+import { requireScoreAdmin } from '@/lib/match-write-guard';
 
 // Tournament status hierarchy based on your schema
 const TOURNAMENT_STATUSES = {
@@ -272,6 +274,7 @@ async function validateTournamentIntegrity(
 
 export async function POST(request: NextRequest) {
   try {
+    await requireScoreAdmin();
     const body = await request.json();
     console.log('Creating match with data:', body);
     
@@ -302,6 +305,10 @@ export async function POST(request: NextRequest) {
         { error: 'Gender must be either "male" or "female"' },
         { status: 400 }
       );
+    }
+
+    if (gender === 'male') {
+      return NextResponse.json({ error: 'Create boys’ fixtures through the group draw. Knockout fixtures are created when the groups are finalized.' }, { status: 400 });
     }
 
     const supabase = createClient(
@@ -569,6 +576,7 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    await requireScoreAdmin();
     const body = await request.json();
     console.log('🔧 PATCH /api/matches - Request body:', body);
     
@@ -605,6 +613,20 @@ export async function PATCH(request: NextRequest) {
           { error: 'Match not found' },
           { status: 404 }
         );
+      }
+
+      if ((status ?? currentMatch.status) === 'played') {
+        try {
+          validateDecisiveResult(currentMatch, team_a_score ?? currentMatch.team_a_score,
+            team_b_score ?? currentMatch.team_b_score, winner_id ?? currentMatch.winner_id,
+            penalty_score === undefined ? currentMatch.penalty_score : penalty_score);
+        } catch (error) {
+          return NextResponse.json({ error: error instanceof Error ? error.message : 'Invalid result' }, { status: 400 });
+        }
+      }
+      if (currentMatch.group_id) {
+        const { data: group } = await supabase.from('tournament_groups').select('finalized').eq('id', currentMatch.group_id).single();
+        if (group?.finalized) return NextResponse.json({ error: 'Group results are locked after qualification.' }, { status: 409 });
       }
       
       console.log('✅ PATCH /api/matches - Current match found:', {
@@ -717,7 +739,7 @@ export async function PATCH(request: NextRequest) {
       }
 
       // If winner set and next match exists, advance the winner
-      if (winner_id && currentMatch.next_match_id) {
+      if (winner_id && currentMatch.next_match_id && Number(winner_id) !== currentMatch.winner_id) {
         const { data: nextMatch, error: nextMatchError } = await supabase
           .from('matches')
           .select('*')
@@ -727,7 +749,11 @@ export async function PATCH(request: NextRequest) {
         if (nextMatch && !nextMatchError) {
           const updateNextMatch: any = {};
           
-          if (!nextMatch.team_a_id) {
+          if (currentMatch.winner_id && nextMatch.team_a_id === currentMatch.winner_id) {
+            updateNextMatch.team_a_id = parseInt(winner_id);
+          } else if (currentMatch.winner_id && nextMatch.team_b_id === currentMatch.winner_id) {
+            updateNextMatch.team_b_id = parseInt(winner_id);
+          } else if (!nextMatch.team_a_id) {
             updateNextMatch.team_a_id = parseInt(winner_id);
             console.log(`Advancing winner ${winner_id} to team_a_id of next match ${currentMatch.next_match_id}`);
           } else if (!nextMatch.team_b_id) {
@@ -795,6 +821,7 @@ export async function DELETE(request: NextRequest) {
   console.log('🗑️ Match deletion request received');
   
   try {
+    await requireScoreAdmin();
     const { searchParams } = new URL(request.url);
     const match_id = searchParams.get('match_id');
     
@@ -815,6 +842,8 @@ export async function DELETE(request: NextRequest) {
     );
 
     console.log('💾 Deleting match from database...');
+    const { data: existingMatch } = await supabase.from('matches').select('group_id').eq('id', match_id).single();
+    if (existingMatch?.group_id) return NextResponse.json({ error: 'Group fixtures cannot be deleted individually. Every team must play both opponents.' }, { status: 409 });
     const { error } = await supabase
       .from('matches')
       .delete()

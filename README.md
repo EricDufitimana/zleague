@@ -1,5 +1,10 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+For boys’ groups, standings, shootouts, qualification and the required database
+setup, see [the group stage guide](docs/group-stage.md).
+
+The public pages and admin workspace use the Studio theme. See [the workspace guide](docs/studio-workspace.md). Design experiments remain under `/tests`; see [the design study notes](docs/design-tests.md).
+
 ## Getting Started
 
 First, run the development server:

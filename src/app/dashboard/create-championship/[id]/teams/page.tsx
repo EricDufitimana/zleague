@@ -11,8 +11,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { updateTeam, deleteTeam, type TeamData } from '@/actions/teams';
-import { ArrowLeft, Plus, Loader2, Users, Trophy, Shield, Pencil, Trash2, MoreVertical, RefreshCw } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { ArrowLeft, ArrowRight, Plus, Loader2, Users, Trophy, Shield, Pencil, Trash2, MoreVertical, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { SportsHeader } from "@/components/sports/sports-header";
 import { FamilySelector } from '@/components/sports/FamilySelector';
@@ -353,7 +353,7 @@ export default function ChampionshipTeamsPage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => router.back()}
+          onClick={() => router.push('/dashboard/create-championship')}
           className="flex items-center gap-2 w-fit"
         >
           <ArrowLeft className="size-4" />
@@ -361,7 +361,8 @@ export default function ChampionshipTeamsPage() {
         </Button>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{championship.name}</h1>
-          <p className="text-muted-foreground">Manage teams for this championship</p>
+          <p className="text-muted-foreground">Build the team list, check the players, then move on to the draw.</p>
+          <div className="flex flex-wrap gap-2 mt-4"><Button variant="outline" onClick={() => router.push(`/dashboard/match/${championshipId}`)}>Next: groups & draws <ArrowRight className="size-4" /></Button><Button variant="outline" onClick={() => router.push(`/dashboard/schedule?championship_id=${championshipId}`)}>Open match center</Button></div>
         </div>
       </div>
 

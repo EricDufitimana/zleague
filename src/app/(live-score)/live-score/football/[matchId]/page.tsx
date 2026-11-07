@@ -63,6 +63,7 @@ export default function FootballLiveScorePage() {
   const [showPlayerSelector, setShowPlayerSelector] = useState(false);
   const [isEndingMatch, setIsEndingMatch] = useState(false);
   const [showEndMatchDialog, setShowEndMatchDialog] = useState(false);
+  const [penalties, setPenalties] = useState({ team_a: '', team_b: '' });
   
   // History tracking for undo
   const [updateHistory, setUpdateHistory] = useState<Array<{
@@ -369,6 +370,13 @@ export default function FootballLiveScorePage() {
   };
 
   const handleEndMatch = async () => {
+    const tied = teamAScore === teamBScore;
+    const shootout = { team_a: Number(penalties.team_a), team_b: Number(penalties.team_b) };
+    if (tied && (!penalties.team_a || !penalties.team_b || !Number.isSafeInteger(shootout.team_a) ||
+      !Number.isSafeInteger(shootout.team_b) || shootout.team_a < 0 || shootout.team_b < 0 || shootout.team_a === shootout.team_b)) {
+      toast.error('Enter a decisive penalty shootout score before ending a tied match.');
+      return;
+    }
     // An in-flight update has not reached matches.team_a_score yet, so ending
     // now would freeze a stale scoreline.
     if (updateScoreMutation.isPending || isUndoing) {
@@ -380,7 +388,7 @@ export default function FootballLiveScorePage() {
       setIsEndingMatch(true);
       
       // Determine winner based on scores
-      const winnerId = teamAScore > teamBScore ? match?.team_a_id : 
+      const winnerId = tied ? (shootout.team_a > shootout.team_b ? match?.team_a_id : match?.team_b_id) : teamAScore > teamBScore ? match?.team_a_id :
                       teamBScore > teamAScore ? match?.team_b_id : null;
       
       // Update match status to 'played' and set winner
@@ -392,7 +400,8 @@ export default function FootballLiveScorePage() {
           status: 'played',
           winner_id: winnerId,
           team_a_score: teamAScore,
-          team_b_score: teamBScore
+          team_b_score: teamBScore,
+          penalty_score: tied ? shootout : null
         })
       });
 
@@ -962,6 +971,16 @@ export default function FootballLiveScorePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {teamAScore === teamBScore && <fieldset className="mb-5 space-y-3">
+                <legend className="font-semibold mb-2">Decide the match on penalties</legend>
+                <p className="text-sm text-muted-foreground">The match score stays {teamAScore}–{teamBScore}. Shootout goals do not affect goal difference.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="text-sm">{match.teamA?.name}<input aria-label="Team A penalty goals" type="number" min="0" step="1" value={penalties.team_a}
+                    className="mt-1 w-full rounded border px-3 py-2" onChange={e => setPenalties(p => ({ ...p, team_a: e.target.value }))} /></label>
+                  <label className="text-sm">{match.teamB?.name}<input aria-label="Team B penalty goals" type="number" min="0" step="1" value={penalties.team_b}
+                    className="mt-1 w-full rounded border px-3 py-2" onChange={e => setPenalties(p => ({ ...p, team_b: e.target.value }))} /></label>
+                </div>
+              </fieldset>}
               <div className="flex justify-end gap-3">
                 <Button
                   variant="outline"
