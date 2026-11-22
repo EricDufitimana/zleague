@@ -1,0 +1,413 @@
+{
+  "verified": true,
+  "families": [
+    {
+      "id": "21",
+      "name": "Andrew Rwigamba",
+      "grade": "s4",
+      "gender": "male",
+      "is_active": true,
+      "sort_order": 210,
+      "created_at": "2026-10-17T12:31:40.122Z",
+      "updated_at": "2026-10-17T12:31:40.122Z"
+    },
+    {
+      "id": "22",
+      "name": "Archimedes",
+      "grade": "s4",
+      "gender": "male",
+      "is_active": true,
+      "sort_order": 220,
+      "created_at": "2026-10-17T12:31:40.122Z",
+      "updated_at": "2026-10-17T12:31:40.122Z"
+    }
+  ],
+  "rosters": [
+    {
+      "id": "508",
+      "first_name": "SHEMA YVAN",
+      "last_name": "KIZIMA",
+      "created_at": "2025-12-06T18:56:14.681Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "510",
+      "first_name": "Niyongabo Landry",
+      "last_name": "Nganzo",
+      "created_at": "2025-12-06T18:56:14.681Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "511",
+      "first_name": "Mugisha Salomon",
+      "last_name": "NKURUNZIZA",
+      "created_at": "2025-12-06T18:56:14.681Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "513",
+      "first_name": "BENJAMIN",
+      "last_name": "SANO",
+      "created_at": "2025-12-07T18:23:09.343Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "514",
+      "first_name": "BAHIZI TONNY",
+      "last_name": "MURENZI",
+      "created_at": "2025-12-07T18:30:48.054Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "515",
+      "first_name": "KELLY",
+      "last_name": "UDAHEMUKA",
+      "created_at": "2025-12-07T18:30:48.054Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "516",
+      "first_name": "ALVIN",
+      "last_name": "SHEMA",
+      "created_at": "2025-12-07T18:30:48.054Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "517",
+      "first_name": "MIHIGO Noah",
+      "last_name": "RUTEMBESA",
+      "created_at": "2025-12-07T18:30:48.054Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "530",
+      "first_name": "Alex",
+      "last_name": "MUNYANEZA",
+      "created_at": "2025-12-12T04:32:29.367Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "535",
+      "first_name": "Musharafu",
+      "last_name": "NIYONKURU",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "537",
+      "first_name": "Gedeon",
+      "last_name": "Ruhongeka",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "546",
+      "first_name": "Davy Grace",
+      "last_name": "HIRWA",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "551",
+      "first_name": "Ikirezi Faustine",
+      "last_name": "Iradukunda",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "554",
+      "first_name": "NTWALI Chrispin",
+      "last_name": "NKURUNZIZA",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "563",
+      "first_name": "CHRIS MERVIN",
+      "last_name": "MUGISHA",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "568",
+      "first_name": "Ngabe Benat",
+      "last_name": "HAKIZIMANA",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "574",
+      "first_name": "Fabrice",
+      "last_name": "IRAMBONA",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "577",
+      "first_name": "peace Jessy",
+      "last_name": "Irakoze",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "595",
+      "first_name": "Gedeon",
+      "last_name": "NTWALI",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "599",
+      "first_name": "Delithe",
+      "last_name": "SANGANIRO",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "600",
+      "first_name": "Rwagasore Eloi",
+      "last_name": "Nisingizwe",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "606",
+      "first_name": "Fred",
+      "last_name": "MUGISHA",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "607",
+      "first_name": "Tracy",
+      "last_name": "Mugisha",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "608",
+      "first_name": "FIDELE",
+      "last_name": "MURENGEZI",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "615",
+      "first_name": "Prince",
+      "last_name": "Byiringiro",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "617",
+      "first_name": "Hubert",
+      "last_name": "Shema",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "619",
+      "first_name": "Eric",
+      "last_name": "Niyomugisha",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "620",
+      "first_name": "Faustin",
+      "last_name": "Mwiseneza",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "622",
+      "first_name": "Emmy",
+      "last_name": "Mucyo",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "623",
+      "first_name": "Frank",
+      "last_name": "KAMUGISHA",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "624",
+      "first_name": "Elissa",
+      "last_name": "IGIRANEZA",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "631",
+      "first_name": "Irene",
+      "last_name": "NSHUTI",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "633",
+      "first_name": "CYUSA Adolphe",
+      "last_name": "NKUNDABAGENZI",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "634",
+      "first_name": "Celestin",
+      "last_name": "NIZEYIMANA",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "635",
+      "first_name": "Gilbert",
+      "last_name": "NIZEYIMANA",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "637",
+      "first_name": "ERENESTE",
+      "last_name": "NIYOMUGENGA",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "638",
+      "first_name": "Jean Paul",
+      "last_name": "NGIRIMANA",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "640",
+      "first_name": "Emmamuel",
+      "last_name": "NDIZEYE",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "646",
+      "first_name": "Emmanuel",
+      "last_name": "Munyeshyaka",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "648",
+      "first_name": "Dieuvin",
+      "last_name": "Mugisha",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "649",
+      "first_name": "Jabo Heritier",
+      "last_name": "Mutangana",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "650",
+      "first_name": "Danny",
+      "last_name": "Nkurunziza",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "653",
+      "first_name": "Christian",
+      "last_name": "Ishimwe",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "655",
+      "first_name": "sage Shekinah",
+      "last_name": "Irakoze",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "656",
+      "first_name": "KIREZI Meora",
+      "last_name": "GAJU",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "657",
+      "first_name": "Vanissa",
+      "last_name": "BATAMURIZA",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    },
+    {
+      "id": "660",
+      "first_name": "Pacific",
+      "last_name": "Umuhire",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Andrew Rwigamba"
+    },
+    {
+      "id": "661",
+      "first_name": "Phocas",
+      "last_name": "NKURUNZIZA",
+      "created_at": "2026-01-16T06:38:09.889Z",
+      "grade": "Ingabe",
+      "family": "Archimedes"
+    }
+  ],
+  "teamsRenamed": 6,
+  "statisticsPreserved": true
+}

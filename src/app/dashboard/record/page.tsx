@@ -1,16 +1,17 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardAction, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Trophy, Calendar, Users, Target, CheckCircle, AlertCircle, Clock, BarChart3, Loader2, Play, Plus, X } from "lucide-react";
+import { CheckCircle, AlertCircle, Loader2, Plus, X } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { restoreTeamScores } from '@/lib/restore-match-scores';
+import { FixturePicker } from '@/components/operations/FixturePicker';
 import { gradeBadgeClasses, isTeamStatsOnlyGrade } from '@/lib/grades';
 
 import Link from 'next/link';
@@ -41,6 +42,8 @@ interface Match {
   match_time?: string;
   status: string;
   winner_id?: number;
+  team_a_score?: number | null;
+  team_b_score?: number | null;
   penalty_score?: { team_a: number; team_b: number } | null;
   teamA: Team;
   teamB: Team;
@@ -78,6 +81,7 @@ export default function RecordPage() {
   const cache = useQueryClient();
   const consumedMatch = useRef('');
   const loadVersion = useRef(0);
+  const loadedFixture = useRef('');
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [existingError, setExistingError] = useState('');
   const [selectedChampionship, setSelectedChampionship] = useState<string>("");
@@ -212,6 +216,9 @@ export default function RecordPage() {
 
   // Ignore responses for a fixture that is no longer selected.
   useEffect(() => {
+    const key = `${selectedChampionship}:${selectedMatch}`;
+    if (loadedFixture.current === key) return;
+    loadedFixture.current = key;
     const version = ++loadVersion.current;
     setLoadingExisting(false); setExistingError(''); setPlayers([]);
     if (selectedMatch && matches.length > 0) {
@@ -232,6 +239,9 @@ export default function RecordPage() {
           teamA: { team_id: match.team_a_id, sets: [{ setNumber: 1, points: 0 }, { setNumber: 2, points: 0 }, { setNumber: 3, points: 0 }] },
           teamB: { team_id: match.team_b_id, sets: [{ setNumber: 1, points: 0 }, { setNumber: 2, points: 0 }, { setNumber: 3, points: 0 }] }
         });
+        setMessage(null);
+        setShowPlayerSelector(false);
+        setShowPenaltyDialog(false);
         setWinningTeam("");
         setIndividualStats({ teamA: [], teamB: [] });
         setPenaltyScores(null);
@@ -254,7 +264,7 @@ export default function RecordPage() {
       setFootballIndividualStats({ teamA: [], teamB: [] });
       setSelectedPlayers({ teamA: [], teamB: [] });
     }
-  }, [selectedMatch, matches]);
+  }, [selectedMatch, matches, selectedChampionship]);
 
   const fetchPlayers = async (teamAId: number, teamBId: number, version = loadVersion.current) => {
     setIsLoadingPlayers(true);
@@ -310,36 +320,13 @@ export default function RecordPage() {
           const scoresData = Array.isArray(scorePayload) ? scorePayload : scorePayload.scores || [];
           console.log('📊 Existing basketball scores data:', scoresData);
           
-          if (!scoresData.length) throw new Error('No saved statistics were found for this result. Please retry before editing.');
-          if (scoresData && scoresData.length > 0) {
-            // Separate team and individual scores
-            const teamScores = scoresData.filter((score: any) => !score.player_id);
-            const individualScores = scoresData.filter((score: any) => score.player_id);
-            
-            if (!teamScores.some((score: { team_id: number }) => score.team_id === match.team_a_id) || !teamScores.some((score: { team_id: number }) => score.team_id === match.team_b_id)) throw new Error('The saved team statistics are incomplete. Reload them before editing this result.');
-            // Update team scores
-            if (teamScores.length >= 2) {
-              const teamAScore = teamScores.find((s: any) => s.team_id === selectedMatchData?.team_a_id);
-              const teamBScore = teamScores.find((s: any) => s.team_id === selectedMatchData?.team_b_id);
-              
-              if (teamAScore && teamBScore) {
-                setBasketballScores({
-                  teamA: { 
-                    team_id: teamAScore.team_id, 
-                    points: teamAScore.points, 
-                    rebounds: teamAScore.rebounds, 
-                    assists: teamAScore.assists 
-                  },
-                  teamB: { 
-                    team_id: teamBScore.team_id, 
-                    points: teamBScore.points, 
-                    rebounds: teamBScore.rebounds, 
-                    assists: teamBScore.assists 
-                  }
-                });
-              }
-            }
-            
+          {
+            const individualScores = scoresData.filter((score: BasketballScore) => score.player_id);
+            setBasketballScores({
+              teamA: restoreTeamScores(scoresData, match.team_a_id, 'basketball', match.team_a_score),
+              teamB: restoreTeamScores(scoresData, match.team_b_id, 'basketball', match.team_b_score),
+            });
+
             // Update individual stats
             if (individualScores.length > 0) {
               const teamAStats = individualScores
@@ -387,34 +374,13 @@ export default function RecordPage() {
           const scoresData = Array.isArray(scorePayload) ? scorePayload : scorePayload.scores || [];
           console.log('⚽ Existing football scores data:', scoresData);
           
-          if (!scoresData.length) throw new Error('No saved statistics were found for this result. Please retry before editing.');
-          if (scoresData && scoresData.length > 0) {
-            // Separate team and individual scores
-            const teamScores = scoresData.filter((score: any) => !score.player_id);
-            const individualScores = scoresData.filter((score: any) => score.player_id);
-            
-            if (!teamScores.some((score: { team_id: number }) => score.team_id === match.team_a_id) || !teamScores.some((score: { team_id: number }) => score.team_id === match.team_b_id)) throw new Error('The saved team statistics are incomplete. Reload them before editing this result.');
-            // Update team scores
-            if (teamScores.length >= 2) {
-              const teamAScore = teamScores.find((s: any) => s.team_id === selectedMatchData?.team_a_id);
-              const teamBScore = teamScores.find((s: any) => s.team_id === selectedMatchData?.team_b_id);
-              
-              if (teamAScore && teamBScore) {
-                setFootballScores({
-                  teamA: { 
-                    team_id: teamAScore.team_id, 
-                    goals: teamAScore.goals, 
-                    assists: teamAScore.assists 
-                  },
-                  teamB: { 
-                    team_id: teamBScore.team_id, 
-                    goals: teamBScore.goals, 
-                    assists: teamBScore.assists 
-                  }
-                });
-              }
-            }
-            
+          {
+            const individualScores = scoresData.filter((score: FootballScore) => score.player_id);
+            setFootballScores({
+              teamA: restoreTeamScores(scoresData, match.team_a_id, 'football', match.team_a_score),
+              teamB: restoreTeamScores(scoresData, match.team_b_id, 'football', match.team_b_score),
+            });
+
             // Update individual stats
             if (individualScores.length > 0) {
               const teamAStats = individualScores
@@ -753,6 +719,7 @@ export default function RecordPage() {
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting || loadingExisting || existingError) return;
     if (!selectedMatchData) {
       setMessage({ type: "error", text: "Please select a match" });
       return;
@@ -819,8 +786,8 @@ export default function RecordPage() {
         }
       }
       
-      // Validate that team statistics match individual player statistics (only if there are goals)
-      if (footballScores.teamA.goals > 0 || footballScores.teamB.goals > 0) {
+      // Validate player statistics even when correcting a result to 0?0.
+      {
         if (!validateFootballStatistics()) {
           setMessage({ 
             type: "error", 
@@ -968,15 +935,15 @@ export default function RecordPage() {
         });
 
         if (!scoresResponse.ok) {
-          throw new Error('Failed to record basketball scores');
+          const data = await scoresResponse.json();
+          throw new Error(data.error || 'Failed to record basketball scores');
         }
       }
 
       // If football, record scores
       if (selectedMatchData.sport_type === 'football') {
-        // Only record individual player stats if there are goals (not 0-0)
-        // For 0-0 matches with penalties, we don't need individual stats
-        if (teamAScore > 0 || teamBScore > 0) {
+        // Replace player statistics even when correcting the result to 0?0.
+        {
           // Combine team scores with individual player stats
           const allScores = [
             ...footballIndividualStats.teamA.map(stat => ({
@@ -1009,10 +976,11 @@ export default function RecordPage() {
           });
 
           if (!scoresResponse.ok) {
-            throw new Error('Failed to record football scores');
+            const data = await scoresResponse.json();
+            throw new Error(data.error || 'Failed to record football scores');
           }
         }
-        // For 0-0 matches with penalties, we don't need to record individual scores
+
       }
 
       // If volleyball, record set scores
@@ -1106,26 +1074,6 @@ export default function RecordPage() {
     }
   };
 
-  const getSportIcon = (sportType: string) => {
-    switch (sportType) {
-      case 'basketball': return '🏀';
-      case 'football': return '⚽';
-      case 'volleyball': return '🏐';
-      default: return '🏆';
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      'not_yet_scheduled': { label: 'Not Scheduled', variant: 'secondary' as const },
-      'scheduled': { label: 'Scheduled', variant: 'default' as const },
-      'played': { label: 'Played', variant: 'default' as const }
-    };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig['not_yet_scheduled'];
-    return <Badge variant={config.variant}>{config.label}</Badge>;
-  };
-
   // get the grade badge color
   const getGradeBadgeColor = (grade: string) => gradeBadgeClasses(grade);
 
@@ -1136,113 +1084,15 @@ export default function RecordPage() {
       <div className="op-record-intro"><p>{selectedMatchData ? 'You’re recording this fixture. Check the scores and winner before saving.' : 'Find a fixture below, or choose one from the Match center to open it directly.'}</p><Link href={dashboard.href('/dashboard/schedule')}>Find a fixture <ArrowUpRight size={15} /></Link></div>
       {matchQuery.isError && <div className="op-error" role="alert">Fixtures couldn’t load. <button onClick={() => matchQuery.refetch()}>Try again</button></div>}
       {matchQuery.isPending && dashboard.championship && <p className="op-caption" role="status">Loading this championship’s fixtures…</p>}
-      {/* Selection Section */}
-    <div className="op-record-select">
-            {/* Match Selection */}
-            {selectedChampionship && (
-              <div className="space-y-2">
-                <Label htmlFor="match-select" className="text-sm font-medium">
-                  Match
-                </Label>
-                <div className="flex gap-2">
-                  <Select value={selectedMatch} onValueChange={setSelectedMatch}>
-                    <SelectTrigger id="match-select" className="flex-1">
-                      <SelectValue placeholder="Select a match" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {matches.length == 0 && !isFetchingMatches ?
-                      <SelectItem value="loading" disabled>
-                          No matches available
-                        </SelectItem>
-                      : isFetchingMatches ?
-                      <SelectItem value="loading" disabled>
-                        <Loader2 className="size-4 animate-spin" />
-                      </SelectItem>
-                      :
-                      matches.map((match) => (
-                        <SelectItem key={match.id} value={match.id.toString()}>
-                          <div className="flex items-center gap-2">
-                            <span>{match.teamA?.name || 'Unknown Team'} vs {match.teamB?.name || 'Unknown Team'}</span>
-                            <Badge variant="outline" className="text-xs">
-                              {getSportIcon(match.sport_type)} {match.sport_type}
-                            </Badge>
-                            {getStatusBadge(match.status)}
-                            {match.status === 'played' && (
-                              <Badge variant="secondary" className="text-xs">Editable</Badge>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  
-                  {selectedMatch && selectedMatchData?.sport_type !== 'volleyball' && (
-                    <Button
-                      variant="outline"
-                      onClick={async () => {
-                        console.log('🎯 Record Page - Live Score button clicked for match:', selectedMatch);
-                        console.log('📊 Record Page - Selected match data:', {
-                          id: selectedMatch,
-                          sport_type: selectedMatchData?.sport_type,
-                          teamA: selectedMatchData?.teamA?.name,
-                          teamB: selectedMatchData?.teamB?.name
-                        });
-                        
-                        // Update match status to live
-                        try {
-                          console.log('🚀 Record Page - Sending PATCH request to update match status to live...');
-                          const requestBody = {
-                            match_id: selectedMatch,
-                            status: 'live',
-                          };
-                          console.log('📤 Record Page - Request body:', requestBody);
-                          
-                          const response = await fetch('/api/matches', {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(requestBody),
-                          });
-                          
-                          console.log('📥 Record Page - Response status:', response.status);
-                          console.log('📥 Record Page - Response ok:', response.ok);
-                          
-                          if (response.ok) {
-                            const responseData = await response.json();
-                            console.log('✅ Record Page - Success response:', responseData);
-                            
-                            // Route to the correct livescore page based on sport type
-                            const liveScorePath = selectedMatchData?.sport_type === 'football' 
-                              ? `/live-score/football/${selectedMatch}`
-                              : `/live-score/${selectedMatch}`;
-                            
-                            console.log('🔗 Record Page - Opening live score page:', liveScorePath);
-                            window.open(liveScorePath, '_blank');
-                          } else {
-                            const errorData = await response.json();
-                            console.error('❌ Record Page - API Error:', errorData);
-                            alert('Failed to start live scoring');
-                          }
-                        } catch (error) {
-                          console.error('💥 Record Page - Error starting live score:', error);
-                          alert('Failed to start live scoring');
-                        }
-                      }}
-                      className="flex items-center gap-2 px-4"
-                    >
-                      <Play className="w-4 h-4" />
-                      Live Score
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-      {selectedMatchData && <div className="op-record-banner"><div><p>{selectedMatchData.sport_type} · {selectedMatchData.teamA?.gender === 'male' ? 'Boys' : 'Girls'} · {selectedMatchData.status === 'played' ? 'Editing a recorded result' : 'Recording a result'}</p><strong>{selectedMatchData.teamA?.name.replaceAll('_', ' ')} vs {selectedMatchData.teamB?.name.replaceAll('_', ' ')}</strong></div><Link href={dashboard.href('/dashboard/schedule')}>Back to fixtures</Link></div>}
+      <FixturePicker matches={matches} selectedId={selectedMatch} onSelect={setSelectedMatch}
+        loading={isFetchingMatches && !!selectedChampionship} disabled={isSubmitting}
+        hasChampionship={!!selectedChampionship} />
+      {selectedMatchData && <div className="op-record-banner"><div><p>{selectedMatchData.sport_type} · {selectedMatchData.teamA?.gender === 'male' ? 'Boys' : 'Girls'} · {selectedMatchData.status === 'played' ? 'Editing a recorded result' : 'Recording a result'}</p><strong>{selectedMatchData.teamA?.name.replaceAll('_', ' ')} vs {selectedMatchData.teamB?.name.replaceAll('_', ' ')}</strong></div>{selectedMatchData.status !== 'played' && selectedMatchData.sport_type !== 'volleyball' && <Link href={selectedMatchData.sport_type === 'football' ? `/live-score/football/${selectedMatch}` : `/live-score/${selectedMatch}`}>Open live scoring <ArrowUpRight size={14} /></Link>}</div>}
       {loadingExisting && <p className="op-caption" role="status">Restoring the saved scores and participants…</p>}
       {existingError && selectedMatchData && <div className="op-error" role="alert">{existingError} <button className="underline" onClick={() => loadExistingMatchData(selectedMatchData.id, selectedMatchData, loadVersion.current)}>Retry loading saved result</button></div>}
       {/* Match Details and Recording Form */}
       {selectedMatchData && selectedMatchData.teamA && selectedMatchData.teamB && (
-        <fieldset className="space-y-6" disabled={loadingExisting || !!existingError}>
+        <fieldset className="space-y-6" disabled={isSubmitting || loadingExisting || !!existingError}>
           <legend className="sr-only">Match result details</legend>
                 {/* Winner Selection */}
                 <section className="rounded-lg border  to-white p-4">
@@ -2569,19 +2419,6 @@ export default function RecordPage() {
             {message.text}
           </AlertDescription>
         </Alert>
-      )}
-
-      {/* No Matches Message */}
-      {selectedChampionship && matches.length === 0 && (
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="text-gray-500">
-              <Target className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p className="text-lg font-medium">No matches available</p>
-              <p className="text-sm">Fixtures need both opponents before a result can be recorded. Check the draw or choose another championship.</p>
-            </div>
-          </CardContent>
-        </Card>
       )}
 
       {/* Player Selection Modal */}

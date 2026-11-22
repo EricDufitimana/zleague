@@ -1,0 +1,5870 @@
+[
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 156,
+      "points": 2,
+      "assists": 0,
+      "team_id": 176,
+      "match_id": 286,
+      "rebounds": 0,
+      "player_id": 2757,
+      "created_at": "2025-11-22T12:53:22.523+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 162,
+      "points": 6,
+      "assists": 0,
+      "team_id": 177,
+      "match_id": 286,
+      "rebounds": 3,
+      "player_id": 2725,
+      "created_at": "2025-11-22T12:53:22.523+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 152,
+      "points": 4,
+      "assists": 0,
+      "team_id": 176,
+      "match_id": 286,
+      "rebounds": 2,
+      "player_id": 2761,
+      "created_at": "2025-11-22T12:53:22.523+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 372,
+      "points": 42,
+      "assists": 2,
+      "team_id": 187,
+      "match_id": 301,
+      "rebounds": 4,
+      "player_id": 2996,
+      "created_at": "2025-12-07T18:43:55.431+00:00",
+      "three_points_made": 2,
+      "three_points_attempted": 3
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 150,
+      "points": 0,
+      "assists": 0,
+      "team_id": 176,
+      "match_id": 286,
+      "rebounds": 0,
+      "player_id": 2773,
+      "created_at": "2025-11-22T12:53:22.523+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 151,
+      "points": 0,
+      "assists": 0,
+      "team_id": 176,
+      "match_id": 286,
+      "rebounds": 0,
+      "player_id": 2769,
+      "created_at": "2025-11-22T12:53:22.523+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 153,
+      "points": 0,
+      "assists": 0,
+      "team_id": 176,
+      "match_id": 286,
+      "rebounds": 0,
+      "player_id": 2758,
+      "created_at": "2025-11-22T12:53:22.523+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 154,
+      "points": 0,
+      "assists": 0,
+      "team_id": 176,
+      "match_id": 286,
+      "rebounds": 0,
+      "player_id": 2768,
+      "created_at": "2025-11-22T12:53:22.523+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 155,
+      "points": 0,
+      "assists": 0,
+      "team_id": 176,
+      "match_id": 286,
+      "rebounds": 0,
+      "player_id": 2760,
+      "created_at": "2025-11-22T12:53:22.523+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 157,
+      "points": 0,
+      "assists": 0,
+      "team_id": 176,
+      "match_id": 286,
+      "rebounds": 0,
+      "player_id": 2755,
+      "created_at": "2025-11-22T12:53:22.523+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 158,
+      "points": 0,
+      "assists": 0,
+      "team_id": 177,
+      "match_id": 286,
+      "rebounds": 0,
+      "player_id": 2733,
+      "created_at": "2025-11-22T12:53:22.523+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 159,
+      "points": 0,
+      "assists": 0,
+      "team_id": 177,
+      "match_id": 286,
+      "rebounds": 0,
+      "player_id": 2717,
+      "created_at": "2025-11-22T12:53:22.523+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 160,
+      "points": 0,
+      "assists": 0,
+      "team_id": 177,
+      "match_id": 286,
+      "rebounds": 0,
+      "player_id": 2724,
+      "created_at": "2025-11-22T12:53:22.523+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 163,
+      "points": 0,
+      "assists": 0,
+      "team_id": 177,
+      "match_id": 286,
+      "rebounds": 0,
+      "player_id": 2719,
+      "created_at": "2025-11-22T12:53:22.523+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 164,
+      "points": 0,
+      "assists": 0,
+      "team_id": 177,
+      "match_id": 286,
+      "rebounds": 0,
+      "player_id": 2730,
+      "created_at": "2025-11-22T12:53:22.523+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 165,
+      "points": 0,
+      "assists": 0,
+      "team_id": 177,
+      "match_id": 286,
+      "rebounds": 0,
+      "player_id": 2718,
+      "created_at": "2025-11-22T12:53:22.523+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 166,
+      "points": 0,
+      "assists": 0,
+      "team_id": 177,
+      "match_id": 286,
+      "rebounds": 0,
+      "player_id": 2720,
+      "created_at": "2025-11-22T12:53:22.523+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 360,
+      "points": 30,
+      "assists": 3,
+      "team_id": 169,
+      "match_id": 301,
+      "rebounds": 1,
+      "player_id": 513,
+      "created_at": "2025-12-07T18:43:55.431+00:00",
+      "three_points_made": 5,
+      "three_points_attempted": 7
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 161,
+      "points": 2,
+      "assists": 0,
+      "team_id": 177,
+      "match_id": 286,
+      "rebounds": 0,
+      "player_id": 2726,
+      "created_at": "2025-11-22T12:53:22.523+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 361,
+      "points": 0,
+      "assists": 1,
+      "team_id": 169,
+      "match_id": 301,
+      "rebounds": 2,
+      "player_id": 519,
+      "created_at": "2025-12-07T18:43:55.431+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 362,
+      "points": 5,
+      "assists": 1,
+      "team_id": 169,
+      "match_id": 301,
+      "rebounds": 5,
+      "player_id": 517,
+      "created_at": "2025-12-07T18:43:55.431+00:00",
+      "three_points_made": 1,
+      "three_points_attempted": 4
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 363,
+      "points": 19,
+      "assists": 3,
+      "team_id": 169,
+      "match_id": 301,
+      "rebounds": 2,
+      "player_id": 514,
+      "created_at": "2025-12-07T18:43:55.431+00:00",
+      "three_points_made": 4,
+      "three_points_attempted": 9
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 364,
+      "points": 3,
+      "assists": 1,
+      "team_id": 169,
+      "match_id": 301,
+      "rebounds": 1,
+      "player_id": 518,
+      "created_at": "2025-12-07T18:43:55.431+00:00",
+      "three_points_made": 1,
+      "three_points_attempted": 3
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 365,
+      "points": 0,
+      "assists": 0,
+      "team_id": 169,
+      "match_id": 301,
+      "rebounds": 2,
+      "player_id": 516,
+      "created_at": "2025-12-07T18:43:55.431+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 366,
+      "points": 18,
+      "assists": 1,
+      "team_id": 169,
+      "match_id": 301,
+      "rebounds": 13,
+      "player_id": 515,
+      "created_at": "2025-12-07T18:43:55.431+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 2
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 367,
+      "points": 2,
+      "assists": 1,
+      "team_id": 187,
+      "match_id": 301,
+      "rebounds": 4,
+      "player_id": 2857,
+      "created_at": "2025-12-07T18:43:55.431+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 368,
+      "points": 0,
+      "assists": 0,
+      "team_id": 187,
+      "match_id": 301,
+      "rebounds": 0,
+      "player_id": 2879,
+      "created_at": "2025-12-07T18:43:55.431+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 369,
+      "points": 6,
+      "assists": 2,
+      "team_id": 187,
+      "match_id": 301,
+      "rebounds": 1,
+      "player_id": 2561,
+      "created_at": "2025-12-07T18:43:55.431+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 370,
+      "points": 0,
+      "assists": 0,
+      "team_id": 187,
+      "match_id": 301,
+      "rebounds": 0,
+      "player_id": 2983,
+      "created_at": "2025-12-07T18:43:55.431+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 371,
+      "points": 3,
+      "assists": 2,
+      "team_id": 187,
+      "match_id": 301,
+      "rebounds": 2,
+      "player_id": 2918,
+      "created_at": "2025-12-07T18:43:55.431+00:00",
+      "three_points_made": 1,
+      "three_points_attempted": 1
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 373,
+      "points": 20,
+      "assists": 4,
+      "team_id": 187,
+      "match_id": 301,
+      "rebounds": 0,
+      "player_id": 2976,
+      "created_at": "2025-12-07T18:43:55.431+00:00",
+      "three_points_made": 1,
+      "three_points_attempted": 1
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 374,
+      "points": 0,
+      "assists": 0,
+      "team_id": 187,
+      "match_id": 301,
+      "rebounds": 0,
+      "player_id": 2974,
+      "created_at": "2025-12-07T18:43:55.431+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 334,
+      "points": 19,
+      "assists": 2,
+      "team_id": 168,
+      "match_id": 298,
+      "rebounds": 8,
+      "player_id": 507,
+      "created_at": "2025-12-06T19:01:49.246+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 3
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 335,
+      "points": 4,
+      "assists": 1,
+      "team_id": 168,
+      "match_id": 298,
+      "rebounds": 4,
+      "player_id": 509,
+      "created_at": "2025-12-06T19:01:49.246+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 336,
+      "points": 0,
+      "assists": 0,
+      "team_id": 168,
+      "match_id": 298,
+      "rebounds": 0,
+      "player_id": 512,
+      "created_at": "2025-12-06T19:01:49.246+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 337,
+      "points": 6,
+      "assists": 0,
+      "team_id": 168,
+      "match_id": 298,
+      "rebounds": 4,
+      "player_id": 510,
+      "created_at": "2025-12-06T19:01:49.247+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 338,
+      "points": 0,
+      "assists": 1,
+      "team_id": 168,
+      "match_id": 298,
+      "rebounds": 3,
+      "player_id": 511,
+      "created_at": "2025-12-06T19:01:49.247+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 2
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 339,
+      "points": 7,
+      "assists": 5,
+      "team_id": 168,
+      "match_id": 298,
+      "rebounds": 0,
+      "player_id": 508,
+      "created_at": "2025-12-06T19:01:49.247+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 9
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 340,
+      "points": 4,
+      "assists": 1,
+      "team_id": 172,
+      "match_id": 298,
+      "rebounds": 2,
+      "player_id": 2779,
+      "created_at": "2025-12-06T19:01:49.247+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 341,
+      "points": 2,
+      "assists": 1,
+      "team_id": 172,
+      "match_id": 298,
+      "rebounds": 1,
+      "player_id": 2777,
+      "created_at": "2025-12-06T19:01:49.247+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 3
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 342,
+      "points": 0,
+      "assists": 0,
+      "team_id": 172,
+      "match_id": 298,
+      "rebounds": 0,
+      "player_id": 2786,
+      "created_at": "2025-12-06T19:01:49.247+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 343,
+      "points": 5,
+      "assists": 0,
+      "team_id": 172,
+      "match_id": 298,
+      "rebounds": 1,
+      "player_id": 2783,
+      "created_at": "2025-12-06T19:01:49.247+00:00",
+      "three_points_made": 1,
+      "three_points_attempted": 1
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 344,
+      "points": 0,
+      "assists": 0,
+      "team_id": 172,
+      "match_id": 298,
+      "rebounds": 0,
+      "player_id": 2797,
+      "created_at": "2025-12-06T19:01:49.247+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 345,
+      "points": 55,
+      "assists": 1,
+      "team_id": 172,
+      "match_id": 298,
+      "rebounds": 8,
+      "player_id": 2784,
+      "created_at": "2025-12-06T19:01:49.247+00:00",
+      "three_points_made": 5,
+      "three_points_attempted": 9
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 346,
+      "points": 7,
+      "assists": 3,
+      "team_id": 172,
+      "match_id": 298,
+      "rebounds": 2,
+      "player_id": 2781,
+      "created_at": "2025-12-06T19:01:49.247+00:00",
+      "three_points_made": 1,
+      "three_points_attempted": 4
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 375,
+      "points": 2,
+      "assists": 3,
+      "team_id": 170,
+      "match_id": 287,
+      "rebounds": 2,
+      "player_id": 522,
+      "created_at": "2025-12-07T19:22:22.728+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 376,
+      "points": 15,
+      "assists": 3,
+      "team_id": 170,
+      "match_id": 287,
+      "rebounds": 2,
+      "player_id": 521,
+      "created_at": "2025-12-07T19:22:22.728+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 1
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 377,
+      "points": 1,
+      "assists": 0,
+      "team_id": 188,
+      "match_id": 287,
+      "rebounds": 1,
+      "player_id": 2629,
+      "created_at": "2025-12-07T19:22:22.728+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 378,
+      "points": 2,
+      "assists": 0,
+      "team_id": 188,
+      "match_id": 287,
+      "rebounds": 1,
+      "player_id": 2632,
+      "created_at": "2025-12-07T19:22:22.728+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 379,
+      "points": 2,
+      "assists": 0,
+      "team_id": 188,
+      "match_id": 287,
+      "rebounds": 0,
+      "player_id": 2634,
+      "created_at": "2025-12-07T19:22:22.728+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 410,
+      "points": 19,
+      "assists": 0,
+      "team_id": 179,
+      "match_id": 296,
+      "rebounds": 0,
+      "player_id": 2897,
+      "created_at": "2025-12-12T04:46:19.418+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 1
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 411,
+      "points": 18,
+      "assists": 0,
+      "team_id": 179,
+      "match_id": 296,
+      "rebounds": 2,
+      "player_id": 2970,
+      "created_at": "2025-12-12T04:46:19.418+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 412,
+      "points": 0,
+      "assists": 0,
+      "team_id": 179,
+      "match_id": 296,
+      "rebounds": 3,
+      "player_id": 2985,
+      "created_at": "2025-12-12T04:46:19.418+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 413,
+      "points": 9,
+      "assists": 0,
+      "team_id": 171,
+      "match_id": 296,
+      "rebounds": 1,
+      "player_id": 528,
+      "created_at": "2025-12-12T04:46:19.418+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 414,
+      "points": 1,
+      "assists": 0,
+      "team_id": 171,
+      "match_id": 296,
+      "rebounds": 3,
+      "player_id": 531,
+      "created_at": "2025-12-12T04:46:19.418+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 422,
+      "points": 6,
+      "assists": 0,
+      "team_id": 189,
+      "match_id": 289,
+      "rebounds": 1,
+      "player_id": 2646,
+      "created_at": "2025-12-12T05:04:39.221+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 423,
+      "points": 13,
+      "assists": 3,
+      "team_id": 189,
+      "match_id": 289,
+      "rebounds": 0,
+      "player_id": 2643,
+      "created_at": "2025-12-12T05:04:39.221+00:00",
+      "three_points_made": 1,
+      "three_points_attempted": 6
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 424,
+      "points": 8,
+      "assists": 0,
+      "team_id": 189,
+      "match_id": 289,
+      "rebounds": 3,
+      "player_id": 2641,
+      "created_at": "2025-12-12T05:04:39.221+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 425,
+      "points": 4,
+      "assists": 0,
+      "team_id": 189,
+      "match_id": 289,
+      "rebounds": 1,
+      "player_id": 2644,
+      "created_at": "2025-12-12T05:04:39.221+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 426,
+      "points": 4,
+      "assists": 0,
+      "team_id": 185,
+      "match_id": 289,
+      "rebounds": 1,
+      "player_id": 2657,
+      "created_at": "2025-12-12T05:04:39.221+00:00",
+      "three_points_made": 3,
+      "three_points_attempted": 11
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 427,
+      "points": 11,
+      "assists": 0,
+      "team_id": 185,
+      "match_id": 289,
+      "rebounds": 1,
+      "player_id": 2969,
+      "created_at": "2025-12-12T05:04:39.221+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 438,
+      "points": 0,
+      "assists": 0,
+      "team_id": 180,
+      "match_id": 300,
+      "rebounds": 2,
+      "player_id": 2602,
+      "created_at": "2026-03-25T16:55:24.356+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 439,
+      "points": 9,
+      "assists": 0,
+      "team_id": 180,
+      "match_id": 300,
+      "rebounds": 1,
+      "player_id": 2855,
+      "created_at": "2026-03-25T16:55:24.356+00:00",
+      "three_points_made": 1,
+      "three_points_attempted": 4
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 440,
+      "points": 24,
+      "assists": 0,
+      "team_id": 180,
+      "match_id": 300,
+      "rebounds": 6,
+      "player_id": 2600,
+      "created_at": "2026-03-25T16:55:24.356+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 441,
+      "points": 5,
+      "assists": 2,
+      "team_id": 180,
+      "match_id": 300,
+      "rebounds": 0,
+      "player_id": 2937,
+      "created_at": "2026-03-25T16:55:24.356+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 442,
+      "points": 10,
+      "assists": 0,
+      "team_id": 180,
+      "match_id": 300,
+      "rebounds": 2,
+      "player_id": 2606,
+      "created_at": "2026-03-25T16:55:24.356+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 1
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 443,
+      "points": 0,
+      "assists": 0,
+      "team_id": 180,
+      "match_id": 300,
+      "rebounds": 2,
+      "player_id": 3044,
+      "created_at": "2026-03-25T16:55:24.356+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 444,
+      "points": 10,
+      "assists": 0,
+      "team_id": 180,
+      "match_id": 300,
+      "rebounds": 3,
+      "player_id": 2604,
+      "created_at": "2026-03-25T16:55:24.356+00:00",
+      "three_points_made": 2,
+      "three_points_attempted": 5
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 445,
+      "points": 10,
+      "assists": 0,
+      "team_id": 169,
+      "match_id": 300,
+      "rebounds": 0,
+      "player_id": 517,
+      "created_at": "2026-03-25T16:55:24.356+00:00",
+      "three_points_made": 2,
+      "three_points_attempted": 6
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 446,
+      "points": 14,
+      "assists": 0,
+      "team_id": 169,
+      "match_id": 300,
+      "rebounds": 0,
+      "player_id": 514,
+      "created_at": "2026-03-25T16:55:24.356+00:00",
+      "three_points_made": 4,
+      "three_points_attempted": 11
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 447,
+      "points": 11,
+      "assists": 0,
+      "team_id": 169,
+      "match_id": 300,
+      "rebounds": 4,
+      "player_id": 515,
+      "created_at": "2026-03-25T16:55:24.356+00:00",
+      "three_points_made": 1,
+      "three_points_attempted": 3
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 448,
+      "points": 11,
+      "assists": 0,
+      "team_id": 169,
+      "match_id": 300,
+      "rebounds": 1,
+      "player_id": 513,
+      "created_at": "2026-03-25T16:55:24.356+00:00",
+      "three_points_made": 2,
+      "three_points_attempted": 5
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 453,
+      "points": 10,
+      "assists": 5,
+      "team_id": 170,
+      "match_id": 285,
+      "rebounds": 0,
+      "player_id": 593,
+      "created_at": "2026-03-25T17:03:33.606+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 454,
+      "points": 4,
+      "assists": 0,
+      "team_id": 170,
+      "match_id": 285,
+      "rebounds": 0,
+      "player_id": 576,
+      "created_at": "2026-03-25T17:03:33.606+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 455,
+      "points": 4,
+      "assists": 0,
+      "team_id": 170,
+      "match_id": 285,
+      "rebounds": 1,
+      "player_id": 664,
+      "created_at": "2026-03-25T17:03:33.606+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 456,
+      "points": 7,
+      "assists": 1,
+      "team_id": 184,
+      "match_id": 288,
+      "rebounds": 1,
+      "player_id": 2667,
+      "created_at": "2026-03-27T06:50:47.868+00:00",
+      "three_points_made": 1,
+      "three_points_attempted": 1
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 457,
+      "points": 7,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 288,
+      "rebounds": 4,
+      "player_id": 2665,
+      "created_at": "2026-03-27T06:50:47.868+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 458,
+      "points": 2,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 288,
+      "rebounds": 0,
+      "player_id": 2663,
+      "created_at": "2026-03-27T06:50:47.868+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 459,
+      "points": 2,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 288,
+      "rebounds": 0,
+      "player_id": 3036,
+      "created_at": "2026-03-27T06:50:47.869+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 460,
+      "points": 19,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 288,
+      "rebounds": 4,
+      "player_id": 3039,
+      "created_at": "2026-03-27T06:50:47.869+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 461,
+      "points": 2,
+      "assists": 0,
+      "team_id": 189,
+      "match_id": 288,
+      "rebounds": 0,
+      "player_id": 2646,
+      "created_at": "2026-03-27T06:50:47.869+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 1
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 462,
+      "points": 5,
+      "assists": 0,
+      "team_id": 189,
+      "match_id": 288,
+      "rebounds": 0,
+      "player_id": 2643,
+      "created_at": "2026-03-27T06:50:47.869+00:00",
+      "three_points_made": 1,
+      "three_points_attempted": 8
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 463,
+      "points": 8,
+      "assists": 0,
+      "team_id": 189,
+      "match_id": 288,
+      "rebounds": 3,
+      "player_id": 2641,
+      "created_at": "2026-03-27T06:50:47.869+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 464,
+      "points": 3,
+      "assists": 0,
+      "team_id": 189,
+      "match_id": 288,
+      "rebounds": 0,
+      "player_id": 2644,
+      "created_at": "2026-03-27T06:50:47.869+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 1
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 465,
+      "points": 34,
+      "assists": 3,
+      "team_id": 175,
+      "match_id": 292,
+      "rebounds": 0,
+      "player_id": 2676,
+      "created_at": "2026-03-27T06:53:09.35+00:00",
+      "three_points_made": 3,
+      "three_points_attempted": 6
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 466,
+      "points": 12,
+      "assists": 0,
+      "team_id": 175,
+      "match_id": 292,
+      "rebounds": 2,
+      "player_id": 2686,
+      "created_at": "2026-03-27T06:53:09.35+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 467,
+      "points": 2,
+      "assists": 0,
+      "team_id": 183,
+      "match_id": 292,
+      "rebounds": 0,
+      "player_id": 2589,
+      "created_at": "2026-03-27T06:53:09.35+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 468,
+      "points": 10,
+      "assists": 0,
+      "team_id": 179,
+      "match_id": 295,
+      "rebounds": 0,
+      "player_id": 2897,
+      "created_at": "2026-03-27T06:54:57.028+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 5
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 469,
+      "points": 4,
+      "assists": 0,
+      "team_id": 179,
+      "match_id": 295,
+      "rebounds": 0,
+      "player_id": 2592,
+      "created_at": "2026-03-27T06:54:57.028+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 470,
+      "points": 11,
+      "assists": 0,
+      "team_id": 179,
+      "match_id": 295,
+      "rebounds": 4,
+      "player_id": 2970,
+      "created_at": "2026-03-27T06:54:57.028+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 265,
+      "points": 11,
+      "assists": 0,
+      "team_id": 174,
+      "match_id": 302,
+      "rebounds": 1,
+      "player_id": 2696,
+      "created_at": "2025-11-22T15:14:07.399+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 1
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 266,
+      "points": 0,
+      "assists": 0,
+      "team_id": 174,
+      "match_id": 302,
+      "rebounds": 1,
+      "player_id": 2697,
+      "created_at": "2025-11-22T15:14:07.399+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 3
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 267,
+      "points": 0,
+      "assists": 0,
+      "team_id": 174,
+      "match_id": 302,
+      "rebounds": 0,
+      "player_id": 2698,
+      "created_at": "2025-11-22T15:14:07.399+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 1
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 347,
+      "points": 0,
+      "assists": 0,
+      "team_id": 173,
+      "match_id": 297,
+      "rebounds": 0,
+      "player_id": 2735,
+      "created_at": "2025-12-06T19:12:54.77+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 348,
+      "points": 0,
+      "assists": 0,
+      "team_id": 173,
+      "match_id": 297,
+      "rebounds": 0,
+      "player_id": 2739,
+      "created_at": "2025-12-06T19:12:54.77+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 349,
+      "points": 0,
+      "assists": 0,
+      "team_id": 173,
+      "match_id": 297,
+      "rebounds": 0,
+      "player_id": 2745,
+      "created_at": "2025-12-06T19:12:54.77+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 271,
+      "points": 2,
+      "assists": 1,
+      "team_id": 174,
+      "match_id": 302,
+      "rebounds": 5,
+      "player_id": 2702,
+      "created_at": "2025-11-22T15:14:07.399+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 3
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 350,
+      "points": 0,
+      "assists": 0,
+      "team_id": 173,
+      "match_id": 297,
+      "rebounds": 0,
+      "player_id": 2747,
+      "created_at": "2025-12-06T19:12:54.77+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 351,
+      "points": 0,
+      "assists": 0,
+      "team_id": 173,
+      "match_id": 297,
+      "rebounds": 0,
+      "player_id": 2749,
+      "created_at": "2025-12-06T19:12:54.77+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 352,
+      "points": 0,
+      "assists": 0,
+      "team_id": 173,
+      "match_id": 297,
+      "rebounds": 0,
+      "player_id": 2751,
+      "created_at": "2025-12-06T19:12:54.77+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 275,
+      "points": 0,
+      "assists": 0,
+      "team_id": 174,
+      "match_id": 302,
+      "rebounds": 0,
+      "player_id": 2706,
+      "created_at": "2025-11-22T15:14:07.399+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 276,
+      "points": 3,
+      "assists": 0,
+      "team_id": 174,
+      "match_id": 302,
+      "rebounds": 0,
+      "player_id": 2707,
+      "created_at": "2025-11-22T15:14:07.399+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 3
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 353,
+      "points": 2,
+      "assists": 0,
+      "team_id": 173,
+      "match_id": 297,
+      "rebounds": 0,
+      "player_id": 2753,
+      "created_at": "2025-12-06T19:12:54.77+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 354,
+      "points": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 297,
+      "rebounds": 0,
+      "player_id": 2811,
+      "created_at": "2025-12-06T19:12:54.77+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 355,
+      "points": 11,
+      "assists": 1,
+      "team_id": 181,
+      "match_id": 297,
+      "rebounds": 2,
+      "player_id": 2971,
+      "created_at": "2025-12-06T19:12:54.77+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 280,
+      "points": 1,
+      "assists": 0,
+      "team_id": 174,
+      "match_id": 302,
+      "rebounds": 4,
+      "player_id": 2711,
+      "created_at": "2025-11-22T15:14:07.399+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 281,
+      "points": 4,
+      "assists": 0,
+      "team_id": 174,
+      "match_id": 302,
+      "rebounds": 1,
+      "player_id": 2712,
+      "created_at": "2025-11-22T15:14:07.399+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 1
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 356,
+      "points": 2,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 297,
+      "rebounds": 0,
+      "player_id": 2909,
+      "created_at": "2025-12-06T19:12:54.77+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 357,
+      "points": 15,
+      "assists": 3,
+      "team_id": 181,
+      "match_id": 297,
+      "rebounds": 5,
+      "player_id": 2860,
+      "created_at": "2025-12-06T19:12:54.77+00:00",
+      "three_points_made": 3,
+      "three_points_attempted": 12
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 284,
+      "points": 10,
+      "assists": 0,
+      "team_id": 180,
+      "match_id": 302,
+      "rebounds": 0,
+      "player_id": 2602,
+      "created_at": "2025-11-22T15:14:07.399+00:00",
+      "three_points_made": 1,
+      "three_points_attempted": 7
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 358,
+      "points": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 297,
+      "rebounds": 0,
+      "player_id": 2582,
+      "created_at": "2025-12-06T19:12:54.77+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 359,
+      "points": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 297,
+      "rebounds": 0,
+      "player_id": 3043,
+      "created_at": "2025-12-06T19:12:54.77+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 380,
+      "points": 0,
+      "assists": 0,
+      "team_id": 166,
+      "match_id": 293,
+      "rebounds": 1,
+      "player_id": 525,
+      "created_at": "2025-12-07T19:36:59.838+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 1
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 381,
+      "points": 1,
+      "assists": 0,
+      "team_id": 166,
+      "match_id": 293,
+      "rebounds": 2,
+      "player_id": 523,
+      "created_at": "2025-12-07T19:36:59.838+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 290,
+      "points": 19,
+      "assists": 2,
+      "team_id": 180,
+      "match_id": 302,
+      "rebounds": 7,
+      "player_id": 2600,
+      "created_at": "2025-11-22T15:14:07.399+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 1
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 291,
+      "points": 0,
+      "assists": 0,
+      "team_id": 180,
+      "match_id": 302,
+      "rebounds": 0,
+      "player_id": 2833,
+      "created_at": "2025-11-22T15:14:07.399+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 3
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 382,
+      "points": 0,
+      "assists": 0,
+      "team_id": 166,
+      "match_id": 293,
+      "rebounds": 2,
+      "player_id": 524,
+      "created_at": "2025-12-07T19:36:59.838+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 383,
+      "points": 2,
+      "assists": 0,
+      "team_id": 166,
+      "match_id": 293,
+      "rebounds": 2,
+      "player_id": 526,
+      "created_at": "2025-12-07T19:36:59.838+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 384,
+      "points": 5,
+      "assists": 0,
+      "team_id": 175,
+      "match_id": 293,
+      "rebounds": 0,
+      "player_id": 2686,
+      "created_at": "2025-12-07T19:36:59.838+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 1
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 295,
+      "points": 2,
+      "assists": 1,
+      "team_id": 180,
+      "match_id": 302,
+      "rebounds": 0,
+      "player_id": 2610,
+      "created_at": "2025-11-22T15:14:07.399+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 2
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 296,
+      "points": 8,
+      "assists": 0,
+      "team_id": 180,
+      "match_id": 302,
+      "rebounds": 2,
+      "player_id": 2937,
+      "created_at": "2025-11-22T15:14:07.399+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 3
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 385,
+      "points": 2,
+      "assists": 2,
+      "team_id": 175,
+      "match_id": 293,
+      "rebounds": 1,
+      "player_id": 2687,
+      "created_at": "2025-12-07T19:36:59.838+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 298,
+      "points": 12,
+      "assists": 0,
+      "team_id": 180,
+      "match_id": 302,
+      "rebounds": 1,
+      "player_id": 2606,
+      "created_at": "2025-11-22T15:14:07.399+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 1
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 386,
+      "points": 22,
+      "assists": 1,
+      "team_id": 175,
+      "match_id": 293,
+      "rebounds": 2,
+      "player_id": 2676,
+      "created_at": "2025-12-07T19:36:59.838+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 387,
+      "points": 0,
+      "assists": 0,
+      "team_id": 175,
+      "match_id": 293,
+      "rebounds": 0,
+      "player_id": 2688,
+      "created_at": "2025-12-07T19:36:59.838+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 399,
+      "points": 0,
+      "assists": 0,
+      "team_id": 183,
+      "match_id": 294,
+      "rebounds": 0,
+      "player_id": 2861,
+      "created_at": "2025-12-09T13:20:38.409+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 400,
+      "points": 3,
+      "assists": 0,
+      "team_id": 183,
+      "match_id": 294,
+      "rebounds": 1,
+      "player_id": 3003,
+      "created_at": "2025-12-09T13:20:38.409+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 401,
+      "points": 2,
+      "assists": 0,
+      "team_id": 183,
+      "match_id": 294,
+      "rebounds": 0,
+      "player_id": 2585,
+      "created_at": "2025-12-09T13:20:38.409+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 304,
+      "points": 0,
+      "assists": 0,
+      "team_id": 180,
+      "match_id": 302,
+      "rebounds": 0,
+      "player_id": 2853,
+      "created_at": "2025-11-22T15:14:07.399+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 305,
+      "points": 0,
+      "assists": 0,
+      "team_id": 180,
+      "match_id": 302,
+      "rebounds": 2,
+      "player_id": 3044,
+      "created_at": "2025-11-22T15:14:07.399+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 2
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 306,
+      "points": 0,
+      "assists": 0,
+      "team_id": 180,
+      "match_id": 302,
+      "rebounds": 1,
+      "player_id": 2604,
+      "created_at": "2025-11-22T15:14:07.399+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 288,
+      "points": 13,
+      "assists": 2,
+      "team_id": 180,
+      "match_id": 302,
+      "rebounds": 5,
+      "player_id": 2855,
+      "created_at": "2025-11-22T15:14:07.399+00:00",
+      "three_points_made": 1,
+      "three_points_attempted": 7
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 402,
+      "points": 3,
+      "assists": 0,
+      "team_id": 183,
+      "match_id": 294,
+      "rebounds": 0,
+      "player_id": 2591,
+      "created_at": "2025-12-09T13:20:38.409+00:00",
+      "three_points_made": 1,
+      "three_points_attempted": 1
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 403,
+      "points": 3,
+      "assists": 0,
+      "team_id": 183,
+      "match_id": 294,
+      "rebounds": 2,
+      "player_id": 2589,
+      "created_at": "2025-12-09T13:20:38.409+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 404,
+      "points": 0,
+      "assists": 0,
+      "team_id": 183,
+      "match_id": 294,
+      "rebounds": 0,
+      "player_id": 2987,
+      "created_at": "2025-12-09T13:20:38.409+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 405,
+      "points": 2,
+      "assists": 0,
+      "team_id": 182,
+      "match_id": 294,
+      "rebounds": 1,
+      "player_id": 2812,
+      "created_at": "2025-12-09T13:20:38.409+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 406,
+      "points": 0,
+      "assists": 0,
+      "team_id": 182,
+      "match_id": 294,
+      "rebounds": 1,
+      "player_id": 2614,
+      "created_at": "2025-12-09T13:20:38.409+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 407,
+      "points": 2,
+      "assists": 0,
+      "team_id": 182,
+      "match_id": 294,
+      "rebounds": 0,
+      "player_id": 2807,
+      "created_at": "2025-12-09T13:20:38.409+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 408,
+      "points": 0,
+      "assists": 0,
+      "team_id": 182,
+      "match_id": 294,
+      "rebounds": 0,
+      "player_id": 2612,
+      "created_at": "2025-12-09T13:20:38.409+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 409,
+      "points": 6,
+      "assists": 0,
+      "team_id": 182,
+      "match_id": 294,
+      "rebounds": 0,
+      "player_id": 3009,
+      "created_at": "2025-12-09T13:20:38.409+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 415,
+      "points": 18,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 290,
+      "rebounds": 2,
+      "player_id": 3039,
+      "created_at": "2025-12-12T04:54:50.175+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 1
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 416,
+      "points": 2,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 290,
+      "rebounds": 1,
+      "player_id": 2667,
+      "created_at": "2025-12-12T04:54:50.175+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 2
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 417,
+      "points": 8,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 290,
+      "rebounds": 1,
+      "player_id": 2663,
+      "created_at": "2025-12-12T04:54:50.175+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 418,
+      "points": 4,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 290,
+      "rebounds": 0,
+      "player_id": 3036,
+      "created_at": "2025-12-12T04:54:50.175+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 419,
+      "points": 4,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 290,
+      "rebounds": 1,
+      "player_id": 2665,
+      "created_at": "2025-12-12T04:54:50.175+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 420,
+      "points": 3,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 290,
+      "rebounds": 1,
+      "player_id": 533,
+      "created_at": "2025-12-12T04:54:50.175+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 421,
+      "points": 10,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 290,
+      "rebounds": 1,
+      "player_id": 532,
+      "created_at": "2025-12-12T04:54:50.175+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 428,
+      "points": 19,
+      "assists": 4,
+      "team_id": 178,
+      "match_id": 299,
+      "rebounds": 3,
+      "player_id": 2567,
+      "created_at": "2026-03-24T20:26:40.718+00:00",
+      "three_points_made": 2,
+      "three_points_attempted": 4
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 429,
+      "points": 31,
+      "assists": 1,
+      "team_id": 178,
+      "match_id": 299,
+      "rebounds": 3,
+      "player_id": 2566,
+      "created_at": "2026-03-24T20:26:40.718+00:00",
+      "three_points_made": 3,
+      "three_points_attempted": 5
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 430,
+      "points": 4,
+      "assists": 3,
+      "team_id": 178,
+      "match_id": 299,
+      "rebounds": 6,
+      "player_id": 2574,
+      "created_at": "2026-03-24T20:26:40.718+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 431,
+      "points": 16,
+      "assists": 2,
+      "team_id": 178,
+      "match_id": 299,
+      "rebounds": 10,
+      "player_id": 2572,
+      "created_at": "2026-03-24T20:26:40.718+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 432,
+      "points": 2,
+      "assists": 1,
+      "team_id": 178,
+      "match_id": 299,
+      "rebounds": 1,
+      "player_id": 2578,
+      "created_at": "2026-03-24T20:26:40.718+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 433,
+      "points": 21,
+      "assists": 0,
+      "team_id": 178,
+      "match_id": 299,
+      "rebounds": 4,
+      "player_id": 2568,
+      "created_at": "2026-03-24T20:26:40.718+00:00",
+      "three_points_made": 4,
+      "three_points_attempted": 7
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 434,
+      "points": 68,
+      "assists": 1,
+      "team_id": 186,
+      "match_id": 299,
+      "rebounds": 7,
+      "player_id": 2559,
+      "created_at": "2026-03-24T20:26:40.718+00:00",
+      "three_points_made": 6,
+      "three_points_attempted": 11
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 435,
+      "points": 30,
+      "assists": 1,
+      "team_id": 186,
+      "match_id": 299,
+      "rebounds": 3,
+      "player_id": 2887,
+      "created_at": "2026-03-24T20:26:40.718+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 4
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 436,
+      "points": 2,
+      "assists": 0,
+      "team_id": 186,
+      "match_id": 299,
+      "rebounds": 1,
+      "player_id": 2627,
+      "created_at": "2026-03-24T20:26:40.718+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 437,
+      "points": 2,
+      "assists": 1,
+      "team_id": 186,
+      "match_id": 299,
+      "rebounds": 1,
+      "player_id": 2556,
+      "created_at": "2026-03-24T20:26:40.718+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 449,
+      "points": 2,
+      "assists": 0,
+      "team_id": 177,
+      "match_id": 285,
+      "rebounds": 0,
+      "player_id": 2719,
+      "created_at": "2026-03-25T17:03:33.605+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 450,
+      "points": 2,
+      "assists": 0,
+      "team_id": 170,
+      "match_id": 285,
+      "rebounds": 4,
+      "player_id": 558,
+      "created_at": "2026-03-25T17:03:33.606+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 451,
+      "points": 47,
+      "assists": 0,
+      "team_id": 170,
+      "match_id": 285,
+      "rebounds": 0,
+      "player_id": 575,
+      "created_at": "2026-03-25T17:03:33.606+00:00",
+      "three_points_made": 3,
+      "three_points_attempted": 4
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 452,
+      "points": 10,
+      "assists": 1,
+      "team_id": 170,
+      "match_id": 285,
+      "rebounds": 0,
+      "player_id": 663,
+      "created_at": "2026-03-25T17:03:33.606+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 502,
+      "points": 3,
+      "assists": 0,
+      "team_id": 172,
+      "match_id": 276,
+      "rebounds": 0,
+      "player_id": 2777,
+      "created_at": "2026-03-30T19:41:14.442+00:00",
+      "three_points_made": 1,
+      "three_points_attempted": 3
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 503,
+      "points": 5,
+      "assists": 0,
+      "team_id": 172,
+      "match_id": 276,
+      "rebounds": 1,
+      "player_id": 2781,
+      "created_at": "2026-03-30T19:41:14.442+00:00",
+      "three_points_made": 1,
+      "three_points_attempted": 3
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 504,
+      "points": 61,
+      "assists": 1,
+      "team_id": 172,
+      "match_id": 276,
+      "rebounds": 2,
+      "player_id": 2784,
+      "created_at": "2026-03-30T19:41:14.442+00:00",
+      "three_points_made": 2,
+      "three_points_attempted": 4
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 505,
+      "points": 18,
+      "assists": 4,
+      "team_id": 172,
+      "match_id": 276,
+      "rebounds": 5,
+      "player_id": 2787,
+      "created_at": "2026-03-30T19:41:14.442+00:00",
+      "three_points_made": 2,
+      "three_points_attempted": 4
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 506,
+      "points": 61,
+      "assists": 2,
+      "team_id": 186,
+      "match_id": 276,
+      "rebounds": 0,
+      "player_id": 2559,
+      "created_at": "2026-03-30T19:41:14.442+00:00",
+      "three_points_made": 1,
+      "three_points_attempted": 7
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 507,
+      "points": 29,
+      "assists": 1,
+      "team_id": 186,
+      "match_id": 276,
+      "rebounds": 7,
+      "player_id": 2887,
+      "created_at": "2026-03-30T19:41:14.442+00:00",
+      "three_points_made": 1,
+      "three_points_attempted": 4
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 508,
+      "points": 2,
+      "assists": 0,
+      "team_id": 186,
+      "match_id": 276,
+      "rebounds": 0,
+      "player_id": 2622,
+      "created_at": "2026-03-30T19:41:14.442+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 509,
+      "points": 15,
+      "assists": 0,
+      "team_id": 175,
+      "match_id": 291,
+      "rebounds": 0,
+      "player_id": 2676,
+      "created_at": "2026-06-27T09:41:37.524+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 510,
+      "points": 0,
+      "assists": 2,
+      "team_id": 175,
+      "match_id": 291,
+      "rebounds": 2,
+      "player_id": 2679,
+      "created_at": "2026-06-27T09:41:37.524+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 511,
+      "points": 0,
+      "assists": 2,
+      "team_id": 175,
+      "match_id": 291,
+      "rebounds": 3,
+      "player_id": 2681,
+      "created_at": "2026-06-27T09:41:37.524+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 512,
+      "points": 0,
+      "assists": 0,
+      "team_id": 175,
+      "match_id": 291,
+      "rebounds": 7,
+      "player_id": 2684,
+      "created_at": "2026-06-27T09:41:37.524+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 513,
+      "points": 3,
+      "assists": 0,
+      "team_id": 175,
+      "match_id": 291,
+      "rebounds": 0,
+      "player_id": 2686,
+      "created_at": "2026-06-27T09:41:37.524+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 514,
+      "points": 0,
+      "assists": 0,
+      "team_id": 175,
+      "match_id": 291,
+      "rebounds": 0,
+      "player_id": 2688,
+      "created_at": "2026-06-27T09:41:37.524+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 515,
+      "points": 17,
+      "assists": 0,
+      "team_id": 179,
+      "match_id": 291,
+      "rebounds": 3,
+      "player_id": 2897,
+      "created_at": "2026-06-27T09:41:37.524+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 516,
+      "points": 11,
+      "assists": -1,
+      "team_id": 179,
+      "match_id": 291,
+      "rebounds": 5,
+      "player_id": 2592,
+      "created_at": "2026-06-27T09:41:37.524+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 517,
+      "points": 17,
+      "assists": 2,
+      "team_id": 179,
+      "match_id": 291,
+      "rebounds": 5,
+      "player_id": 2970,
+      "created_at": "2026-06-27T09:41:37.524+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 518,
+      "points": 0,
+      "assists": 3,
+      "team_id": 179,
+      "match_id": 291,
+      "rebounds": 0,
+      "player_id": 2973,
+      "created_at": "2026-06-27T09:41:37.524+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 519,
+      "points": 12,
+      "assists": 3,
+      "team_id": 179,
+      "match_id": 291,
+      "rebounds": 0,
+      "player_id": 2985,
+      "created_at": "2026-06-27T09:41:37.524+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 520,
+      "points": 0,
+      "assists": 0,
+      "team_id": 179,
+      "match_id": 291,
+      "rebounds": 0,
+      "player_id": 3033,
+      "created_at": "2026-06-27T09:41:37.524+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 521,
+      "points": 3,
+      "assists": 0,
+      "team_id": 170,
+      "match_id": 284,
+      "rebounds": 3,
+      "player_id": 558,
+      "created_at": "2026-06-27T09:48:35.119+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 522,
+      "points": 0,
+      "assists": 0,
+      "team_id": 170,
+      "match_id": 284,
+      "rebounds": 1,
+      "player_id": 652,
+      "created_at": "2026-06-27T09:48:35.119+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 523,
+      "points": 5,
+      "assists": 0,
+      "team_id": 170,
+      "match_id": 284,
+      "rebounds": 0,
+      "player_id": 593,
+      "created_at": "2026-06-27T09:48:35.119+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 524,
+      "points": 0,
+      "assists": 0,
+      "team_id": 170,
+      "match_id": 284,
+      "rebounds": 0,
+      "player_id": 539,
+      "created_at": "2026-06-27T09:48:35.119+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 525,
+      "points": 19,
+      "assists": 2,
+      "team_id": 170,
+      "match_id": 284,
+      "rebounds": 0,
+      "player_id": 575,
+      "created_at": "2026-06-27T09:48:35.119+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 526,
+      "points": 0,
+      "assists": 0,
+      "team_id": 170,
+      "match_id": 284,
+      "rebounds": 0,
+      "player_id": 664,
+      "created_at": "2026-06-27T09:48:35.119+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 527,
+      "points": 19,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 284,
+      "rebounds": 2,
+      "player_id": 2667,
+      "created_at": "2026-06-27T09:48:35.119+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 528,
+      "points": 5,
+      "assists": 2,
+      "team_id": 184,
+      "match_id": 284,
+      "rebounds": 0,
+      "player_id": 2665,
+      "created_at": "2026-06-27T09:48:35.119+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 529,
+      "points": 1,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 284,
+      "rebounds": 1,
+      "player_id": 3020,
+      "created_at": "2026-06-27T09:48:35.119+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 530,
+      "points": 1,
+      "assists": 2,
+      "team_id": 184,
+      "match_id": 284,
+      "rebounds": 0,
+      "player_id": 2663,
+      "created_at": "2026-06-27T09:48:35.119+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 531,
+      "points": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 284,
+      "rebounds": 0,
+      "player_id": 3036,
+      "created_at": "2026-06-27T09:48:35.119+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "basketball",
+    "record": {
+      "id": 532,
+      "points": 16,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 284,
+      "rebounds": 0,
+      "player_id": 3039,
+      "created_at": "2026-06-27T09:48:35.119+00:00",
+      "three_points_made": 0,
+      "three_points_attempted": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 145,
+      "goals": 0,
+      "saves": 4,
+      "assists": 0,
+      "team_id": 166,
+      "match_id": 314,
+      "player_id": 520,
+      "created_at": "2025-12-07T19:13:28.548+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 146,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 175,
+      "match_id": 314,
+      "player_id": 2679,
+      "created_at": "2025-12-07T19:13:28.548+00:00",
+      "shots_on_target": 3
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 147,
+      "goals": 2,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 175,
+      "match_id": 314,
+      "player_id": 2671,
+      "created_at": "2025-12-07T19:13:28.548+00:00",
+      "shots_on_target": 4
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 148,
+      "goals": 1,
+      "saves": 0,
+      "assists": 1,
+      "team_id": 175,
+      "match_id": 314,
+      "player_id": 2683,
+      "created_at": "2025-12-07T19:13:28.548+00:00",
+      "shots_on_target": 3
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 149,
+      "goals": 0,
+      "saves": 0,
+      "assists": 1,
+      "team_id": 175,
+      "match_id": 314,
+      "player_id": 2686,
+      "created_at": "2025-12-07T19:13:28.548+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 150,
+      "goals": 0,
+      "saves": 1,
+      "assists": 0,
+      "team_id": 175,
+      "match_id": 314,
+      "player_id": 2689,
+      "created_at": "2025-12-07T19:13:28.548+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 151,
+      "goals": 2,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 174,
+      "match_id": 318,
+      "player_id": 2693,
+      "created_at": "2025-12-10T08:20:19.148+00:00",
+      "shots_on_target": 2
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 152,
+      "goals": 0,
+      "saves": 0,
+      "assists": 1,
+      "team_id": 174,
+      "match_id": 318,
+      "player_id": 2696,
+      "created_at": "2025-12-10T08:20:19.148+00:00",
+      "shots_on_target": 1
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 153,
+      "goals": 0,
+      "saves": 0,
+      "assists": 1,
+      "team_id": 174,
+      "match_id": 318,
+      "player_id": 2699,
+      "created_at": "2025-12-10T08:20:19.148+00:00",
+      "shots_on_target": 1
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 154,
+      "goals": 0,
+      "saves": 0,
+      "assists": 1,
+      "team_id": 174,
+      "match_id": 318,
+      "player_id": 2700,
+      "created_at": "2025-12-10T08:20:19.148+00:00",
+      "shots_on_target": 3
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 155,
+      "goals": 0,
+      "saves": 3,
+      "assists": 0,
+      "team_id": 174,
+      "match_id": 318,
+      "player_id": 2702,
+      "created_at": "2025-12-10T08:20:19.148+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 156,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 174,
+      "match_id": 318,
+      "player_id": 2704,
+      "created_at": "2025-12-10T08:20:19.148+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 157,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 177,
+      "match_id": 306,
+      "player_id": 2722,
+      "created_at": "2025-12-10T08:31:07.159+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 158,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 171,
+      "match_id": 306,
+      "player_id": 528,
+      "created_at": "2025-12-10T08:31:07.159+00:00",
+      "shots_on_target": 2
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 159,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 171,
+      "match_id": 306,
+      "player_id": 529,
+      "created_at": "2025-12-10T08:31:07.159+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 160,
+      "goals": 1,
+      "saves": 0,
+      "assists": 1,
+      "team_id": 171,
+      "match_id": 306,
+      "player_id": 527,
+      "created_at": "2025-12-10T08:31:07.159+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 161,
+      "goals": 1,
+      "saves": 0,
+      "assists": 1,
+      "team_id": 182,
+      "match_id": 307,
+      "player_id": 2874,
+      "created_at": "2025-12-10T08:43:33.458+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 162,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 182,
+      "match_id": 307,
+      "player_id": 2612,
+      "created_at": "2025-12-10T08:43:33.458+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 163,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 182,
+      "match_id": 307,
+      "player_id": 3009,
+      "created_at": "2025-12-10T08:43:33.458+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 164,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 168,
+      "match_id": 320,
+      "player_id": 530,
+      "created_at": "2025-12-12T04:36:46.534+00:00",
+      "shots_on_target": 2
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 165,
+      "goals": 0,
+      "saves": 0,
+      "assists": 1,
+      "team_id": 186,
+      "match_id": 320,
+      "player_id": 2886,
+      "created_at": "2025-12-12T04:36:46.534+00:00",
+      "shots_on_target": 2
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 166,
+      "goals": 2,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 186,
+      "match_id": 320,
+      "player_id": 2623,
+      "created_at": "2025-12-12T04:36:46.534+00:00",
+      "shots_on_target": 3
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 167,
+      "goals": 0,
+      "saves": 3,
+      "assists": 0,
+      "team_id": 186,
+      "match_id": 320,
+      "player_id": 2558,
+      "created_at": "2025-12-12T04:36:46.534+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 168,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 186,
+      "match_id": 320,
+      "player_id": 2625,
+      "created_at": "2025-12-12T04:36:46.534+00:00",
+      "shots_on_target": 2
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 169,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 186,
+      "match_id": 320,
+      "player_id": 3006,
+      "created_at": "2025-12-12T04:36:46.534+00:00",
+      "shots_on_target": 1
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 170,
+      "goals": 0,
+      "saves": 0,
+      "assists": 1,
+      "team_id": 186,
+      "match_id": 320,
+      "player_id": 3046,
+      "created_at": "2025-12-12T04:36:46.534+00:00",
+      "shots_on_target": 1
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 171,
+      "goals": 0,
+      "saves": 0,
+      "assists": 1,
+      "team_id": 172,
+      "match_id": 321,
+      "player_id": 2782,
+      "created_at": "2025-12-12T04:42:00.175+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 172,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 172,
+      "match_id": 321,
+      "player_id": 2784,
+      "created_at": "2025-12-12T04:42:00.175+00:00",
+      "shots_on_target": 2
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 173,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 172,
+      "match_id": 321,
+      "player_id": 2796,
+      "created_at": "2025-12-12T04:42:00.175+00:00",
+      "shots_on_target": 1
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 174,
+      "goals": 0,
+      "saves": 0,
+      "assists": 1,
+      "team_id": 187,
+      "match_id": 321,
+      "player_id": 2879,
+      "created_at": "2025-12-12T04:42:00.175+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 175,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 187,
+      "match_id": 321,
+      "player_id": 2617,
+      "created_at": "2025-12-12T04:42:00.175+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 176,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 187,
+      "match_id": 321,
+      "player_id": 2976,
+      "created_at": "2025-12-12T04:42:00.175+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 177,
+      "goals": 1,
+      "saves": 0,
+      "assists": 1,
+      "team_id": 183,
+      "match_id": 313,
+      "player_id": 3003,
+      "created_at": "2025-12-12T05:10:22.083+00:00",
+      "shots_on_target": 3
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 178,
+      "goals": 2,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 183,
+      "match_id": 313,
+      "player_id": 2954,
+      "created_at": "2025-12-12T05:10:22.083+00:00",
+      "shots_on_target": 4
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 179,
+      "goals": 0,
+      "saves": 1,
+      "assists": 0,
+      "team_id": 189,
+      "match_id": 313,
+      "player_id": 2651,
+      "created_at": "2025-12-12T05:10:22.083+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 180,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 303,
+      "player_id": 545,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 181,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 303,
+      "player_id": 632,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 182,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 303,
+      "player_id": 547,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 183,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 303,
+      "player_id": 594,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 184,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 303,
+      "player_id": 548,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 185,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 303,
+      "player_id": 549,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 186,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 303,
+      "player_id": 598,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 187,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 303,
+      "player_id": 658,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 188,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 303,
+      "player_id": 552,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 189,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 303,
+      "player_id": 602,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 190,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 303,
+      "player_id": 533,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 191,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 303,
+      "player_id": 553,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 192,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 303,
+      "player_id": 603,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 193,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 303,
+      "player_id": 654,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 194,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 303,
+      "player_id": 557,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 195,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 303,
+      "player_id": 559,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 196,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 303,
+      "player_id": 560,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 197,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 303,
+      "player_id": 532,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 198,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 303,
+      "player_id": 639,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 199,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 303,
+      "player_id": 592,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 200,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 303,
+      "player_id": 562,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 201,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 167,
+      "match_id": 303,
+      "player_id": 662,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 202,
+      "goals": 2,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 303,
+      "player_id": 2986,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 203,
+      "goals": 2,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 303,
+      "player_id": 2552,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 204,
+      "goals": 3,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 303,
+      "player_id": 2834,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 205,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 303,
+      "player_id": 2870,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 206,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 303,
+      "player_id": 2666,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 207,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 303,
+      "player_id": 2899,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 208,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 303,
+      "player_id": 2901,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 209,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 303,
+      "player_id": 2668,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 210,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 303,
+      "player_id": 2920,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 211,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 303,
+      "player_id": 2667,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 212,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 303,
+      "player_id": 2662,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 213,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 303,
+      "player_id": 2664,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 214,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 303,
+      "player_id": 2669,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 215,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 303,
+      "player_id": 2665,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 216,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 303,
+      "player_id": 2836,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 217,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 303,
+      "player_id": 3017,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 218,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 303,
+      "player_id": 3019,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 219,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 303,
+      "player_id": 3020,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 220,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 303,
+      "player_id": 2663,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 221,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 303,
+      "player_id": 3036,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 222,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 303,
+      "player_id": 3039,
+      "created_at": "2026-03-23T19:47:02.917+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 223,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 304,
+      "player_id": 2971,
+      "created_at": "2026-03-24T20:10:14.142+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 224,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 304,
+      "player_id": 2860,
+      "created_at": "2026-03-24T20:10:14.142+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 225,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 304,
+      "player_id": 2582,
+      "created_at": "2026-03-24T20:10:14.142+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 226,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 304,
+      "player_id": 3030,
+      "created_at": "2026-03-24T20:10:14.142+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 227,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 185,
+      "match_id": 310,
+      "player_id": 2553,
+      "created_at": "2026-03-25T16:46:25.993+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 228,
+      "goals": 2,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 185,
+      "match_id": 310,
+      "player_id": 2969,
+      "created_at": "2026-03-25T16:46:25.993+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 229,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 179,
+      "match_id": 311,
+      "player_id": 2897,
+      "created_at": "2026-03-25T16:48:07.069+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 230,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 179,
+      "match_id": 311,
+      "player_id": 2592,
+      "created_at": "2026-03-25T16:48:07.069+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 231,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 179,
+      "match_id": 311,
+      "player_id": 2864,
+      "created_at": "2026-03-25T16:48:07.069+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 232,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 179,
+      "match_id": 311,
+      "player_id": 2828,
+      "created_at": "2026-03-25T16:48:07.069+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 233,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 179,
+      "match_id": 311,
+      "player_id": 3033,
+      "created_at": "2026-03-25T16:48:07.069+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 234,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 178,
+      "match_id": 316,
+      "player_id": 2573,
+      "created_at": "2026-03-27T06:44:53.888+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 235,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 174,
+      "match_id": 316,
+      "player_id": 2696,
+      "created_at": "2026-03-27T06:44:53.888+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 236,
+      "goals": 2,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 183,
+      "match_id": 312,
+      "player_id": 2589,
+      "created_at": "2026-03-29T18:39:17.884+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 237,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 171,
+      "match_id": 305,
+      "player_id": 527,
+      "created_at": "2026-03-29T18:40:27.8+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 238,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 182,
+      "match_id": 305,
+      "player_id": 2884,
+      "created_at": "2026-03-29T18:40:27.8+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 239,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 185,
+      "match_id": 309,
+      "player_id": 2889,
+      "created_at": "2026-06-27T10:21:52.464+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 240,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 179,
+      "match_id": 309,
+      "player_id": 2581,
+      "created_at": "2026-06-27T10:21:52.464+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 241,
+      "goals": 2,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 179,
+      "match_id": 309,
+      "player_id": 2970,
+      "created_at": "2026-06-27T10:21:52.464+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 242,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 179,
+      "match_id": 309,
+      "player_id": 2828,
+      "created_at": "2026-06-27T10:21:52.464+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 243,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 179,
+      "match_id": 309,
+      "player_id": 3033,
+      "created_at": "2026-06-27T10:21:52.464+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 244,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 269,
+      "player_id": 2986,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 245,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 269,
+      "player_id": 2552,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 246,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 269,
+      "player_id": 2834,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 247,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 269,
+      "player_id": 2870,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 248,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 269,
+      "player_id": 2666,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 249,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 269,
+      "player_id": 2899,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 250,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 269,
+      "player_id": 2901,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 251,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 269,
+      "player_id": 2668,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 252,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 269,
+      "player_id": 2920,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 253,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 269,
+      "player_id": 2667,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 254,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 269,
+      "player_id": 2662,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 255,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 269,
+      "player_id": 2664,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 256,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 269,
+      "player_id": 2669,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 257,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 269,
+      "player_id": 2665,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 258,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 269,
+      "player_id": 2836,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 259,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 269,
+      "player_id": 3017,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 260,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 269,
+      "player_id": 3019,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 261,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 269,
+      "player_id": 3020,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 262,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 269,
+      "player_id": 2663,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 263,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 269,
+      "player_id": 3036,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 264,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 184,
+      "match_id": 269,
+      "player_id": 3039,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 265,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 269,
+      "player_id": 2811,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 266,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 269,
+      "player_id": 2799,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 267,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 269,
+      "player_id": 2971,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 268,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 269,
+      "player_id": 2862,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 269,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 269,
+      "player_id": 2580,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 270,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 269,
+      "player_id": 2593,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 271,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 269,
+      "player_id": 2584,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 272,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 269,
+      "player_id": 2909,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 273,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 269,
+      "player_id": 2919,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 274,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 269,
+      "player_id": 2957,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 275,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 269,
+      "player_id": 2583,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 276,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 269,
+      "player_id": 2813,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 277,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 269,
+      "player_id": 2938,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 278,
+      "goals": 1,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 269,
+      "player_id": 2860,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 279,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 269,
+      "player_id": 2582,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 280,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 269,
+      "player_id": 2579,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 281,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 269,
+      "player_id": 2895,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 282,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 269,
+      "player_id": 2846,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 283,
+      "goals": 2,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 269,
+      "player_id": 3030,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 284,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 269,
+      "player_id": 2829,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "football",
+    "record": {
+      "id": 285,
+      "goals": 0,
+      "saves": 0,
+      "assists": 0,
+      "team_id": 181,
+      "match_id": 269,
+      "player_id": 3043,
+      "created_at": "2026-06-27T10:24:12.04+00:00",
+      "shots_on_target": 0
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 3,
+      "sets": [
+        {
+          "points": 9,
+          "setNumber": 1
+        },
+        {
+          "points": 13,
+          "setNumber": 2
+        },
+        {
+          "points": 13,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 171,
+      "match_id": 333,
+      "created_at": "2025-11-23T09:25:32.401+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 4,
+      "sets": [
+        {
+          "points": 25,
+          "setNumber": 1
+        },
+        {
+          "points": 25,
+          "setNumber": 2
+        },
+        {
+          "points": 25,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 181,
+      "match_id": 333,
+      "created_at": "2025-11-23T09:25:32.401+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 7,
+      "sets": [
+        {
+          "points": 7,
+          "setNumber": 1
+        },
+        {
+          "points": 4,
+          "setNumber": 2
+        }
+      ],
+      "team_id": 176,
+      "match_id": 323,
+      "created_at": "2025-12-06T19:23:27.99+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 8,
+      "sets": [
+        {
+          "points": 25,
+          "setNumber": 1
+        },
+        {
+          "points": 25,
+          "setNumber": 2
+        }
+      ],
+      "team_id": 183,
+      "match_id": 323,
+      "created_at": "2025-12-06T19:23:27.99+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 9,
+      "sets": [
+        {
+          "points": 25,
+          "setNumber": 1
+        },
+        {
+          "points": 25,
+          "setNumber": 2
+        },
+        {
+          "points": 0,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 168,
+      "match_id": 336,
+      "created_at": "2025-12-07T18:19:53.933+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 10,
+      "sets": [
+        {
+          "points": 18,
+          "setNumber": 1
+        },
+        {
+          "points": 15,
+          "setNumber": 2
+        },
+        {
+          "points": 0,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 172,
+      "match_id": 336,
+      "created_at": "2025-12-07T18:19:53.933+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 11,
+      "sets": [
+        {
+          "points": 25,
+          "setNumber": 1
+        },
+        {
+          "points": 25,
+          "setNumber": 2
+        },
+        {
+          "points": 0,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 167,
+      "match_id": 330,
+      "created_at": "2025-12-09T13:17:02.803+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 12,
+      "sets": [
+        {
+          "points": 12,
+          "setNumber": 1
+        },
+        {
+          "points": 8,
+          "setNumber": 2
+        },
+        {
+          "points": 0,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 166,
+      "match_id": 330,
+      "created_at": "2025-12-09T13:17:02.803+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 15,
+      "sets": [
+        {
+          "points": 25,
+          "setNumber": 1
+        },
+        {
+          "points": 25,
+          "setNumber": 2
+        },
+        {
+          "points": 0,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 189,
+      "match_id": 326,
+      "created_at": "2025-12-10T08:22:47.753+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 16,
+      "sets": [
+        {
+          "points": 12,
+          "setNumber": 1
+        },
+        {
+          "points": 11,
+          "setNumber": 2
+        },
+        {
+          "points": 0,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 170,
+      "match_id": 326,
+      "created_at": "2025-12-10T08:22:47.753+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 17,
+      "sets": [
+        {
+          "points": 13,
+          "setNumber": 1
+        },
+        {
+          "points": 15,
+          "setNumber": 2
+        },
+        {
+          "points": 0,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 186,
+      "match_id": 339,
+      "created_at": "2025-12-10T08:25:19.383+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 18,
+      "sets": [
+        {
+          "points": 25,
+          "setNumber": 1
+        },
+        {
+          "points": 25,
+          "setNumber": 2
+        },
+        {
+          "points": 0,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 180,
+      "match_id": 339,
+      "created_at": "2025-12-10T08:25:19.383+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 19,
+      "sets": [
+        {
+          "points": 25,
+          "setNumber": 1
+        },
+        {
+          "points": 25,
+          "setNumber": 2
+        },
+        {
+          "points": 0,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 179,
+      "match_id": 322,
+      "created_at": "2025-12-10T09:04:14.578+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 20,
+      "sets": [
+        {
+          "points": 12,
+          "setNumber": 1
+        },
+        {
+          "points": 14,
+          "setNumber": 2
+        },
+        {
+          "points": 0,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 185,
+      "match_id": 322,
+      "created_at": "2025-12-10T09:04:14.578+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 21,
+      "sets": [
+        {
+          "points": 14,
+          "setNumber": 1
+        },
+        {
+          "points": 14,
+          "setNumber": 2
+        },
+        {
+          "points": 0,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 178,
+      "match_id": 340,
+      "created_at": "2025-12-12T04:28:48.274+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 22,
+      "sets": [
+        {
+          "points": 25,
+          "setNumber": 1
+        },
+        {
+          "points": 25,
+          "setNumber": 2
+        },
+        {
+          "points": 0,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 187,
+      "match_id": 340,
+      "created_at": "2025-12-12T04:28:48.274+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 25,
+      "sets": [
+        {
+          "points": 25,
+          "setNumber": 1
+        },
+        {
+          "points": 25,
+          "setNumber": 2
+        },
+        {
+          "points": 0,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 184,
+      "match_id": 332,
+      "created_at": "2025-12-12T04:30:49.769+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 26,
+      "sets": [
+        {
+          "points": 17,
+          "setNumber": 1
+        },
+        {
+          "points": 13,
+          "setNumber": 2
+        },
+        {
+          "points": 0,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 177,
+      "match_id": 332,
+      "created_at": "2025-12-12T04:30:49.769+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 27,
+      "sets": [
+        {
+          "points": 25,
+          "setNumber": 1
+        },
+        {
+          "points": 25,
+          "setNumber": 2
+        },
+        {
+          "points": 0,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 173,
+      "match_id": 329,
+      "created_at": "2025-12-12T05:06:26.806+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 28,
+      "sets": [
+        {
+          "points": 9,
+          "setNumber": 1
+        },
+        {
+          "points": 16,
+          "setNumber": 2
+        },
+        {
+          "points": 0,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 182,
+      "match_id": 329,
+      "created_at": "2025-12-12T05:06:26.806+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 29,
+      "sets": [
+        {
+          "points": 23,
+          "setNumber": 1
+        },
+        {
+          "points": 23,
+          "setNumber": 2
+        },
+        {
+          "points": 25,
+          "setNumber": 3
+        },
+        {
+          "points": 25,
+          "setNumber": 4
+        },
+        {
+          "points": 25,
+          "setNumber": 5
+        }
+      ],
+      "team_id": 174,
+      "match_id": 337,
+      "created_at": "2026-03-24T20:07:32.637+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 30,
+      "sets": [
+        {
+          "points": 25,
+          "setNumber": 1
+        },
+        {
+          "points": 25,
+          "setNumber": 2
+        },
+        {
+          "points": 0,
+          "setNumber": 3
+        },
+        {
+          "points": 0,
+          "setNumber": 4
+        },
+        {
+          "points": 0,
+          "setNumber": 5
+        }
+      ],
+      "team_id": 169,
+      "match_id": 337,
+      "created_at": "2026-03-24T20:07:32.637+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 31,
+      "sets": [
+        {
+          "points": 25,
+          "setNumber": 1
+        },
+        {
+          "points": 25,
+          "setNumber": 2
+        },
+        {
+          "points": 0,
+          "setNumber": 3
+        },
+        {
+          "points": 0,
+          "setNumber": 4
+        },
+        {
+          "points": 0,
+          "setNumber": 5
+        }
+      ],
+      "team_id": 180,
+      "match_id": 338,
+      "created_at": "2026-03-24T20:08:13.505+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 32,
+      "sets": [
+        {
+          "points": 0,
+          "setNumber": 1
+        },
+        {
+          "points": 0,
+          "setNumber": 2
+        },
+        {
+          "points": 25,
+          "setNumber": 3
+        },
+        {
+          "points": 25,
+          "setNumber": 4
+        },
+        {
+          "points": 25,
+          "setNumber": 5
+        }
+      ],
+      "team_id": 187,
+      "match_id": 338,
+      "created_at": "2026-03-24T20:08:13.505+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 35,
+      "sets": [
+        {
+          "points": 16,
+          "setNumber": 1
+        },
+        {
+          "points": 12,
+          "setNumber": 2
+        },
+        {
+          "points": 11,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 188,
+      "match_id": 325,
+      "created_at": "2026-03-25T16:45:05.557+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 36,
+      "sets": [
+        {
+          "points": 25,
+          "setNumber": 1
+        },
+        {
+          "points": 25,
+          "setNumber": 2
+        },
+        {
+          "points": 25,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 175,
+      "match_id": 325,
+      "created_at": "2026-03-25T16:45:05.557+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 37,
+      "sets": [
+        {
+          "points": 25,
+          "setNumber": 1
+        },
+        {
+          "points": 25,
+          "setNumber": 2
+        },
+        {
+          "points": 25,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 174,
+      "match_id": 335,
+      "created_at": "2026-03-25T17:06:36.188+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 38,
+      "sets": [
+        {
+          "points": 12,
+          "setNumber": 1
+        },
+        {
+          "points": 12,
+          "setNumber": 2
+        },
+        {
+          "points": 12,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 168,
+      "match_id": 335,
+      "created_at": "2026-03-25T17:06:36.188+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 39,
+      "sets": [
+        {
+          "points": 25,
+          "setNumber": 1
+        },
+        {
+          "points": 25,
+          "setNumber": 2
+        },
+        {
+          "points": 25,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 167,
+      "match_id": 328,
+      "created_at": "2026-03-27T06:45:50.478+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 40,
+      "sets": [
+        {
+          "points": 17,
+          "setNumber": 1
+        },
+        {
+          "points": 17,
+          "setNumber": 2
+        },
+        {
+          "points": 19,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 173,
+      "match_id": 328,
+      "created_at": "2026-03-27T06:45:50.478+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 41,
+      "sets": [
+        {
+          "points": 16,
+          "setNumber": 1
+        },
+        {
+          "points": 19,
+          "setNumber": 2
+        },
+        {
+          "points": 25,
+          "setNumber": 3
+        },
+        {
+          "points": 25,
+          "setNumber": 4
+        },
+        {
+          "points": 14,
+          "setNumber": 5
+        }
+      ],
+      "team_id": 181,
+      "match_id": 331,
+      "created_at": "2026-03-28T14:25:08.194+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 42,
+      "sets": [
+        {
+          "points": 25,
+          "setNumber": 1
+        },
+        {
+          "points": 25,
+          "setNumber": 2
+        },
+        {
+          "points": 0,
+          "setNumber": 3
+        },
+        {
+          "points": 0,
+          "setNumber": 4
+        },
+        {
+          "points": 25,
+          "setNumber": 5
+        }
+      ],
+      "team_id": 184,
+      "match_id": 331,
+      "created_at": "2026-03-28T14:25:08.194+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 43,
+      "sets": [
+        {
+          "points": 0,
+          "setNumber": 1
+        },
+        {
+          "points": 0,
+          "setNumber": 2
+        },
+        {
+          "points": 0,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 189,
+      "match_id": 324,
+      "created_at": "2026-03-28T14:25:44.224+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 44,
+      "sets": [
+        {
+          "points": 25,
+          "setNumber": 1
+        },
+        {
+          "points": 25,
+          "setNumber": 2
+        },
+        {
+          "points": 25,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 175,
+      "match_id": 324,
+      "created_at": "2026-03-28T14:25:44.224+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 45,
+      "sets": [
+        {
+          "points": 0,
+          "setNumber": 1
+        },
+        {
+          "points": 0,
+          "setNumber": 2
+        },
+        {
+          "points": 0,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 183,
+      "match_id": 273,
+      "created_at": "2026-03-28T14:26:57.014+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 46,
+      "sets": [
+        {
+          "points": 25,
+          "setNumber": 1
+        },
+        {
+          "points": 25,
+          "setNumber": 2
+        },
+        {
+          "points": 25,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 179,
+      "match_id": 273,
+      "created_at": "2026-03-28T14:26:57.014+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 47,
+      "sets": [
+        {
+          "points": 6,
+          "setNumber": 1
+        },
+        {
+          "points": 15,
+          "setNumber": 2
+        },
+        {
+          "points": 15,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 167,
+      "match_id": 327,
+      "created_at": "2026-03-30T19:16:26.594+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 48,
+      "sets": [
+        {
+          "points": 25,
+          "setNumber": 1
+        },
+        {
+          "points": 25,
+          "setNumber": 2
+        },
+        {
+          "points": 25,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 184,
+      "match_id": 327,
+      "created_at": "2026-03-30T19:16:26.594+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 49,
+      "sets": [
+        {
+          "points": 15,
+          "setNumber": 1
+        },
+        {
+          "points": 12,
+          "setNumber": 2
+        },
+        {
+          "points": 18,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 175,
+      "match_id": 272,
+      "created_at": "2026-03-30T19:17:34.624+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 50,
+      "sets": [
+        {
+          "points": 25,
+          "setNumber": 1
+        },
+        {
+          "points": 25,
+          "setNumber": 2
+        },
+        {
+          "points": 25,
+          "setNumber": 3
+        }
+      ],
+      "team_id": 179,
+      "match_id": 272,
+      "created_at": "2026-03-30T19:17:34.625+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 51,
+      "sets": [
+        {
+          "points": 20,
+          "setNumber": 1
+        },
+        {
+          "points": 25,
+          "setNumber": 2
+        },
+        {
+          "points": 25,
+          "setNumber": 3
+        },
+        {
+          "points": 25,
+          "setNumber": 4
+        }
+      ],
+      "team_id": 187,
+      "match_id": 334,
+      "created_at": "2026-06-27T09:50:05.057+00:00"
+    }
+  },
+  {
+    "sport": "volleyball",
+    "record": {
+      "id": 52,
+      "sets": [
+        {
+          "points": 25,
+          "setNumber": 1
+        },
+        {
+          "points": 23,
+          "setNumber": 2
+        },
+        {
+          "points": 21,
+          "setNumber": 3
+        },
+        {
+          "points": 19,
+          "setNumber": 4
+        }
+      ],
+      "team_id": 174,
+      "match_id": 334,
+      "created_at": "2026-06-27T09:50:05.057+00:00"
+    }
+  }
+]

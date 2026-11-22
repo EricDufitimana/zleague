@@ -1,0 +1,241 @@
+{
+  "verified": true,
+  "counts": {
+    "Family 3": 24,
+    "Family 4": 24
+  },
+  "statisticsPreserved": true,
+  "unassignedRecords": 11,
+  "changes": [
+    {
+      "id": "507",
+      "name": "Mucyo Aime",
+      "before": "Family 3",
+      "after": null,
+      "reason": "Surplus duplicate or absent from authoritative roster"
+    },
+    {
+      "id": "509",
+      "name": "Uwijuru Berthard",
+      "before": "Family 3",
+      "after": null,
+      "reason": "Surplus duplicate or absent from authoritative roster"
+    },
+    {
+      "id": "543",
+      "name": "MIHIGO Noah RUTEMBESA",
+      "before": "Family 3",
+      "after": null,
+      "reason": "Surplus duplicate or absent from authoritative roster"
+    },
+    {
+      "id": "555",
+      "name": "SHEMA YVAN KIZIMA",
+      "before": "Family 4",
+      "after": null,
+      "reason": "Surplus duplicate or absent from authoritative roster"
+    },
+    {
+      "id": "561",
+      "name": "Niyongabo Landry Nganzo",
+      "before": "Family 4",
+      "after": null,
+      "reason": "Surplus duplicate or absent from authoritative roster"
+    },
+    {
+      "id": "580",
+      "name": "ALVIN SHEMA",
+      "before": "Family 3",
+      "after": null,
+      "reason": "Surplus duplicate or absent from authoritative roster"
+    },
+    {
+      "id": "582",
+      "name": "BAHIZI TONNY MURENZI",
+      "before": "Family 3",
+      "after": null,
+      "reason": "Surplus duplicate or absent from authoritative roster"
+    },
+    {
+      "id": "585",
+      "name": "KELLY UDAHEMUKA",
+      "before": "Family 3",
+      "after": null,
+      "reason": "Surplus duplicate or absent from authoritative roster"
+    },
+    {
+      "id": "618",
+      "name": "Mugisha Salomon NKURUNZIZA",
+      "before": "Family 4",
+      "after": null,
+      "reason": "Surplus duplicate or absent from authoritative roster"
+    },
+    {
+      "id": "621",
+      "name": "Alex MUNYANEZA",
+      "before": "Family 4",
+      "after": null,
+      "reason": "Surplus duplicate or absent from authoritative roster"
+    },
+    {
+      "id": "625",
+      "name": "BENJAMIN SANO",
+      "before": "Family 3",
+      "after": null,
+      "reason": "Surplus duplicate or absent from authoritative roster"
+    },
+    {
+      "id": "517",
+      "before": {
+        "id": "517",
+        "first_name": "Noah",
+        "last_name": "Mihigo",
+        "created_at": "2025-12-07T18:30:48.054Z",
+        "grade": "Ingabe",
+        "family": "Family 3"
+      },
+      "after": {
+        "first_name": "MIHIGO Noah",
+        "last_name": "RUTEMBESA",
+        "family": "Family 3"
+      },
+      "reason": "Authoritative spreadsheet identity and family"
+    },
+    {
+      "id": "508",
+      "before": {
+        "id": "508",
+        "first_name": "Shema",
+        "last_name": "Yvan",
+        "created_at": "2025-12-06T18:56:14.681Z",
+        "grade": "Ingabe",
+        "family": "Family 4"
+      },
+      "after": {
+        "first_name": "SHEMA YVAN",
+        "last_name": "KIZIMA",
+        "family": "Family 4"
+      },
+      "reason": "Authoritative spreadsheet identity and family"
+    },
+    {
+      "id": "510",
+      "before": {
+        "id": "510",
+        "first_name": "Nganzo",
+        "last_name": "Landry",
+        "created_at": "2025-12-06T18:56:14.681Z",
+        "grade": "Ingabe",
+        "family": "Family 4"
+      },
+      "after": {
+        "first_name": "Niyongabo Landry",
+        "last_name": "Nganzo",
+        "family": "Family 4"
+      },
+      "reason": "Authoritative spreadsheet identity and family"
+    },
+    {
+      "id": "516",
+      "before": {
+        "id": "516",
+        "first_name": "Alvin",
+        "last_name": "Shema",
+        "created_at": "2025-12-07T18:30:48.054Z",
+        "grade": "Ingabe",
+        "family": "Family 3"
+      },
+      "after": {
+        "first_name": "ALVIN",
+        "last_name": "SHEMA",
+        "family": "Family 3"
+      },
+      "reason": "Authoritative spreadsheet identity and family"
+    },
+    {
+      "id": "514",
+      "before": {
+        "id": "514",
+        "first_name": "Tony",
+        "last_name": "Murenzi",
+        "created_at": "2025-12-07T18:30:48.054Z",
+        "grade": "Ingabe",
+        "family": "Family 4"
+      },
+      "after": {
+        "first_name": "BAHIZI TONNY",
+        "last_name": "MURENZI",
+        "family": "Family 3"
+      },
+      "reason": "Authoritative spreadsheet identity and family"
+    },
+    {
+      "id": "515",
+      "before": {
+        "id": "515",
+        "first_name": "Kelly",
+        "last_name": "Udahemuka",
+        "created_at": "2025-12-07T18:30:48.054Z",
+        "grade": "Ingabe",
+        "family": "Family 3"
+      },
+      "after": {
+        "first_name": "KELLY",
+        "last_name": "UDAHEMUKA",
+        "family": "Family 3"
+      },
+      "reason": "Authoritative spreadsheet identity and family"
+    },
+    {
+      "id": "511",
+      "before": {
+        "id": "511",
+        "first_name": "Mugisha",
+        "last_name": "Salomon",
+        "created_at": "2025-12-06T18:56:14.681Z",
+        "grade": "Ingabe",
+        "family": "Family 4"
+      },
+      "after": {
+        "first_name": "Mugisha Salomon",
+        "last_name": "NKURUNZIZA",
+        "family": "Family 4"
+      },
+      "reason": "Authoritative spreadsheet identity and family"
+    },
+    {
+      "id": "530",
+      "before": {
+        "id": "530",
+        "first_name": "Alex",
+        "last_name": "Munyaneza",
+        "created_at": "2025-12-12T04:32:29.367Z",
+        "grade": "Ingabe",
+        "family": "Family 4"
+      },
+      "after": {
+        "first_name": "Alex",
+        "last_name": "MUNYANEZA",
+        "family": "Family 4"
+      },
+      "reason": "Authoritative spreadsheet identity and family"
+    },
+    {
+      "id": "513",
+      "before": {
+        "id": "513",
+        "first_name": "Sano",
+        "last_name": "Benjamin",
+        "created_at": "2025-12-07T18:23:09.343Z",
+        "grade": "Ingabe",
+        "family": "Family 3"
+      },
+      "after": {
+        "first_name": "BENJAMIN",
+        "last_name": "SANO",
+        "family": "Family 3"
+      },
+      "reason": "Authoritative spreadsheet identity and family"
+    }
+  ]
+}

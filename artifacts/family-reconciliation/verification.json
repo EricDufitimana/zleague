@@ -1,0 +1,32 @@
+{
+  "verified": true,
+  "changed": 11,
+  "totalPlayers": 544,
+  "counts": {
+    "Family 3": 30,
+    "Family 4": 29
+  },
+  "unresolved": [
+    {
+      "id": 507,
+      "first_name": "Mucyo",
+      "last_name": "Aime",
+      "family": "Family 3",
+      "grade": "Ingabe"
+    },
+    {
+      "id": 509,
+      "first_name": "Uwijuru",
+      "last_name": "Berthard",
+      "family": "Family 3",
+      "grade": "Ingabe"
+    },
+    {
+      "id": 514,
+      "first_name": "Tony",
+      "last_name": "Murenzi",
+      "family": "Family 4",
+      "grade": "Ingabe"
+    }
+  ]
+}

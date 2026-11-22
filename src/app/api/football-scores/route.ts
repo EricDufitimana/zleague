@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     if (deleteError) {
       console.error('Error deleting existing scores:', deleteError);
-      // Continue anyway - might be first time recording
+      throw new Error(deleteError.message);
     } else {
       console.log('Existing scores deleted successfully');
     }
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     console.log('Attempting to insert football scores...');
 
     // Insert all scores (team and individual player scores)
-    const { data: insertedScores, error } = await supabase
+    const { data: insertedScores, error } = scores.length ? await supabase
       .from('football_scores')
       .insert(scores.map(score => ({
         match_id,
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
         player_id: score.player_id || null,
         created_at: new Date().toISOString()
       })))
-      .select();
+      .select() : { data: [], error: null };
 
     if (error) {
       console.error('Supabase error:', error);
@@ -89,12 +89,12 @@ export async function POST(request: NextRequest) {
     } else if (match) {
       const updateData: { team_a_score?: number; team_b_score?: number } = {};
       
-      if (match.team_a_id && teamTotals[match.team_a_id] !== undefined) {
-        updateData.team_a_score = teamTotals[match.team_a_id];
+      if (match.team_a_id) {
+        updateData.team_a_score = teamTotals[match.team_a_id] ?? 0;
       }
       
-      if (match.team_b_id && teamTotals[match.team_b_id] !== undefined) {
-        updateData.team_b_score = teamTotals[match.team_b_id];
+      if (match.team_b_id) {
+        updateData.team_b_score = teamTotals[match.team_b_id] ?? 0;
       }
 
       if (Object.keys(updateData).length > 0) {
