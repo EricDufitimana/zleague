@@ -41,7 +41,8 @@ interface Match {
   sport_type: string;
   match_time?: string;
   status: string;
-  winner_id?: number;
+  winner_id?: number | null;
+  group_id?: number | null;
   team_a_score?: number | null;
   team_b_score?: number | null;
   penalty_score?: { team_a: number; team_b: number } | null;
@@ -470,6 +471,12 @@ export default function RecordPage() {
         setWinningTeam(selectedMatchData.winner_id.toString());
       }
       
+      if (selectedMatchData?.status === 'played' && selectedMatchData.sport_type === 'football' &&
+          selectedMatchData.group_id && !selectedMatchData.winner_id && !selectedMatchData.penalty_score &&
+          selectedMatchData.team_a_score === selectedMatchData.team_b_score) {
+        setWinningTeam('draw');
+      }
+
       // Load penalty scores if they exist
       const matchData = selectedMatchData as Match & { penalty_score?: { team_a: number; team_b: number } | null };
       if (matchData?.penalty_score && typeof matchData.penalty_score === 'object') {
@@ -718,6 +725,9 @@ export default function RecordPage() {
     return true;
   };
 
+  const canDraw = selectedMatchData?.sport_type === 'football' && !!selectedMatchData.group_id;
+  const isDrawSelected = canDraw && winningTeam === 'draw';
+
   const handleSubmit = async () => {
     if (isSubmitting || loadingExisting || existingError) return;
     if (!selectedMatchData) {
@@ -725,11 +735,16 @@ export default function RecordPage() {
       return;
     }
 
+    if (isDrawSelected && footballScores.teamA.goals !== footballScores.teamB.goals) {
+      setMessage({ type: 'error', text: 'A draw requires equal goal scores for both teams.' });
+      return;
+    }
+
     if (selectedMatchData.sport_type === 'basketball' && basketballScores.teamA.points === basketballScores.teamB.points) {
       setMessage({ type: 'error', text: 'Basketball cannot finish tied. Record the deciding overtime points.' });
       return;
     }
-    if (selectedMatchData.sport_type === 'football' && footballScores.teamA.goals === footballScores.teamB.goals &&
+    if (!isDrawSelected && selectedMatchData.sport_type === 'football' && footballScores.teamA.goals === footballScores.teamB.goals &&
       (!penaltyScores || penaltyScores.team_a === penaltyScores.team_b)) {
       setMessage({ type: 'error', text: 'Enter a decisive penalty shootout score for a tied football match.' });
       setShowPenaltyDialog(true);
@@ -768,7 +783,7 @@ export default function RecordPage() {
       // Allow 0-0 scores if penalties are entered
       const hasPenalties = penaltyScores && (penaltyScores.team_a > 0 || penaltyScores.team_b > 0);
       
-      if (footballScores.teamA.goals === 0 && footballScores.teamB.goals === 0 && !hasPenalties) {
+      if (!isDrawSelected && footballScores.teamA.goals === 0 && footballScores.teamB.goals === 0 && !hasPenalties) {
         setMessage({ type: "error", text: "Please enter goals for both teams, or enter penalty scores if the match ended 0-0" });
         return;
       }
@@ -851,9 +866,9 @@ export default function RecordPage() {
 
       // Prepare penalty score data if scores are tied and penalty scores exist
       let penaltyScoreData = null;
-      let finalWinnerId = winningTeam ? parseInt(winningTeam) : null;
+      let finalWinnerId = !isDrawSelected && winningTeam ? parseInt(winningTeam) : null;
       
-      if (selectedMatchData.sport_type === 'football' && 
+      if (!isDrawSelected && selectedMatchData.sport_type === 'football' &&
           teamAScore === teamBScore && 
           penaltyScores && 
           (penaltyScores.team_a > 0 || penaltyScores.team_b > 0)) {
@@ -871,7 +886,7 @@ export default function RecordPage() {
       }
       
       // Ensure we have a winner
-      if (!finalWinnerId) {
+      if (!finalWinnerId && !isDrawSelected) {
         setMessage({ type: "error", text: "Unable to determine winner. Please check your entries." });
         setIsSubmitting(false);
         return;
@@ -1099,8 +1114,13 @@ export default function RecordPage() {
                 
                   <div className="space-y-3">
                     <Label className="text-sm font-medium">
-                      Winning Team *
+                      Match result *
                     </Label>
+                    {canDraw && <Button type="button" variant={isDrawSelected ? 'default' : 'outline'}
+                      aria-pressed={isDrawSelected}
+                      onClick={() => { setWinningTeam('draw'); setPenaltyScores(null); setShowPenaltyDialog(false); }}>
+                      Draw - 1 point each
+                    </Button>}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <Button
                         type="button"
@@ -1671,7 +1691,8 @@ export default function RecordPage() {
                                   value={penaltyScores?.team_a || 0}
                                   onChange={(e) => {
                                     const value = parseInt(e.target.value) || 0;
-                                    setPenaltyScores(prev => ({
+                                    setWinningTeam(current => current === 'draw' ? '' : current);
+                                setPenaltyScores(prev => ({
                                       team_a: value,
                                       team_b: prev?.team_b || 0
                                     }));
@@ -1690,7 +1711,8 @@ export default function RecordPage() {
                                   value={penaltyScores?.team_b || 0}
                                   onChange={(e) => {
                                     const value = parseInt(e.target.value) || 0;
-                                    setPenaltyScores(prev => ({
+                                    setWinningTeam(current => current === 'draw' ? '' : current);
+                                setPenaltyScores(prev => ({
                                       team_a: prev?.team_a || 0,
                                       team_b: value
                                     }));
@@ -1835,6 +1857,7 @@ export default function RecordPage() {
                               value={penaltyScores?.team_a || 0}
                               onChange={(e) => {
                                 const value = parseInt(e.target.value) || 0;
+                                setWinningTeam(current => current === 'draw' ? '' : current);
                                 setPenaltyScores(prev => ({
                                   team_a: value,
                                   team_b: prev?.team_b || 0
@@ -1854,6 +1877,7 @@ export default function RecordPage() {
                               value={penaltyScores?.team_b || 0}
                               onChange={(e) => {
                                 const value = parseInt(e.target.value) || 0;
+                                setWinningTeam(current => current === 'draw' ? '' : current);
                                 setPenaltyScores(prev => ({
                                   team_a: prev?.team_a || 0,
                                   team_b: value
@@ -1864,7 +1888,7 @@ export default function RecordPage() {
                           </div>
                         </div>
                         <p className="text-xs text-yellow-700 mt-2">
-                          Enter penalty shootout scores if the match ended in a tie
+                          {canDraw ? 'Choose Draw for 1 point each, or enter a decisive shootout result.' : 'Enter penalty shootout scores if the match ended in a tie'}
                         </p>
                       </div>
                     )}

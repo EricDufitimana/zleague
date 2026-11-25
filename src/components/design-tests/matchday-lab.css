@@ -254,3 +254,5 @@
 @media (max-width: 360px) { .ml-tournament .ml-section-heading h1, .ml-leaders .ml-section-heading h1, .ml-predictions .ml-section-heading h1 { font-size: 27px; }.ml-tournament .ml-board-controls, .ml-leaders .ml-board-controls, .ml-predictions .ml-board-controls { max-width: 110px; }.ml-pick-card { padding-inline: 16px; }.ml-pick-sides { gap: 24px; }.ml-pick-card > footer { font-size: 8px; }.ml-pick-card > footer > button { padding-inline: 10px; font-size: 9px; }.ml-spotlight { grid-template-columns: minmax(0, 1fr) 80px; padding-inline: 19px; }.ml-player-portrait > span { font-size: 85px; }.ml-spotlight-name { font-size: 21px; } }
 .ml-account summary { max-width: 175px; overflow: hidden; white-space: nowrap; }
 @media(max-width:680px) { .ml-account summary { max-width: 145px; }.ml-signin-note { align-items: flex-start; padding: 15px 18px; font-size: 11px; }.ml-signin-note button { min-height: 30px; } }
+
+.ml-form-draw { background: #eee8d5; color: #675321; }

@@ -618,7 +618,7 @@ export async function PATCH(request: NextRequest) {
       if ((status ?? currentMatch.status) === 'played') {
         try {
           validateDecisiveResult(currentMatch, team_a_score ?? currentMatch.team_a_score,
-            team_b_score ?? currentMatch.team_b_score, winner_id ?? currentMatch.winner_id,
+            team_b_score ?? currentMatch.team_b_score, winner_id === undefined ? currentMatch.winner_id : winner_id,
             penalty_score === undefined ? currentMatch.penalty_score : penalty_score);
         } catch (error) {
           return NextResponse.json({ error: error instanceof Error ? error.message : 'Invalid result' }, { status: 400 });
@@ -637,7 +637,7 @@ export async function PATCH(request: NextRequest) {
       });
 
       // Validate winner is one of the teams in the match
-      if (winner_id !== undefined) {
+      if (winner_id !== undefined && winner_id !== null) {
         const winnerId = parseInt(winner_id);
         if (winnerId !== currentMatch.team_a_id && winnerId !== currentMatch.team_b_id) {
           return NextResponse.json(
@@ -660,7 +660,7 @@ export async function PATCH(request: NextRequest) {
       }
       
       if (winner_id !== undefined) {
-        updateData.winner_id = parseInt(winner_id);
+        updateData.winner_id = winner_id === null ? null : parseInt(winner_id);
       }
       
       if (team_a_score !== undefined) {

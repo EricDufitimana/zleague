@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, Check, ChevronDown, Loader2, Shuffle, Trophy, X } from 'lucide-react';
-import { calculateStandings, type GroupSport, type GroupTeam, type TournamentGroup, wonOnPenalties } from '@/lib/group-stage';
+import { calculateStandings, isDraw, type GroupSport, type GroupTeam, type TournamentGroup, wonOnPenalties } from '@/lib/group-stage';
 import './group-stage.css';
 
 interface Props { sport: GroupSport; championshipId?: number; teams?: GroupTeam[]; editable?: boolean; onFinalized?: () => void }
@@ -64,7 +64,7 @@ export function GroupStage({ sport, championshipId, teams = [], editable = false
   }
 
   const played = groups.flatMap(g => g.matches).filter(m => m.status === 'played').length;
-  const completed = groups.length === 2 && groups.every(g => g.matches.length === 3 && g.matches.every(m => m.status === 'played' && m.winner_id));
+  const completed = groups.length === 2 && groups.every(g => g.matches.length === 3 && g.matches.every(m => m.status === 'played' && (m.winner_id != null || isDraw(m))));
   const finalized = groups.length > 0 && groups.every(g => g.finalized);
   const unresolved = completed && groups.some(g => !orders[g.name] && calculateStandings(g.teams, g.matches).some(row => row.tied));
   const football = sport === 'football';
@@ -72,7 +72,7 @@ export function GroupStage({ sport, championshipId, teams = [], editable = false
   return <section className="group-stage" aria-label="Boys group stage" aria-busy={loading || busy}>
     <header className="gs-masthead">
       <div><p className="gs-eyebrow">ZLEAGUE / BOYS / {sport}</p><h2>THE GROUP STAGE<span>.</span></h2>
-        <p>Two groups. One meeting each. Every match has a winner.</p></div>
+        <p>Two groups. One meeting each. {sport === 'football' ? 'Draws earn one point each.' : 'Every match has a winner.'}</p></div>
       <div className="gs-progress"><strong>{played}<span>/ 6</span></strong><span>matches complete</span>
         <div className="gs-track"><i style={{ width: `${played / 6 * 100}%` }} /></div></div>
     </header>
@@ -103,13 +103,13 @@ export function GroupStage({ sport, championshipId, teams = [], editable = false
           <header className="gs-panel-header"><div><span className="gs-eyebrow">ROUND ROBIN</span><h3>Group {group.name}</h3></div>
             <span className="gs-tag">{group.finalized ? 'QUALIFIED' : `${group.matches.filter(m => m.status === 'played').length} / 3 PLAYED`}</span></header>
           <div className="gs-table-scroll"><table className="gs-table"><caption className="sr-only">Group {group.name} standings. Most recent result on the right.</caption>
-            <thead><tr><th scope="col">TEAM</th>{['MP', 'W', 'L', ...(football ? ['GD', 'PTS'] : []), 'LAST 3'].map(column => <th scope="col" key={column}>{column}</th>)}</tr></thead>
+            <thead><tr><th scope="col">TEAM</th>{['MP', 'W', ...(football ? ['D'] : []), 'L', ...(football ? ['GD', 'PTS'] : []), 'LAST 3'].map(column => <th scope="col" key={column}>{column}</th>)}</tr></thead>
             <tbody>{standings.map((row, index) => <tr key={row.team.id} className={group.finalized && ranked.indexOf(row.team.id) < 2 ? 'gs-qualified' : ''}>
               <th scope="row"><span className="gs-rank">{row.tied && completed && !group.finalized ? '=' : index + 1}</span><span>{row.team.name.replaceAll('_', ' ')}</span></th>
-              <td>{row.mp}</td><td>{row.wins}</td><td>{row.losses}</td>{football && <><td>{row.difference > 0 ? '+' : ''}{row.difference}</td><td className="gs-points">{row.points}</td></>}
+              <td>{row.mp}</td><td>{row.wins}</td>{football && <td>{row.draws}</td>}<td>{row.losses}</td>{football && <><td>{row.difference > 0 ? '+' : ''}{row.difference}</td><td className="gs-points">{row.points}</td></>}
               <td><div className="gs-form">{Array.from({ length: 3 - row.form.length }, (_, i) => <span className="gs-result gs-unplayed" key={`empty-${i}`} aria-label="No match">—</span>)}
-                {row.form.map(result => <button key={result.matchId} className={`gs-result ${result.won ? 'gs-win' : 'gs-loss'} ${result.penalties ? 'gs-pens' : ''}`} title={result.label} aria-label={result.label}
-                  onClick={() => setDetail(result.label)}>{result.won ? <Check size={13} /> : <X size={13} />}{result.penalties && <span>P</span>}</button>)}
+                {row.form.map(result => <button key={result.matchId} className={`gs-result ${result.drawn ? 'gs-result-draw' : result.won ? 'gs-win' : 'gs-loss'} ${result.penalties ? 'gs-pens' : ''}`} title={result.label} aria-label={result.label}
+                  onClick={() => setDetail(result.label)}>{result.drawn ? 'D' : result.won ? <Check size={13} /> : <X size={13} />}{result.penalties && <span>P</span>}</button>)}
               </div></td></tr>)}</tbody></table></div>
           <div className="gs-fixtures"><p className="gs-eyebrow">THE MATCHES</p>{group.matches.map(match => {
             const a = group.teams.find(t => t.id === match.team_a_id), b = group.teams.find(t => t.id === match.team_b_id);
@@ -135,8 +135,8 @@ export function GroupStage({ sport, championshipId, teams = [], editable = false
         </article>;
       })}</div>
       {detail && <div className="gs-detail" role="status"><span>{detail}</span><button onClick={() => setDetail('')} aria-label="Close result details"><X size={16} /></button></div>}
-      {groups.length > 0 && <footer className="gs-footer"><span><i className="gs-key" /> W = win · L = loss · P = penalties. Newest result on the right.</span>
-        <span>{football ? 'Win = 3 pts. Shootouts do not affect GD.' : 'Ranked by wins, then score difference and head-to-head.'}</span></footer>}
+      {groups.length > 0 && <footer className="gs-footer"><span><i className="gs-key" /> D = draw, W = win · L = loss · P = penalties. Newest result on the right.</span>
+        <span>{football ? 'Win = 3 pts. Draw = 1 pt each. Shootouts do not affect GD.' : 'Ranked by wins, then score difference and head-to-head.'}</span></footer>}
       {editable && groups.length > 0 && <div className="gs-qualification"><Trophy size={22} /><div><h3>{finalized ? 'The knockout stage is ready.' : 'Next stop: the semifinals.'}</h3>
         <p>{finalized ? 'Group results are locked. Schedule the semifinals in Schedule.' : unresolved ? 'Confirm the official order in each tied group before reviewing qualifiers.' : 'A1 vs B2 · B1 vs A2. Complete every group fixture before confirming qualification.'}</p>
         {review && <div className="gs-review">{[[0, 1], [1, 0]].map(([aIndex, bIndex], i) => {

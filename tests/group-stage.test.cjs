@@ -58,7 +58,7 @@ test('draw rejects duplicate, ineligible or incorrectly sized groups', () => {
     assert.throws(() => validateGroupAssignments(a, b, [1, 2, 3, 4, 5, 6]));
   }
 });
-test('all sports require decisive results and football shootouts must agree with the winner', () => {
+test('knockout results require a winner and football shootouts must agree with the winner', () => {
   const football = { sport_type: 'football', team_a_id: 1, team_b_id: 2 };
   assert.doesNotThrow(() => validateDecisiveResult(football, 1, 1, 2, { team_a: 3, team_b: 4 }));
   assert.throws(() => validateDecisiveResult(football, 1, 1, 1, null), /shootout/);
@@ -67,4 +67,42 @@ test('all sports require decisive results and football shootouts must agree with
   assert.throws(() => validateDecisiveResult(football, 2, 1, 1, { team_a: 3, team_b: 4 }), /only/);
   assert.throws(() => validateDecisiveResult(football, -1, 0, 2, null), /non-negative/);
   for (const sport_type of ['basketball', 'volleyball']) assert.throws(() => validateDecisiveResult({ ...football, sport_type }, 2, 2, 1, null), /cannot finish tied/);
+});
+
+
+test('football draws, including 0-0, award one point each without a win or loss', () => {
+  for (const score of [0, 2]) {
+    const rows = calculateStandings(teams, [match(1, 1, 2, score, score, null)]);
+    for (const id of [1, 2]) {
+      const row = rows.find(r => r.team.id === id);
+      assert.deepEqual([row.mp, row.wins, row.draws, row.losses, row.points, row.difference], [1, 0, 1, 0, 1, 0]);
+      assert.equal(row.form[0].drawn, true);
+      assert.match(row.form[0].label, /^Drew/);
+    }
+  }
+});
+
+test('qualification counts drawn matches and still resolves tied rankings explicitly', () => {
+  const results = [match(1, 1, 2, 0, 0, null), match(2, 1, 3, 2, 0, 1), match(3, 2, 3, 1, 0, 2)];
+  assert.deepEqual(qualificationOrder(group(results)), [1, 2, 3]);
+  const draws = group([match(1, 1, 2, 0, 0, null), match(2, 1, 3, 1, 1, null), match(3, 2, 3, 2, 2, null)]);
+  assert.throws(() => qualificationOrder(draws), /Resolve the tied ranking/);
+  assert.deepEqual(qualificationOrder(draws, [3, 2, 1]), [3, 2, 1]);
+});
+
+test('only football group matches can finish drawn, with no winner or shootout', () => {
+  const football = { sport_type: 'football', team_a_id: 1, team_b_id: 2, group_id: 10 };
+  for (const score of [0, 2]) assert.doesNotThrow(() => validateDecisiveResult(football, score, score, null, null));
+  assert.throws(() => validateDecisiveResult({ ...football, group_id: null }, 0, 0, null, null), /shootout/);
+  assert.throws(() => validateDecisiveResult(football, 1, 0, null, null), /winner/);
+  assert.throws(() => validateDecisiveResult(football, 1, 1, 1, null), /shootout/);
+  assert.throws(() => validateDecisiveResult(football, 1, 1, null, { team_a: 3, team_b: 2 }), /winner/);
+  for (const sport_type of ['basketball', 'volleyball']) assert.throws(() => validateDecisiveResult({ ...football, sport_type }, 0, 0, null, null), /cannot finish tied/);
+});
+
+test('unfinished ties and invalid winnerless results do not earn draw points', () => {
+  const invalid = [match(1, 1, 2, 0, 0, null, { status: 'live' }), match(2, 1, 2, 1, 0, null),
+    match(3, 1, 2, 1, 1, null, { sport_type: 'basketball' }),
+    match(4, 1, 2, 1, 1, null, { penalty_score: { team_a: 3, team_b: 2 } })];
+  assert.ok(calculateStandings(teams, invalid).every(r => r.points === 0 && r.mp === 0));
 });

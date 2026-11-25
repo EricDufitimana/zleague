@@ -33,6 +33,10 @@ async function main() {
   assert.equal(existing.length, 0, 'Verification ID is already in use; no test writes were made.');
   try {
     await db.$transaction(async tx => {
+      // Verify the new RPC definition inside the rollback-only transaction.
+      const migration = fs.readFileSync(path.resolve(__dirname, '../prisma/sql/2026-11-25-football-group-draws.sql'), 'utf8');
+      const functionSql = migration.slice(migration.indexOf('CREATE OR REPLACE FUNCTION'), migration.indexOf("NOTIFY pgrst")).trim();
+      await tx.$executeRawUnsafe(functionSql);
       const families = await tx.$queryRawUnsafe("SELECT id FROM families WHERE gender='male' AND is_active ORDER BY id LIMIT 6");
       assert.equal(families.length, 6, 'Six active boys families are required for this verification.');
       await tx.$executeRawUnsafe("INSERT INTO championships(id,name,status) VALUES ($1,'Group-stage verification (rolled back)','ongoing')", championshipId);
@@ -67,19 +71,22 @@ async function main() {
           team_b_score=$2::int,penalty_score=$3::jsonb WHERE id=$1::bigint`, match.id, i === 0 ? 1 : 0,
           i === 0 ? JSON.stringify({ team_a: 4, team_b: 3 }) : null);
       }
+      await tx.$executeRawUnsafe(`UPDATE matches SET winner_id=NULL,team_a_score=0,team_b_score=0,penalty_score=NULL
+        WHERE id=$1::bigint`, matches[1].id);
       const results = await tx.$queryRawUnsafe("SELECT * FROM matches WHERE championship_id=$1 AND sport_type='football' ORDER BY id", championshipId);
       const normalized = results.map(m => ({ ...m, id: Number(m.id), team_a_id: Number(m.team_a_id), team_b_id: Number(m.team_b_id),
-        winner_id: Number(m.winner_id), team_a_score: Number(m.team_a_score), team_b_score: Number(m.team_b_score),
+        winner_id: m.winner_id == null ? null : Number(m.winner_id), team_a_score: Number(m.team_a_score), team_b_score: Number(m.team_b_score),
         created_at: m.created_at.toISOString(), match_time: m.match_time?.toISOString() }));
       const orders = [];
       for (const group of footballGroups) {
         const teams = await tx.$queryRawUnsafe('SELECT t.id,t.name FROM teams t JOIN tournament_group_teams g ON g.team_id=t.id WHERE g.group_id=$1', group.id);
         const data = { ...group, teams: teams.map(t => ({ ...t, id: Number(t.id) })), matches: normalized.filter(m => m.group_id === group.id) };
         const standings = calculateStandings(data.teams, data.matches);
-        assert.equal(standings[0].points, 6);
+        assert.equal(standings[0].points, group.name === 'A' ? 4 : 6);
         assert.equal(standings[0].mp, 2);
         if (group.name === 'A') {
-          assert.equal(standings[0].difference, 1, 'Shootout goals must not affect GD.');
+          assert.equal(standings[0].draws, 1);
+          assert.equal(standings[0].difference, 0, 'Shootout goals must not affect GD.');
           assert.ok(standings[0].form.some(r => r.penalties));
         }
         orders.push(qualificationOrder(data));
@@ -111,6 +118,6 @@ async function main() {
   } catch (error) { if (error !== rollback) throw error; }
   const leftover = await db.$queryRawUnsafe('SELECT id FROM championships WHERE id=$1', championshipId);
   assert.equal(leftover.length, 0);
-  console.log('Database integration passed: all-sport draws, fixture counts, shootout GD, qualification, stale-result protection, result locks, RPC privileges, and full verification rollback.');
+  console.log('Database integration passed: all-sport fixtures, football draw qualification, shootout GD, qualification, stale-result protection, result locks, RPC privileges, and full verification rollback.');
 }
 main().catch(error => { console.error(error.message); process.exitCode = 1; }).finally(() => db.$disconnect());

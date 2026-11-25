@@ -537,3 +537,5 @@
      height: 44px;
   }
 }
+
+.gs-result.gs-result-draw { background: #eee8d5; color: #675321; }

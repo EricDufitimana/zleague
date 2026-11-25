@@ -13,9 +13,9 @@ export interface GroupMatch {
   created_at: string;
   penalty_score?: { team_a: number; team_b: number } | null;
 }
-export interface FormResult { matchId: number; won: boolean; penalties: boolean; label: string }
+export interface FormResult { matchId: number; won: boolean; drawn: boolean; penalties: boolean; label: string }
 export interface Standing {
-  team: GroupTeam; mp: number; wins: number; losses: number; difference: number;
+  team: GroupTeam; mp: number; wins: number; draws: number; losses: number; difference: number;
   points: number; form: FormResult[]; headToHead: number; tied: boolean;
 }
 export interface TournamentGroup {
@@ -30,14 +30,22 @@ export function wonOnPenalties(match: GroupMatch): boolean {
     match.penalty_score.team_a !== match.penalty_score.team_b && match.winner_id != null;
 }
 
+/** A completed football draw has no winner or shootout. */
+export function isDraw(match: GroupMatch): boolean {
+  return match.status === 'played' && match.sport_type === 'football' &&
+    match.winner_id == null && match.penalty_score == null &&
+    Number.isSafeInteger(match.team_a_score) && Number(match.team_a_score) >= 0 &&
+    match.team_a_score === match.team_b_score;
+}
+
 /** Match goals/points/sets alone count toward difference, never shootout goals. */
 export function calculateStandings(teams: GroupTeam[], matches: GroupMatch[]): Standing[] {
-  const rows: Standing[] = teams.map(team => ({ team, mp: 0, wins: 0, losses: 0,
+  const rows: Standing[] = teams.map(team => ({ team, mp: 0, wins: 0, draws: 0, losses: 0,
     difference: 0, points: 0, form: [], headToHead: 0, tied: false }));
   const byId = new Map(rows.map(row => [Number(row.team.id), row]));
-  const completed = matches.filter(m => m.status === 'played' && m.winner_id != null &&
+  const completed = matches.filter(m => m.status === 'played' &&
     m.team_a_score != null && m.team_b_score != null &&
-    (m.winner_id === m.team_a_id || m.winner_id === m.team_b_id))
+    (isDraw(m) || (m.winner_id != null && (m.winner_id === m.team_a_id || m.winner_id === m.team_b_id))))
     .sort((a, b) => new Date(a.match_time || a.created_at).getTime() -
       new Date(b.match_time || b.created_at).getTime() || a.id - b.id);
   for (const match of completed) {
@@ -48,11 +56,12 @@ export function calculateStandings(teams: GroupTeam[], matches: GroupMatch[]): S
       [b, a, match.team_b_score!, match.team_a_score!],
     ] as const) {
       const won = Number(match.winner_id) === Number(row.team.id);
-      row.mp++; row.wins += Number(won); row.losses += Number(!won);
-      row.points = row.wins * 3; row.difference += own - against;
+      const drawn = isDraw(match);
+      row.mp++; row.wins += Number(won); row.draws += Number(drawn); row.losses += Number(!won && !drawn);
+      row.points = row.wins * 3 + row.draws; row.difference += own - against;
       const penalties = wonOnPenalties(match);
-      row.form.push({ matchId: match.id, won, penalties,
-        label: `${won ? 'Won' : 'Lost'} ${own}–${against} vs ${opponent.team.name}${penalties ? ` on penalties (${match.penalty_score!.team_a}–${match.penalty_score!.team_b})` : ''}${match.match_time ? ` · ${new Date(match.match_time).toLocaleDateString('en-GB')}` : ''}` });
+      row.form.push({ matchId: match.id, won, drawn, penalties,
+        label: `${drawn ? 'Drew' : won ? 'Won' : 'Lost'} ${own}–${against} vs ${opponent.team.name}${penalties ? ` on penalties (${match.penalty_score!.team_a}–${match.penalty_score!.team_b})` : ''}${match.match_time ? ` · ${new Date(match.match_time).toLocaleDateString('en-GB')}` : ''}` });
     }
   }
   // A mini-table gives a consistent head-to-head tiebreak for two or three teams.
@@ -78,7 +87,7 @@ export function validateGroupAssignments(a: number[], b: number[], eligibleIds: 
 }
 
 export function qualificationOrder(group: TournamentGroup, requested?: number[]): number[] {
-  if (group.matches.length !== 3 || group.matches.some(m => m.status !== 'played' || m.winner_id == null)) {
+  if (group.matches.length !== 3 || group.matches.some(m => m.status !== 'played' || (m.winner_id == null && !isDraw(m)))) {
     throw new Error(`Finish all three matches in Group ${group.name} first.`);
   }
   const rows = calculateStandings(group.teams, group.matches);
@@ -100,13 +109,14 @@ export function qualificationOrder(group: TournamentGroup, requested?: number[])
   return requested;
 }
 
-export function validateDecisiveResult(match: Pick<GroupMatch, 'sport_type' | 'team_a_id' | 'team_b_id'>,
+export function validateDecisiveResult(match: Pick<GroupMatch, 'sport_type' | 'team_a_id' | 'team_b_id'> & { group_id?: number | null },
   a: unknown, b: unknown, winner: unknown, penalty: GroupMatch['penalty_score']) {
   if (!Number.isSafeInteger(a) || !Number.isSafeInteger(b) || Number(a) < 0 || Number(b) < 0) {
     throw new Error('Both final scores must be non-negative whole numbers.');
   }
   if (a === b) {
     if (match.sport_type !== 'football') throw new Error('Play a deciding period or set: this match cannot finish tied.');
+    if (match.group_id != null && winner === null && penalty == null) return;
     if (!penalty || !Number.isSafeInteger(penalty.team_a) || !Number.isSafeInteger(penalty.team_b) ||
       penalty.team_a < 0 || penalty.team_b < 0 || penalty.team_a === penalty.team_b) {
       throw new Error('Enter a decisive penalty shootout score for a tied football match.');
